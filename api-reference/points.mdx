@@ -1,0 +1,65 @@
+---
+title: Points & Loyalty
+description: Programmable points ledger with double-entry bookkeeping, earning rules, and spending mechanics
+---
+
+## Overview
+
+Podium includes a programmable points ledger. Points are earned through purchases, campaign participation, API grants, and NFT interactions. They can be spent on order discounts, NFT redemption, and token presales.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/points` | Current points balance |
+| `GET` | `/user/{id}/points/history` | Transaction history |
+| `POST` | `/user/{id}/order/{orderId}/points` | Apply points to an order |
+| `POST` | `/user/{id}/order/{orderId}/points/finalize` | Finalize point spend (after payment) |
+| `POST` | `/user/{id}/order/{orderId}/points/revert` | Revert points (if payment fails) |
+| `POST` | `/companion/profile/{userId}/points` | Award points programmatically |
+
+## Transaction Types
+
+| Type | Direction | Source |
+|------|-----------|--------|
+| `API` | Earn | Programmatic grants via the API |
+| `CAMPAIGN` | Earn | Campaign participation rewards |
+| `PURCHASE` | Earn | Purchase rewards (based on creator's `pointsPerDollar` config) |
+| `NFT_REDEMPTION` | Spend | Redeeming NFT-backed rewards |
+| `PRESALE` | Spend | Token presale purchases |
+
+## Earning Points
+
+### Via API (Companion/Agent Use)
+
+```bash
+POST /api/v1/companion/profile/{userId}/points
+{
+  "amount": 25,
+  "details": {
+    "source": "beauty-companion",
+    "action": "purchase",
+    "productId": "prod_abc123"
+  }
+}
+```
+
+The `details` metadata is stored with the transaction for audit and analytics.
+
+### Via Purchase
+
+When `Product.pointEligible` is true, purchases automatically earn points based on the creator's `pointsPerDollar` configuration.
+
+### Via Campaign
+
+Campaign rewards are configured per-campaign via `CampaignReward`. Points are awarded when a user completes a `CampaignJourney`.
+
+## Spending Points
+
+Points can be applied as a discount during checkout:
+
+1. `POST /user/{id}/order/{orderId}/points` — reserves points against the order
+2. If payment succeeds: `POST .../points/finalize` — permanently deducts
+3. If payment fails: `POST .../points/revert` — returns points to balance
+
+This two-phase commit prevents points from being spent on failed orders.

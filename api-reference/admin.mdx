@@ -1,0 +1,64 @@
+---
+title: Admin
+description: API key management, organization settings, subscription tiers, and enrichment pipeline administration
+---
+
+## Overview
+
+Admin endpoints manage platform-level configuration including API keys, organizations, subscription tiers, and the enrichment pipeline. Most require `ADMIN` role access.
+
+## API Keys
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/admin/api-keys` | Create a new API key |
+| `GET` | `/admin/api-keys` | List organization's API keys |
+| `GET` | `/admin/api-keys/{id}` | Get key details (masked) |
+| `DELETE` | `/admin/api-keys/{id}` | Revoke a key |
+| `POST` | `/admin/api-keys/{id}/rotate` | Rotate key (generate new, deprecate old) |
+
+Key rotation generates a new key and invalidates the old one. A `api-key-changed` QStash event is published to flush Redis caches across all instances.
+
+## Organizations
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/organizations` | List organizations |
+| `GET` | `/admin/organizations/{id}` | Organization details |
+| `PATCH` | `/admin/organizations/{id}` | Update organization |
+| `GET` | `/admin/organizations/{id}/settings` | Organization settings (x402, blockchain, etc.) |
+| `PATCH` | `/admin/organizations/{id}/settings` | Update settings |
+
+## App Configuration
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/app-config` | Get app configuration |
+| `PATCH` | `/admin/app-config` | Update app config (network, reward mode) |
+
+## Subscription Tiers
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/subscription-tiers` | List all tiers |
+| `GET` | `/admin/subscription-tiers/{id}` | Tier details |
+| `PATCH` | `/admin/subscription-tiers/{id}` | Update tier limits |
+
+## Campaigns (Admin)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/campaigns` | All campaigns across the organization |
+| `PATCH` | `/admin/campaigns/{id}/status` | Approve/reject campaign submissions |
+
+## Enrichment Pipeline
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/admin/enrichment/run` | Trigger a crawl for a specific source |
+| `POST` | `/admin/enrichment/baseline/recompute` | Trigger baseline recomputation |
+| `GET` | `/admin/enrichment/status` | Pipeline status dashboard |
+| `POST` | `/admin/enrichment/sources` | Register a new enrichment source |
+| `GET` | `/admin/enrichment/sources` | List all configured sources |
+
+See [Enrichment Pipeline](/agentic/enrichment-pipeline) for the full pipeline architecture.

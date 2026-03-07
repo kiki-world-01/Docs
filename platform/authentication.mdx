@@ -1,0 +1,135 @@
+---
+title: Authentication
+description: API key authentication, subscription tiers, rate limiting, and public endpoint access
+---
+
+## API Key Authentication
+
+All authenticated requests require a Bearer token in the `Authorization` header:
+
+```bash
+Authorization: Bearer podium_live_abc123...
+```
+
+API keys are scoped to a single organization. When the platform receives a request:
+
+1. Extracts the key from the `Authorization` header
+2. Validates the key prefix matches the expected environment (`podium_test_` or `podium_live_`)
+3. SHA-256 hashes the key and looks it up in the database
+4. Returns the associated organization context (ID, settings, subscription tier)
+5. Caches the result in Redis with a jittered TTL (60–150 seconds)
+
+Failed lookups are also cached (15 seconds) to prevent brute-force probing from hitting the database.
+
+### Key Management
+
+Organizations can have multiple active API keys. Keys support:
+
+- **Rotation**: Generate a new key and deprecate the old one with zero downtime via `POST /admin/api-keys/{id}/rotate`
+- **Expiration**: Keys can be set to expire at a specific timestamp
+- **Revocation**: Immediately invalidate a key; cache is purged via a QStash `api-key-changed` event
+
+### Environments
+
+| Key Prefix | Environment | Base URL |
+|-----------|------------|----------|
+| `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
+| `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
+
+The TypeScript SDK auto-detects the environment from the key prefix and routes to the correct base URL.
+
+## Subscription Tiers
+
+Each organization has a subscription tier that controls rate limits, request quotas, and endpoint access:
+
+| Tier | Requests/Month | Rate Limit/Second | Max API Keys | Endpoint Access |
+|------|---------------|-------------------|-------------|----------------|
+| **BUILDER** | 10,000 | 5 | 2 | Core commerce endpoints |
+| **GROWTH** | 100,000 | 20 | 5 | + Campaigns, NFTs, search |
+| **PRO** | 1,000,000 | 50 | 20 | + Enrichment, agentic, analytics |
+| **ADMIN** | Unlimited | 100 | Unlimited | Full platform access |
+
+### Rate Limiting
+
+Rate limits are enforced per-organization using a Redis sliding window. When exceeded, the API returns:
+
+```json
+{
+  "status": 429,
+  "error": "Rate limit exceeded",
+  "retryAfter": 1.2
+}
+```
+
+The `Retry-After` header indicates seconds until the next allowed request.
+
+### Access Control
+
+The access control middleware checks each endpoint against the organization's tier. If an endpoint is blocked for the current tier:
+
+```json
+{
+  "status": 403,
+  "error": "Endpoint not available on your current plan",
+  "requiredTier": "PRO"
+}
+```
+
+## Public Endpoints
+
+Some endpoints are accessible without authentication for specific use cases:
+
+| Path Pattern | Purpose |
+|-------------|---------|
+| `/agentic/*` | Agentic Commerce Protocol — AI agents discover products and create checkout sessions |
+| `/webhooks/*` | Inbound webhooks from Stripe, Shopify, Privy, and QStash |
+| `/solver/*` | Solver discovery for the Task Pool system |
+| `/shippo/callback` | Shippo OAuth callback |
+| `/shopify/callback` | Shopify OAuth callback |
+
+<Warning>
+  Public endpoints still enforce rate limiting by IP address. Abuse triggers automatic throttling.
+</Warning>
+
+## Role-Based Access
+
+Within an organization, users and creators can have roles that gate specific operations:
+
+### User Roles
+
+| Role | Capabilities |
+|------|-------------|
+| `ADMIN` | Full organization management, API key CRUD, tier management |
+| `CAMPAIGN_ADMIN` | Campaign creation, publishing, and moderation |
+
+### Creator Roles
+
+| Role | Capabilities |
+|------|-------------|
+| `PUBLISHER` | Product publishing, order management, payout access |
+
+Roles are checked by `ensureUserHasRole()` and `ensureCreatorHasRole()` guards within route handlers.
+
+## Error Responses
+
+Authentication failures return standard error shapes:
+
+```json
+// Missing or malformed key
+{
+  "status": 401,
+  "error": "Invalid or missing API key"
+}
+
+// Expired key
+{
+  "status": 401,
+  "error": "API key has expired"
+}
+
+// Insufficient tier
+{
+  "status": 403,
+  "error": "Endpoint not available on your current plan"
+}
+```

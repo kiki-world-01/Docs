@@ -1,97 +1,64 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Podium
+description: Commerce infrastructure for trusted agents and intelligent applications
 ---
 
-## Setting up
+Podium is a multi-tenant commerce and settlement infrastructure platform. It gives developers the primitives to build applications where **personal agents** discover products, capture user intent, execute purchases, and settle rewards — all backed by transparent data provenance and on-chain finality.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={3}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get an API key, make your first call, and install the SDK in under 5 minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Architecture" icon="sitemap" href="/platform/architecture">
+    Multi-tenant design, middleware chain, and how the platform fits together
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="API Playground" icon="play" href="https://api.podiumcommerce.xyz/docs">
+    Interactive endpoint explorer with live request/response testing
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What Podium Provides
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Commerce Primitives" icon="cart-shopping" href="/api-reference/products">
+    Products, orders, checkout (Stripe + USDC via x402), creator storefronts, Shopify sync, and shipping
+  </Card>
+  <Card title="Agentic Intelligence" icon="brain" href="/agentic/overview">
+    Enrichment pipeline, intent profiles, transparent provenance scoring, and an agent-native product feed
+  </Card>
+  <Card title="Engagement & Loyalty" icon="star" href="/api-reference/points">
+    Programmable points ledger, campaign mechanics (swipe, vote, survey, UGC), and NFT-backed rewards
+  </Card>
+  <Card title="On-Chain Settlement" icon="link" href="/contracts/overview">
+    Task Pool V2 with USDC escrow, solver reputation, pluggable verification, and multi-tenant beacon proxies on Base
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Three Layers, One Platform
 
-## Need inspiration?
+Podium combines three layers that work together:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Intelligence Layer">
+    The enrichment pipeline ingests market data from structured APIs, web scraping, and community sources. It extracts product attributes via LLM and rule-based extraction, resolves entities against your catalog, and computes scored baselines. Agents consuming the product feed receive every signal with explicit provenance — they always know whether data came from user declarations or market analysis.
+  </Step>
+  <Step title="Commerce Layer">
+    A full-stack commerce API: product catalog with configurable attributes, multi-payment checkout (Stripe, x402 USDC, embedded wallets), creator storefronts with Stripe Connect payouts, order lifecycle management, and shipping integration via Shippo. Everything is multi-tenant with PostgreSQL Row-Level Security.
+  </Step>
+  <Step title="Settlement Layer">
+    On-chain smart contracts on Base handle the trust-critical operations. The Task Pool V2 system provides per-tenant USDC escrow, task lifecycle management, solver reputation tracking, and a pluggable verification engine (oracle, AI evaluation, or consensus). Rewards are settled on-chain with a transparent fee structure.
+  </Step>
+</Steps>
+
+## For Developers Building Agents
+
+If you're building an AI agent that needs to discover products, understand user preferences, or execute commerce transactions, start here:
+
+<CardGroup cols={2}>
+  <Card title="Agentic Commerce Overview" icon="robot" href="/agentic/overview">
+    The architecture behind trusted agent commerce — enrichment, intent profiles, provenance, and x402 payments
+  </Card>
+  <Card title="Beauty Companion Tutorial" icon="wand-magic-sparkles" href="/agentic/beauty-companion">
+    A complete reference implementation: building a personal shopping agent on Podium with Telegram, Claude, and Privy wallets
+  </Card>
+</CardGroup>

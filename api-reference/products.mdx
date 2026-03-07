@@ -1,0 +1,85 @@
+---
+title: Products
+description: Product catalog CRUD, configurable attributes, media, categories, and analytics
+---
+
+## Overview
+
+Products are the core commerce entity. They support configurable attribute variants (size, color, etc.), media attachments, category organization, and per-creator assignment.
+
+## Endpoints
+
+### Product CRUD
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/product` | Create a product |
+| `GET` | `/product/{id}` | Get product by ID |
+| `PATCH` | `/product/{id}` | Update product |
+| `DELETE` | `/product/{id}` | Delete product |
+| `GET` | `/products` | List products (paginated, filterable) |
+
+### Product Lifecycle
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/creator/id/{creatorId}/product/{productId}/publish` | Publish a draft product |
+| `POST` | `/creator/id/{creatorId}/product/{productId}/purge` | Permanently remove |
+| `POST` | `/creator/id/{creatorId}/product/{productId}/restore` | Restore archived product |
+
+### Product Analytics
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/id/{creatorId}/product/{productId}/analytics` | Product performance analytics |
+| `GET` | `/creator/id/{creatorId}/products/analytics` | Aggregate product analytics for a creator |
+| `GET` | `/creator/id/{creatorId}/products/sales` | Sales data |
+
+### Categories
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/categories` | List all product categories |
+
+## Product Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | CUID2 identifier |
+| `name` | string | Product name |
+| `description` | string | Product description |
+| `price` | integer | Price in cents |
+| `currency` | string | ISO currency code (default: USD) |
+| `supply` | integer | Available inventory (-1 for unlimited) |
+| `status` | enum | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
+| `slug` | string | URL-friendly identifier |
+| `shippingType` | enum | Shipping method |
+| `pointEligible` | boolean | Whether purchases earn points |
+
+## Attribute Variants
+
+Products support configurable attributes for variant selection:
+
+```json
+{
+  "attributes": [
+    {
+      "name": "Size",
+      "variants": [
+        { "value": "30ml", "priceModifier": 0 },
+        { "value": "50ml", "priceModifier": 1000 },
+        { "value": "100ml", "priceModifier": 2500 }
+      ]
+    },
+    {
+      "name": "Color",
+      "variants": [
+        { "value": "Natural", "supply": 50 },
+        { "value": "Fair", "supply": 30 }
+      ]
+    }
+  ]
+}
+```
+
+Each variant can have its own price modifier (added to base price) and independent supply tracking.

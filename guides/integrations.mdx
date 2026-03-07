@@ -1,0 +1,118 @@
+---
+title: Integration Guides
+description: Connecting Podium with Shopify, Stripe Connect, Privy wallets, and Stream Chat
+---
+
+## Shopify
+
+Podium syncs products and orders with Shopify stores.
+
+### Setup
+
+1. **Install**: `GET /shopify/install?shop=your-store.myshopify.com` — initiates OAuth flow
+2. **Callback**: Shopify redirects to `/shopify/callback` with access token
+3. **Sync**: Products are synced automatically via webhooks or manually via `/shopify/sync/manual`
+
+### Synced Data
+
+| Shopify Entity | Podium Model |
+|---------------|-------------|
+| Products | `ShopifyProduct` → linked to `Product` |
+| Variants | `ShopifyVariant` → linked to `ProductAttributeVariant` |
+| Options | `ShopifyOption` |
+| Media | `ShopifyMedia` → linked to `ProductMedia` |
+| Orders | `ShopifyOrder` |
+
+### Webhooks
+
+Shopify sends webhooks to `/webhooks/shopify` for product updates, order creation, and app uninstall events. Product sync runs async via the `shopify-products-sync` QStash queue.
+
+## Stripe Connect
+
+Creators receive payouts through Stripe Connect.
+
+### Setup
+
+1. Creator initiates Stripe onboarding via `GET /creator/id/{creatorId}/stripe/account`
+2. Stripe redirects for identity verification and bank account setup
+3. Account status tracked in `StripeAccount`
+4. Periodic reminders sent via `stripe-onboarding-reminder` cron if setup is incomplete
+
+### Payment Flow
+
+1. Customer pays via Stripe PaymentIntent
+2. Platform takes application fee (`STRIPE_PLATFORM_APPLICATION_FEE_BPS`)
+3. Net amount tracked in `CreatorPayout` (PENDING → ELIGIBLE → TRANSFERRED)
+4. Payout sweep cron transfers eligible payouts to creator's Connect account
+
+## Privy Wallets
+
+Privy provides embedded wallet infrastructure for both server-side automation and client-side user wallets.
+
+### Server Wallets (Bots / Backend)
+
+```typescript
+import { PrivyClient } from '@privy-io/server-auth';
+
+const privy = new PrivyClient(appId, appSecret);
+
+// Create a server wallet
+const wallet = await privy.wallets().create({ chain_type: 'ethereum' });
+
+// Use for automated x402 payments, NFT minting, etc.
+```
+
+### Embedded Wallets (Frontend)
+
+```typescript
+import { PrivyProvider } from '@privy-io/react-auth';
+
+<PrivyProvider
+  appId={PRIVY_APP_ID}
+  config={{
+    loginMethods: ['email', 'telegram'],
+    embeddedWallets: {
+      ethereum: { createOnLogin: 'all-users' }
+    }
+  }}
+>
+  <App />
+</PrivyProvider>
+```
+
+Users get a wallet auto-created on first login. They can fund it via Apple Pay, Google Pay, Coinbase, or direct USDC transfer.
+
+### User Linking
+
+Privy users are linked to Podium users via the `PrivyUser` mapping table. The `/user/privy/{privyId}` endpoint resolves Privy DIDs to Podium user profiles.
+
+## Stream Chat
+
+Podium integrates Stream Chat for real-time messaging between users and creators.
+
+### Setup
+
+1. Server generates Stream Chat tokens via `GET /creator/id/{creatorId}/chat` or `GET /user/{id}/chat`
+2. Client connects using the Stream Chat SDK with the generated token
+3. Channels are created per creator-user pair
+
+### Environment
+
+```bash
+STREAM_ACCESS_KEY=your_key
+STREAM_ACCESS_SECRET=your_secret
+```
+
+## Shippo Shipping
+
+Podium uses Shippo for shipping rate calculation and label generation.
+
+### Setup
+
+1. **Install**: `GET /shippo/install` — initiates Shippo OAuth
+2. **Callback**: `/shippo/callback` — stores access token in `ShippoAccount`
+
+### Usage
+
+- `GET /order/{id}/shipping/quote` — get available shipping rates
+- `POST /creator/id/{creatorId}/order/{orderId}/shipping/label` — generate and purchase a shipping label

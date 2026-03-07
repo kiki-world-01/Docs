@@ -1,0 +1,71 @@
+---
+title: Creators
+description: Creator profiles, storefronts, product management, order fulfillment, payouts, and analytics
+---
+
+## Overview
+
+Creators are merchants or brands within an organization. They manage products, fulfill orders, receive payouts, and run campaigns. Public-facing creator pages are accessed by slug; authenticated operations use creator ID.
+
+## Endpoints
+
+### Public (By Slug)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/{slug}` | Public creator profile |
+| `GET` | `/creator/{slug}/products` | Creator's published products |
+| `GET` | `/creator/{slug}/product/{productSlug}` | Single product by slug |
+| `GET` | `/creator/{slug}/collectibles` | Creator's NFT collectibles |
+| `GET` | `/creator/{slug}/rewards` | Available rewards |
+| `GET` | `/creator/{slug}/stats` | Public stats |
+
+### Authenticated (By ID)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/id/{creatorId}/products` | All products (including drafts) |
+| `GET` | `/creator/id/{creatorId}/orders` | Order list |
+| `GET` | `/creator/id/{creatorId}/order/{orderId}` | Order detail |
+| `POST` | `/creator/id/{creatorId}/order/{orderId}/shipping/label` | Generate shipping label |
+| `GET` | `/creator/id/{creatorId}/campaigns` | Creator's campaigns |
+| `GET` | `/creator/id/{creatorId}/payouts` | Payout history |
+| `GET` | `/creator/id/{creatorId}/followers/{followerId}` | Follower details |
+| `GET` | `/creator/id/{creatorId}/followers/{followerId}/growth` | Follower growth analytics |
+
+### Dashboard
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/id/{creatorId}/dashboard/rewards` | Rewards dashboard |
+| `GET` | `/creator/id/{creatorId}/dashboard/campaigns` | Campaign dashboard |
+| `GET` | `/creator/id/{creatorId}/dashboard/fans` | Fan analytics |
+
+### Stripe Connect
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/id/{creatorId}/stripe/account` | Stripe Connect account status |
+
+## Creator Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | CUID2 identifier |
+| `slug` | string | URL-friendly unique handle |
+| `displayName` | string | Brand/creator name |
+| `heroImageUrl` | string | Storefront banner image |
+| `shippingSettings` | JSON | Default shipping configuration |
+| `pointsConfig` | JSON | Points-per-dollar earning rules |
+
+## Payout System
+
+When orders are paid, `CreatorPayout` records track the payout lifecycle:
+
+| Status | Description |
+|--------|-------------|
+| `PENDING` | Order paid, payout queued |
+| `ELIGIBLE` | Payout ready for transfer (after hold period) |
+| `TRANSFERRED` | Funds transferred via Stripe Connect |
+
+A scheduled cron job sweeps eligible payouts and executes Stripe Connect transfers to the creator's connected account.

@@ -1,0 +1,160 @@
+---
+title: Usage Examples
+description: Common workflows with the Podium SDK — products, orders, campaigns, NFTs, and agentic commerce
+---
+
+## Create and Publish a Product
+
+```typescript
+import Podium from '@podiumcommerce/node-sdk';
+const podium = new Podium({ apiKey: process.env.PODIUM_API_KEY });
+
+// Create product
+const product = await podium.products.create({
+  name: 'Organic Face Serum',
+  price: 2500, // $25.00 in cents
+  currency: 'USD',
+  description: 'Lightweight hydrating serum with hyaluronic acid',
+  supply: 100,
+  pointEligible: true
+});
+
+// Add attribute variants
+await podium.products.addAttribute(product.id, {
+  name: 'Size',
+  variants: [
+    { value: '30ml', priceModifier: 0 },
+    { value: '50ml', priceModifier: 1000 }
+  ]
+});
+
+// Publish
+await podium.creators.publishProduct(creatorId, product.id);
+```
+
+## Process an Order
+
+```typescript
+// User adds product to order
+const order = await podium.orders.addProduct(userId, orderId, productId);
+
+// Apply points discount
+await podium.points.applyToOrder(userId, orderId, { points: 500 });
+
+// Checkout via Stripe
+const checkout = await podium.orders.checkout(userId, orderId);
+// Returns Stripe PaymentIntent client secret
+
+// After payment succeeds (via webhook), finalize points
+await podium.points.finalizeOrder(userId, orderId);
+```
+
+## Run a Swipe Campaign
+
+```typescript
+// Create campaign
+const campaign = await podium.campaigns.create({
+  type: 'SWIPE',
+  title: 'What moisturizer do you prefer?',
+  startsAt: new Date(),
+  endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+});
+
+// Submit and publish
+await podium.campaigns.submit(campaign.id);
+await podium.campaigns.publish(campaign.id);
+
+// Record votes
+await podium.campaigns.vote(campaign.id, {
+  userId: 'user_123',
+  attributeId: 'attr_abc',
+  optionId: 'opt_xyz'
+});
+
+// Get analytics
+const analytics = await podium.campaigns.getAnalytics(campaign.id);
+```
+
+## Build a Companion Agent
+
+```typescript
+// Create user and profile
+const user = await podium.users.create({
+  email: 'agent_user@example.com',
+  username: 'agent_user'
+});
+
+const profile = await podium.companion.createProfile(user.id, {
+  skinType: 'Oily',
+  concerns: ['Acne', 'SPF protection'],
+  priceRange: { min: 15, max: 50 },
+  brands: ['CeraVe', 'The Ordinary']
+});
+
+// Get recommendations
+const recs = await podium.companion.getRecommendations(user.id, {
+  count: 5,
+  category: 'moisturizer'
+});
+
+// Record interactions
+for (const product of recs) {
+  await podium.companion.recordInteraction({
+    userId: user.id,
+    productId: product.id,
+    action: 'RANK_UP'
+  });
+}
+
+// Place order
+const order = await podium.companion.createOrder({
+  userId: user.id,
+  productId: recs[0].id,
+  shippingAddress: { street: '123 Main St', city: 'SF', state: 'CA', zip: '94102', country: 'US' },
+  email: 'agent_user@example.com'
+});
+```
+
+## Create and Fund a Task Pool Task
+
+```typescript
+// Create a task with USDC bounty
+const task = await podium.tasks.create({
+  amount: 5000000, // $5.00 USDC (6 decimals)
+  duration: 86400,  // 24 hours
+  campaignId: 'campaign_abc',
+  verificationMethod: 'Oracle',
+  acceptanceCriteria: JSON.stringify({
+    description: 'Write a product review of at least 200 words',
+    requirements: ['Include personal experience', 'Rate 1-5 stars']
+  })
+});
+
+// Check pool status
+const pools = await podium.tasks.getPools();
+console.log('TaskPool:', pools.taskPool);
+console.log('RewardPool:', pools.rewardPool);
+```
+
+## Mint an NFT Reward
+
+```typescript
+// Create NFT reward program
+const reward = await podium.nfts.createReward({
+  type: 'FREE_PRODUCT',
+  productId: 'prod_abc123',
+  contractAddress: '0x...',
+  name: 'Free Serum NFT',
+  description: 'Redeem for a free Organic Face Serum'
+});
+
+// Check user's redeemable NFTs
+const redeemable = await podium.nfts.getRedeemable(userId);
+
+// Redeem
+await podium.nfts.redeem(userId, {
+  network: 'base',
+  contractAddress: '0x...',
+  tokenId: '42'
+});
+```

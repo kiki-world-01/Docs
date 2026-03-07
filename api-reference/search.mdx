@@ -1,0 +1,50 @@
+---
+title: Search & Discovery
+description: Full-text search, autocomplete, universal search, and curated discovery feeds
+---
+
+## Overview
+
+Podium provides multiple search and discovery surfaces powered by PostgreSQL `tsvector` full-text search with custom ranking.
+
+## Endpoints
+
+### Search
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/search` | Full-text search across products, creators, and campaigns |
+| `GET` | `/autocomplete` | Autocomplete suggestions as user types |
+| `GET` | `/universal-search` | Unified search across all entity types |
+| `GET` | `/universal-search/suggestions` | Search suggestions |
+
+### Discovery Feeds
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/discover` | Curated discovery feed |
+| `GET` | `/discover/campaigns` | Discoverable campaigns |
+| `GET` | `/discover/collectibles` | Discoverable NFT collectibles |
+| `GET` | `/discover/creators` | Discoverable creators |
+
+### Personalized
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/for-you` | Personalized feed (requires user context) |
+| `GET` | `/for-you/creators` | Recommended creators |
+| `GET` | `/featured` | Featured/editorial content |
+
+### Saved Items
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/saved-item` | Save an item (wishlist) |
+| `GET` | `/saved-item` | List saved items |
+| `DELETE` | `/saved-item/{id}` | Remove saved item |
+
+Saved items support three types: `PRODUCT`, `CAMPAIGN`, and `REWARD`.
+
+## Search Architecture
+
+Search uses PostgreSQL's built-in full-text search with `tsvector` columns on `SearchDoc` and `SearchChunk` models. Documents are indexed with custom ranking weights for relevance ordering.

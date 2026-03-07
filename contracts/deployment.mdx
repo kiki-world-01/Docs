@@ -1,0 +1,127 @@
+---
+title: Deployment & Networks
+description: Deployment scripts, supported networks, Foundry configuration, and Circle SDK integration for Arc Testnet
+---
+
+## Foundry Configuration
+
+The project uses Foundry with:
+
+- **Solidity**: 0.8.24
+- **EVM target**: Cancun
+- **Optimizer**: 200 runs
+- **Dependencies**: OpenZeppelin v5.5.0 (contracts + upgradeable)
+
+```toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+```
+
+## Deployment Scripts
+
+### V1: `script/Deploy.s.sol`
+
+Deploys the intent settler suite:
+
+1. `IntentRegistry`
+2. `PodiumOriginSettler(registry)`
+3. `PodiumDestinationSettler(origin, registry)`
+4. Wire: `registry.setOriginSettler(origin)` + `origin.setDestinationSettler(destination)`
+5. On testnet (chainId != 8453): deploys `MockUSDC`
+
+```bash
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify
+```
+
+### V2: `script/DeployV2.s.sol`
+
+Deploys the full multi-tenant system:
+
+1. **MockUSDC** (testnet) or canonical USDC address (mainnet)
+2. **SolverRegistry** — implementation + ERC1967Proxy
+3. **VerificationEngine** — implementation + ERC1967Proxy
+4. **IntentRegistryV2** — implementation + ERC1967Proxy
+5. **TaskPoolImplementation** + **RewardPoolImplementation** — bare implementations
+6. **TaskPoolFactory** — creates UpgradeableBeacons, wires all references
+7. Authorizes factory as caller on IntentRegistryV2
+8. Optionally transfers all ownership to `SAFE_MULTISIG_ADDRESS`
+
+```bash
+forge script script/DeployV2.s.sol --rpc-url $RPC_URL --broadcast --verify
+```
+
+### Upgrade: `script/Upgrade.s.sol`
+
+Upgrades TaskPool and/or RewardPool beacon implementations:
+
+```bash
+UPGRADE_TASK_POOL=true UPGRADE_REWARD_POOL=true \
+  forge script script/Upgrade.s.sol --rpc-url $RPC_URL --broadcast
+```
+
+## Supported Networks
+
+| Network | Chain ID | USDC | Purpose |
+|---------|----------|------|---------|
+| **Base Mainnet** | 8453 | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Production |
+| **Base Sepolia** | 84532 | MockUSDC deployed per environment | Testnet |
+| **Arc Testnet** | — | `0x3600000000000000000000000000000000000000` | Development |
+
+## Environment Variables
+
+```bash
+# Required for deployment
+DEPLOYER_PRIVATE_KEY=0x...
+RPC_URL=https://...
+
+# V2 specific
+AI_ORACLE_ADDRESS=0x...        # VerificationEngine oracle (defaults to deployer)
+SAFE_MULTISIG_ADDRESS=0x...    # Optional: transfer ownership to multisig
+
+# Upgrade specific
+UPGRADE_TASK_POOL=true|false
+UPGRADE_REWARD_POOL=true|false
+TASK_POOL_FACTORY_ADDRESS=0x...
+```
+
+## Circle SDK Integration
+
+The `circle-sdk/` directory provides a Node.js/TypeScript integration layer using Circle's Dev-Controlled Wallets and Smart Contract Platform SDKs, targeting Arc Testnet.
+
+### Available Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `generate-entity-secret.ts` | Generate Circle entity secret |
+| `register-entity-secret.ts` | Register with Circle |
+| `create-wallet.ts` | Create dev-controlled wallet |
+| `wallet-balance.ts` | Check wallet balance |
+| `deploy-erc20.ts` | Deploy ERC-20 template on Arc |
+| `deploy-erc721.ts` | Deploy ERC-721 template |
+| `deploy-erc1155.ts` | Deploy ERC-1155 template |
+| `deploy-airdrop.ts` | Deploy airdrop template |
+| `transfer-usdc.ts` | Transfer USDC between wallets |
+
+### Arc Testnet Notes
+
+- Arc Testnet uses USDC as the native gas token
+- USDC address on Arc: `0x3600000000000000000000000000000000000000`
+- Circle SDK targets `ARC-TESTNET` blockchain identifier
+
+## Shell Scripts
+
+Utility scripts for quick operations:
+
+| Script | Purpose |
+|--------|---------|
+| `deploy-hello-arc.sh` | Deploy HelloArchitect contract to Arc Testnet |
+| `call-greeting.sh` | Read greeting via `cast call` |
+| `verify-deploy.sh` | Verify deployment matches expected state |
+| `print-env-checklist.sh` | Check required env vars |
+| `funding-check.sh` | Check native balance |

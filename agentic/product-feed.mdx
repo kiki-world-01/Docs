@@ -1,0 +1,229 @@
+---
+title: Agentic Product Feed
+description: The endpoint agents call to discover products — scored with intent signals, tagged with provenance, and enriched with attribute baselines
+---
+
+## Overview
+
+The agentic product feed at `GET /agentic/products/feed` is the primary interface for AI agents discovering products on Podium. Every product in the feed includes:
+
+- An **intent score** reflecting both user-declared preferences and market-derived intelligence
+- **Provenance metadata** showing exactly what signals contribute to the score
+- **Attribute baselines** — the top enriched attributes for the product (texture, sentiment, key ingredients, etc.)
+
+The feed is **public** — no API key required. This enables AI agents to discover products without pre-provisioned credentials, lowering the integration barrier for the agentic commerce ecosystem.
+
+## Request
+
+```bash
+GET /api/v1/agentic/products/feed
+```
+
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 20 | Max products to return (1–100) |
+| `offset` | integer | 0 | Pagination offset |
+| `category` | string | — | Filter by product category |
+| `minPrice` | integer | — | Minimum price in cents |
+| `maxPrice` | integer | — | Maximum price in cents |
+| `inStock` | boolean | true | Only return in-stock products |
+
+## Response Shape
+
+```json
+{
+  "products": [
+    {
+      "id": "prod_abc123",
+      "title": "Organic Face Serum",
+      "description": "Lightweight hydrating serum with hyaluronic acid",
+      "price": {
+        "amount": 2500,
+        "currency": "USD"
+      },
+      "available": true,
+      "imageUrl": "https://cdn.example.com/serum.jpg",
+      "productUrl": "https://shop.example.com/organic-serum",
+      "creator": {
+        "id": "creator_xyz",
+        "name": "Clean Beauty Co",
+        "slug": "clean-beauty-co"
+      },
+      "intentScore": 0.42,
+      "intentProvenance": {
+        "USER_DECLARED": {
+          "voteCount": 12,
+          "weight": 0.7
+        },
+        "MARKET_DERIVED": {
+          "signalCount": 87,
+          "weight": 0.3
+        }
+      },
+      "attributeBaselines": [
+        {
+          "type": "texture",
+          "topValue": "lightweight",
+          "score": 0.91
+        },
+        {
+          "type": "sentiment",
+          "topValue": "positive",
+          "score": 0.84
+        },
+        {
+          "type": "key_ingredient",
+          "topValue": "hyaluronic acid",
+          "score": 0.78
+        },
+        {
+          "type": "scent",
+          "topValue": "fragrance-free",
+          "score": 0.72
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "total": 234,
+    "limit": 20,
+    "offset": 0,
+    "hasMore": true
+  }
+}
+```
+
+## Intent Score Computation
+
+The intent score combines two signal lanes with fixed weighting:
+
+```
+intentScore = (declaredScore × 0.7) + (marketScore × 0.3)
+```
+
+### USER_DECLARED (70% weight)
+
+First-party signals: campaign votes, user interactions, explicit preferences.
+
+```
+declaredScore = min(voteCount / 100, 1.0)
+```
+
+Scales linearly from 0 to 1 as votes accumulate, capped at 100 votes. This lane carries the most weight because user-declared intent is the highest-fidelity signal.
+
+### MARKET_DERIVED (30% weight)
+
+Enrichment pipeline signals: extracted attributes from reviews, structured APIs, and community sources.
+
+```
+marketScore = min(signalCount / 500, 1.0)
+```
+
+Scales linearly from 0 to 1 as enrichment signals accumulate, capped at 500 signals.
+
+### Cold-Start Behavior
+
+When a product is new and has zero votes, the intent score is driven entirely by market-derived signals. As users interact with the product (via campaigns, companion interactions, or direct purchases), the user-declared lane naturally takes over:
+
+| Phase | USER_DECLARED | MARKET_DERIVED | Effective Score Driver |
+|-------|--------------|---------------|----------------------|
+| Cold start (0 votes, 50 signals) | 0 | 0.03 | Market data only |
+| Early (5 votes, 100 signals) | 0.035 | 0.06 | Balanced |
+| Growing (50 votes, 200 signals) | 0.35 | 0.12 | User data dominates |
+| Mature (100+ votes, 500 signals) | 0.7 | 0.3 | User data drives |
+
+## Provenance Transparency
+
+Every product in the feed includes `intentProvenance` — a breakdown of exactly what signals contribute to the score. This enables agents to:
+
+- **Explain recommendations** to users ("This product has strong positive reviews from 87 market sources")
+- **Apply their own weighting** if the default 70/30 split doesn't match their use case
+- **Filter by confidence** — only recommend products with sufficient user-declared signals
+
+## Attribute Baselines
+
+The `attributeBaselines` array provides the top enrichment attribute for each type, computed by the [enrichment pipeline](/agentic/enrichment-pipeline). Each entry includes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Attribute type from the [taxonomy](/agentic/enrichment-pipeline#attribute-taxonomy) |
+| `topValue` | string | Most prominent value for this attribute |
+| `score` | float | Computed score: `avg(confidence) × log1p(count)` |
+
+Agents can use baselines to match products against user preferences. For example, a user with `skinType: "oily"` and `concerns: ["acne"]` can be matched against products with `skin_type_suitability: "oily"` and `key_ingredient: "salicylic acid"` baselines.
+
+## Checkout Sessions
+
+Once an agent selects a product for purchase, it creates a checkout session:
+
+```bash
+POST /api/v1/agentic/checkout/sessions
+```
+
+```json
+{
+  "productId": "prod_abc123",
+  "quantity": 1,
+  "userId": "user_xyz",
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "San Francisco",
+    "state": "CA",
+    "zip": "94102",
+    "country": "US"
+  },
+  "paymentMethod": "x402"
+}
+```
+
+The session returns payment details for x402 execution or Stripe checkout URL. See [x402 Payments](/agentic/x402-payments) for the machine-native payment flow.
+
+## Integration Patterns
+
+### Minimal Agent Integration
+
+```typescript
+// 1. Discover products
+const feed = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/products/feed?limit=10');
+const { products } = await feed.json();
+
+// 2. Filter by agent logic (e.g., match user preferences)
+const matches = products.filter(p =>
+  p.attributeBaselines.some(b =>
+    b.type === 'skin_type_suitability' && b.topValue === 'oily'
+  )
+);
+
+// 3. Create checkout session for best match
+const session = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/checkout/sessions', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    productId: matches[0].id,
+    quantity: 1,
+    userId: 'user_xyz',
+    paymentMethod: 'x402'
+  })
+});
+```
+
+### With Companion API (Personalized)
+
+For agents that maintain user profiles:
+
+```typescript
+// 1. Fetch user's intent profile
+const profile = await podium.companion.getProfile(userId);
+
+// 2. Get personalized recommendations
+const recs = await podium.companion.getRecommendations(userId, { count: 10 });
+
+// 3. Cross-reference with enrichment baselines from the feed
+const feed = await fetch('/api/v1/agentic/products/feed');
+const enriched = feed.products.map(p => ({
+  ...p,
+  matchScore: computeMatch(profile, p.attributeBaselines)
+}));
+```

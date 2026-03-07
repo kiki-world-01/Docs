@@ -1,80 +1,138 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get an API key, make your first call, and install the SDK
 ---
 
-## Get started in three steps
+## 1. Get Your API Key
 
-Get your documentation site running locally and make your first customization.
+Every request to the Podium API requires an API key passed as a Bearer token. Keys are scoped to an organization and prefixed to indicate environment:
 
-### Step 1: Set up your local environment
+| Prefix | Environment | API Base URL |
+|--------|------------|--------------|
+| `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
+| `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Info>
+  Contact the Podium team to provision an organization and receive your API keys. Each organization can have multiple keys with independent rate limits.
+</Info>
 
-### Step 2: Deploy your changes
+## 2. Make Your First Call
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Verify your key works by listing products:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<CodeGroup>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+```bash cURL
+curl -X GET https://api.podiumcommerce.xyz/api/v1/products \
+  -H "Authorization: Bearer podium_live_your_key_here"
+```
 
-### Step 3: Go live
+```typescript TypeScript SDK
+import Podium from '@podiumcommerce/node-sdk';
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+const podium = new Podium({
+  apiKey: 'podium_live_your_key_here'
+});
 
-## Next steps
+const products = await podium.products.list();
+console.log(products);
+```
 
-Now that you have your docs running, explore these key features:
+```typescript Fetch
+const res = await fetch('https://api.podiumcommerce.xyz/api/v1/products', {
+  headers: {
+    'Authorization': 'Bearer podium_live_your_key_here'
+  }
+});
+const products = await res.json();
+```
+
+</CodeGroup>
+
+A successful response returns a JSON array of products scoped to your organization.
+
+## 3. Install the TypeScript SDK
+
+The SDK auto-detects staging vs production from your key prefix:
+
+```bash
+npm install @podiumcommerce/node-sdk
+```
+
+```typescript
+import Podium from '@podiumcommerce/node-sdk';
+
+const podium = new Podium({
+  apiKey: process.env.PODIUM_API_KEY
+});
+
+// The SDK is organized by namespace
+const product  = await podium.products.get('prod_abc123');
+const creators = await podium.creators.list();
+const user     = await podium.users.get('user_xyz');
+```
+
+<Tip>
+  The SDK is published as `@podiumcommerce/node-sdk` on npm. It ships with full TypeScript types generated from the OpenAPI spec.
+</Tip>
+
+## 4. Explore the API
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Interactive Docs" icon="play" href="https://api.podiumcommerce.xyz/docs">
+    Try endpoints live with the Scalar API playground — paste your key and send requests
+  </Card>
+  <Card title="OpenAPI Spec" icon="file-code" href="https://api.podiumcommerce.xyz/openapi.json">
+    Download the full OpenAPI 3.1 spec for code generation or import into Postman
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## 5. Choose Your Path
+
+<CardGroup cols={3}>
+  <Card title="Build an Agent" icon="robot" href="/agentic/overview">
+    Use the agentic product feed, companion API, and x402 payments to build intelligent commerce agents
+  </Card>
+  <Card title="Commerce API" icon="cart-shopping" href="/api-reference/introduction">
+    Products, orders, checkout, creators, payments, points, campaigns, and NFTs
+  </Card>
+  <Card title="Smart Contracts" icon="link" href="/contracts/overview">
+    On-chain Task Pool, solver reputation, and USDC settlement on Base
+  </Card>
+</CardGroup>
+
+## Local Development
+
+To run podium-elysia locally for development:
+
+<Steps>
+  <Step title="Prerequisites">
+    Install [Bun](https://bun.sh) (>= 1.0) and Docker.
+  </Step>
+  <Step title="Clone and install">
+    ```bash
+    git clone https://github.com/kiki-world-01/podium-elysia.git
+    cd podium-elysia
+    bun install
+    ```
+  </Step>
+  <Step title="Start infrastructure">
+    ```bash
+    bun run db:start    # PostgreSQL on port 5432
+    bun run redis:start # Redis on port 6379
+    ```
+  </Step>
+  <Step title="Configure environment">
+    ```bash
+    cp .env .env.local
+    ```
+    At minimum, set `DATABASE_URL`, `DIRECT_URL`, `REDIS_URL`, `PLATFORM_ORG_ID`, `API_KEY_PREFIX`, and `API_SHARED_KEY`.
+  </Step>
+  <Step title="Push schema and start">
+    ```bash
+    bun run db:push  # Sync Prisma schema + apply RLS policies
+    bun run dev      # http://localhost:3030
+    ```
+    Verify at `http://localhost:3030/docs` for the interactive API explorer.
+  </Step>
+</Steps>

@@ -1,0 +1,71 @@
+---
+title: Task Pool API
+description: REST endpoints for Task Pool V2 — task management, pool deployment, solver discovery, and verification
+---
+
+## Overview
+
+The Task Pool API provides REST endpoints for managing the on-chain Task Pool V2 system. These endpoints orchestrate between the Podium API and the smart contracts on Base.
+
+See [Smart Contracts: Task Pool V2](/contracts/task-pool) for the on-chain architecture.
+
+## Endpoints
+
+### Tasks
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/tasks` | Create a task (deploys on-chain intent) |
+| `GET` | `/tasks` | List tasks for the organization |
+| `GET` | `/tasks/{taskId}` | Get task details |
+| `POST` | `/tasks/{taskId}/verify` | Submit task for verification |
+
+### Pools
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/tasks/pools` | Get organization's deployed pool addresses |
+
+### Solver Discovery
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/solver` | List registered solvers (public, no auth) |
+
+### Verification Webhook
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/webhooks/task-verify` | Verification oracle callback |
+
+### Admin
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/admin/tasks` | Admin task management |
+
+## Task Creation Flow
+
+1. **API call**: `POST /tasks` with amount, duration, campaign ID, verification method, and acceptance criteria
+2. **Pool check**: Verifies the organization has a deployed TaskPool (via `TenantContractPool`)
+3. **On-chain**: Calls `TaskPool.createTask()` which registers with IntentRegistry
+4. **Database**: Creates a `Task` record tracking the off-chain state
+
+## Verification Methods
+
+| Method | Description |
+|--------|-------------|
+| `Consensus` | Multiple parties must agree on completion |
+| `Oracle` | Authorized oracle evaluates the submission |
+| `AIEval` | AI evaluation against acceptance criteria |
+
+The Podium API backend acts as the oracle — it receives verification requests, evaluates submissions (via AI, consensus, or custom logic), and calls `VerificationEngine.resolveVerification()` on-chain.
+
+## Intents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/intents` | List intents for the organization |
+| `GET` | `/intents/analytics` | Intent analytics (total, fulfilled, pending, expired) |
+| `GET` | `/intents/treasury` | Treasury balance and status |
+| `POST` | `/intents/treasury/create` | Create merchant treasury |

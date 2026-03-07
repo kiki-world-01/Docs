@@ -1,0 +1,76 @@
+---
+title: NFTs & Airdrops
+description: On-chain NFT minting, reward programs, airdrop distribution, and redemption tracking
+---
+
+## Overview
+
+Podium supports minting NFTs on EVM chains (Base, Polygon, Arc Testnet) with a queued minting system via Privy server wallets. NFTs serve as reward vehicles with six distinct reward types.
+
+## Endpoints
+
+### NFT Queries
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/nft` | Query NFTs by contract/owner |
+| `GET` | `/user/{id}/nfts` | User's NFT collection |
+| `GET` | `/user/{id}/nfts/earned` | NFTs earned through rewards |
+| `GET` | `/user/{id}/nfts/redeemable` | Available for redemption |
+| `GET` | `/user/{id}/nfts/redeemed` | Already redeemed |
+| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | NFT status |
+
+### NFT Rewards
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/nft-reward` | Create an NFT reward program |
+| `GET` | `/nft-reward/{id}` | Get reward details |
+| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem an NFT |
+
+### Airdrops
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/airdrop/{id}` | Airdrop details |
+| `POST` | `/airdrop/{id}/delivered` | Mark airdrop as delivered |
+| `GET` | `/airdrop/{id}/redemption` | Airdrop redemption tracking |
+
+### Creator Collectibles
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/creator/{slug}/collectibles` | Public collectibles listing |
+| `GET` | `/creator/{slug}/collectibles/metadata` | Collectible metadata |
+| `GET` | `/creator/id/{creatorId}/collectibles` | Authenticated collectibles management |
+
+## NFT Reward Types
+
+| Type | Description |
+|------|-------------|
+| `POINTS` | Redeem for Podium points |
+| `FREE_PRODUCT` | Redeem for a specific product |
+| `DISCOUNT_CODE` | Unlock a discount code |
+| `EVENT_PASS` | Access to an event or experience |
+| `CUSTOM` | Custom reward defined by creator |
+| `EXCLUSIVE_ACCESS` | Gated content or feature access |
+
+## Minting System
+
+NFTs are minted through a queue system for reliability:
+
+1. Mint request created → `QueuedMint` with status `PENDING`
+2. Mint queue cron job processes pending mints
+3. Privy server wallet executes the on-chain transaction
+4. Status updated to `COMPLETED` or `ERROR`
+
+## NFT Contract Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Contract name |
+| `symbol` | string | Token symbol |
+| `proxyAddress` | string | Deployed proxy address |
+| `implementationAddress` | string | Implementation address |
+| `chain` | string | Deployment chain |
+| `maxSupply` | integer | Maximum mintable tokens |

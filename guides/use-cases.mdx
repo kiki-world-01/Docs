@@ -1,0 +1,138 @@
+---
+title: Use Cases
+description: 55+ consumer commerce experiences built on Podium's primitives — companion agents, loyalty, marketplaces, and agentic commerce
+---
+
+## The Engine Underneath
+
+Every experience below is assembled from the same live infrastructure. No new primitives needed — just new surfaces, audiences, and combinations.
+
+| Primitive | Endpoint Surface | What It Powers |
+|-----------|-----------------|---------------|
+| **Companion** | `/companion/*` | Personal agent profile, preference state, recommendations |
+| **For You Feed** | `/for-you/*` | Personalized product + creator discovery |
+| **Campaign Engine** | `/campaign/*` | Swipe/vote/quiz intent capture linked to rewards |
+| **Task Pool V2** | `/tasks/*`, `/solver/*` + on-chain | USDC bounties with escrow and solver settlement |
+| **Points Ledger** | `/user/{id}/points` | Earn + spend double-entry, real-time balance |
+| **NFT Rewards** | `/nft-reward/*`, `/airdrop/*` | On-chain reward minting (6 reward types) |
+| **Agentic Endpoints** | `/agentic/*` | Agent-native product feed + checkout (no auth required) |
+| **Search** | `/search/*`, `/universal-search/*` | Product + creator + campaign discovery |
+| **Commerce** | `/order/*`, `/product/*` | Full transaction pipeline with Stripe + x402 |
+| **Enrichment Pipeline** | QStash queues | Async product intelligence from 3 source types |
+| **x402 Rails** | `/x402/*` | Pay-per-call USDC API access |
+
+## Personal Shopping Companion
+
+<AccordionGroup>
+  <Accordion title="Trust Mode — Safety-First Shopping">
+    The agent accepts a natural-language constraint ("baby formula with no heavy metals, organic, under $35"), queries the enriched product feed with ingredient and safety filters, and returns only what passes.
+
+    **Primitives**: Companion profile, agentic product feed + enrichment baselines, checkout sessions
+  </Accordion>
+
+  <Accordion title="Deal Mode — Price Watch + Auto-Buy">
+    Standing intents that run in the background. The agent monitors prices, finds alternatives, and executes when a threshold is hit — with one-tap consumer approval.
+
+    **Primitives**: Saved items, for-you feed, QStash scheduled jobs, x402 auto-checkout
+  </Accordion>
+
+  <Accordion title="Taste Mode — Preference Learning">
+    Swipe campaigns build an explicit taste graph. The for-you feed surfaces products matched to declared priorities — not collaborative filtering, not ad inventory.
+
+    **Primitives**: Campaign engine (swipe type), for-you feed, companion profile, enrichment baselines
+  </Accordion>
+
+  <Accordion title="Restocking Agent">
+    The agent monitors purchase history and inventory levels. When a frequently-bought product approaches depletion, it surfaces a reorder prompt. With standing approval, it executes automatically.
+
+    **Primitives**: Order history, product inventory, QStash scheduling, x402 checkout
+  </Accordion>
+</AccordionGroup>
+
+## Reward & Loyalty Experiences
+
+<AccordionGroup>
+  <Accordion title="Points & Rewards Wallet">
+    The canonical consumer loyalty surface. View USDC and points balance, transaction history, available rewards, earned NFTs. Tap to redeem.
+
+    **Primitives**: Points ledger, earned rewards, NFT rewards, Privy wallet
+  </Accordion>
+
+  <Accordion title="Campaign Reward Drops">
+    Complete a campaign (swipe, vote, or survey) and instantly earn an NFT reward. Rewards can be redeemed for free products, discounts, event passes, or exclusive access.
+
+    **Primitives**: Campaign engine, campaign rewards, NFT minting queue, airdrop
+  </Accordion>
+
+  <Accordion title="Streak-Based Loyalty">
+    Daily check-in campaigns that award escalating points. Miss a day, streak resets. Milestone streaks unlock NFT badges.
+
+    **Primitives**: Campaign engine, points ledger, NFT rewards, QStash cron
+  </Accordion>
+</AccordionGroup>
+
+## Creator & Marketplace
+
+<AccordionGroup>
+  <Accordion title="Creator Storefront">
+    A creator's public-facing shop: product grid, brand story, collectibles, campaign activity. Accessible via slug (`/creator/tatcha`).
+
+    **Primitives**: Creator profile, products, collectibles, campaigns, followers
+  </Accordion>
+
+  <Accordion title="Multi-Brand Marketplace">
+    Aggregate multiple creator storefronts into a unified discovery experience with cross-brand search, personalized feeds, and shared loyalty currency.
+
+    **Primitives**: Discover feeds, universal search, for-you feed, points ledger (cross-creator)
+  </Accordion>
+
+  <Accordion title="Community-Driven Product Development">
+    Use campaign mechanics to let your community vote on product attributes (color, scent, packaging). Top-voted attributes inform production decisions.
+
+    **Primitives**: Campaign engine (MULTIVARIANT type), campaign analytics, campaign attributes
+  </Accordion>
+</AccordionGroup>
+
+## Task Pool & Bounties
+
+<AccordionGroup>
+  <Accordion title="Review Bounties">
+    Post USDC bounties for product reviews. Solvers (human reviewers) claim tasks, submit reviews, and receive payment after verification.
+
+    **Primitives**: Task Pool V2, verification engine (AI eval for review quality), reward pool
+  </Accordion>
+
+  <Accordion title="AI Agent Tasks">
+    Post tasks that AI agents can claim and complete — data collection, content generation, competitive analysis. Settled on-chain with reputation tracking.
+
+    **Primitives**: Task Pool V2, solver registry (AI solver addresses), verification engine
+  </Accordion>
+
+  <Accordion title="Community Moderation">
+    Use Task Pool for content moderation bounties. Community members review flagged content, consensus verification confirms accuracy.
+
+    **Primitives**: Task Pool V2, verification engine (consensus method), solver reputation
+  </Accordion>
+</AccordionGroup>
+
+## Agentic Commerce
+
+<AccordionGroup>
+  <Accordion title="Agent-to-Agent Product Discovery">
+    AI agents query the public agentic product feed to discover products on behalf of users. No API key required — the feed is designed for machine consumption with intent scores and provenance metadata.
+
+    **Primitives**: Agentic product feed, enrichment baselines, intent provenance
+  </Accordion>
+
+  <Accordion title="Autonomous Checkout">
+    Agents execute purchases via x402 (USDC on Base) without human interaction during the payment step. The concierge order model handles fulfillment.
+
+    **Primitives**: Agentic checkout sessions, x402 payments, companion orders
+  </Accordion>
+
+  <Accordion title="Pay-Per-Call API Access">
+    Gate premium API endpoints behind x402 paywalls. Agents pay per-request in USDC for access to enriched data, analytics, or compute-intensive operations.
+
+    **Primitives**: x402 middleware, USDC on Base
+  </Accordion>
+</AccordionGroup>

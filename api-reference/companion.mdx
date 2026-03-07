@@ -1,0 +1,106 @@
+---
+title: Companion API
+description: Generalized personal agent infrastructure — intent profiles, product catalog, interactions, recommendations, and orders
+---
+
+## Overview
+
+The Companion API provides the building blocks for personal shopping agents. It's **vertical-agnostic** — the Beauty Companion uses it for skincare, but the same endpoints power agents for any product domain.
+
+See [Building a Personal Agent](/agentic/beauty-companion) for a complete reference implementation.
+
+## Endpoints
+
+### Intent Profiles
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/profile/{userId}` | Get user's intent profile |
+| `POST` | `/companion/profile/{userId}` | Create intent profile |
+| `PATCH` | `/companion/profile/{userId}` | Update profile fields |
+| `POST` | `/companion/profile/{userId}/points` | Award points with metadata |
+
+### Products
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/products` | List catalog items (filterable) |
+| `GET` | `/companion/products/{productId}` | Single product detail |
+
+Query parameters for product listing: `category`, `brand`, `minPrice`, `maxPrice`, `search`, `limit`, `offset`.
+
+### Interactions
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/interactions` | Record a user-product interaction |
+| `GET` | `/companion/interactions/{userId}` | Get all interactions for a user |
+
+### Interaction Types
+
+| Action | Meaning |
+|--------|---------|
+| `RANK_UP` | User likes/loves the product |
+| `RANK_DOWN` | User dislikes the product |
+| `SKIP` | User skipped (neutral) |
+| `PURCHASED` | User completed a purchase |
+| `PURCHASE_INTENT` | User attempted but didn't complete purchase |
+| `NUDGE_OPENED` | User opened a proactive nudge/notification |
+
+### Recommendations
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/recommendations/{userId}` | AI-ranked product recommendations |
+
+Query parameters: `count` (number of recommendations), `category`.
+
+### Orders
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/orders` | Create a concierge order |
+| `GET` | `/companion/orders/{userId}` | List user's companion orders |
+| `GET` | `/companion/orders/detail/{orderId}` | Order detail |
+
+### User Linking
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/user/by-telegram/{telegramId}` | Find/link Podium user by Telegram ID |
+
+## Intent Profile Schema
+
+The intent profile stores user preferences. Fields are flexible — use whatever dimensions describe your vertical:
+
+```json
+{
+  "id": "profile_abc123",
+  "userId": "user_xyz",
+  "skinType": "Sensitive",
+  "concerns": ["Anti-aging", "Hydration"],
+  "priceRange": { "min": 75, "max": 150 },
+  "brands": ["La Mer", "Drunk Elephant"],
+  "avoidances": ["fragrance", "parabens"],
+  "purchaseHistory": [],
+  "podiumPoints": 45,
+  "enrichmentVec": [],
+  "quizCompletedAt": "2026-03-07T10:00:00Z"
+}
+```
+
+The `enrichmentVec` field holds a vector embedding for similarity-based matching, populated server-side from the user's interaction patterns and preference declarations.
+
+## Concierge Order Model
+
+Companion orders use a concierge fulfillment model — the platform handles purchasing from the retailer and shipping to the user:
+
+| Status | Description |
+|--------|-------------|
+| `PENDING_PAYMENT` | Order created, awaiting payment |
+| `PAID` | Payment confirmed (x402 or Stripe) |
+| `FULFILLING` | Platform purchasing from retailer |
+| `SHIPPED` | Shipped to user |
+| `DELIVERED` | Delivered |
+| `CANCELLED` | Order cancelled |
+| `REFUNDED` | Payment refunded |

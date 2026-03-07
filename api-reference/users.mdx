@@ -1,0 +1,100 @@
+---
+title: Users
+description: User profiles, wallets, orders, points, NFTs, social graph, and notifications
+---
+
+## Overview
+
+Users are end consumers within an organization. They browse products, earn points, follow creators, collect NFTs, and manage wallets.
+
+## Endpoints
+
+### Profile
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/user` | Create a user |
+| `GET` | `/user/{id}` | Get user profile |
+| `PATCH` | `/user/{id}` | Update profile |
+| `GET` | `/user/username/{username}` | Look up by username |
+| `GET` | `/user/privy/{privyId}` | Look up by Privy ID |
+| `GET` | `/user/privy/{privyId}/profile` | Full profile by Privy ID |
+
+### Wallets
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/wallets` | List user's wallets |
+| `GET` | `/user/{id}/wallets/{address}` | Wallet detail |
+| `GET` | `/user/{id}/wallets/{address}/transactions` | Wallet transactions |
+| `POST` | `/user/{id}/wallets/{address}/send` | Send from wallet |
+
+### Orders
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/orders` | Order history |
+| `GET` | `/user/{id}/order/{orderId}` | Order detail |
+| `POST` | `/user/{id}/order/{orderId}/checkout` | Stripe checkout |
+| `POST` | `/user/{id}/order/{orderId}/checkout/coinbase` | Coinbase checkout |
+| `POST` | `/user/{id}/order/{orderId}/checkout/embedded-wallet` | Embedded wallet checkout |
+| `POST` | `/user/{id}/order/{orderId}/product/{productId}` | Add product to order |
+| `DELETE` | `/user/{id}/order/{orderId}/item/{itemId}` | Remove order item |
+
+### Points
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/points` | Current points balance |
+| `GET` | `/user/{id}/points/history` | Points transaction history |
+| `POST` | `/user/{id}/order/{orderId}/points` | Apply points to order |
+| `POST` | `/user/{id}/order/{orderId}/points/finalize` | Finalize point spend |
+| `POST` | `/user/{id}/order/{orderId}/points/revert` | Revert point application |
+
+### NFTs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/nfts` | User's NFT collection |
+| `GET` | `/user/{id}/nfts/earned` | Earned NFT rewards |
+| `GET` | `/user/{id}/nfts/redeemable` | Available to redeem |
+| `GET` | `/user/{id}/nfts/redeemed` | Already redeemed |
+| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem an NFT reward |
+| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | NFT redemption status |
+
+### Social
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/followers` | User's followers |
+| `POST` | `/user/{id}/followers/follow` | Follow a user |
+| `GET` | `/user/{id}/following` | Users being followed |
+| `GET` | `/user/{id}/following/creators` | Creators being followed |
+| `GET` | `/user/{id}/following/count` | Following count |
+
+### Notifications
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/user/{id}/notifications` | Notification list |
+| `GET` | `/user/{id}/notification/{notificationId}` | Single notification |
+| `POST` | `/user/{id}/notification` | Create notification |
+
+## User Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | CUID2 identifier |
+| `username` | string | Unique handle |
+| `email` | string | Contact email |
+| `avatarUrl` | string | Profile image URL |
+| `bio` | string | User biography |
+| `city`, `state` | string | Location |
+
+## Wallet Types
+
+| Provider | Description |
+|----------|-------------|
+| Privy embedded | Auto-created on login, user-controlled |
+| Privy server | Platform-managed for automated operations |
+| Self-custodied | User's own external wallet address |

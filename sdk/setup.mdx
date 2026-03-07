@@ -1,0 +1,97 @@
+---
+title: TypeScript SDK
+description: Install, configure, and authenticate with the Podium TypeScript SDK
+---
+
+## Installation
+
+```bash
+npm install @podiumcommerce/node-sdk
+```
+
+The SDK is published as `@podiumcommerce/node-sdk` on npm with full TypeScript type definitions.
+
+## Configuration
+
+```typescript
+import Podium from '@podiumcommerce/node-sdk';
+
+const podium = new Podium({
+  apiKey: process.env.PODIUM_API_KEY
+});
+```
+
+The SDK auto-detects the environment from your key prefix:
+
+| Key Prefix | Routes To |
+|-----------|-----------|
+| `podium_test_` | `https://api.test.podiumcommerce.xyz/api/v1` |
+| `podium_live_` | `https://api.podiumcommerce.xyz/api/v1` |
+
+## SDK Namespaces
+
+The SDK is organized into namespaces that mirror the API structure:
+
+| Namespace | Covers |
+|-----------|--------|
+| `podium.products` | Product CRUD, listing, search |
+| `podium.creators` | Creator profiles, products, orders |
+| `podium.users` | User profiles, wallets, following |
+| `podium.orders` | Order management, checkout |
+| `podium.campaigns` | Campaign CRUD, participation |
+| `podium.nfts` | NFT queries, rewards, airdrops |
+| `podium.points` | Points balance, history |
+| `podium.companion` | Intent profiles, interactions, recommendations |
+| `podium.search` | Full-text search, autocomplete |
+| `podium.admin` | API keys, organizations, enrichment |
+
+## Basic Usage
+
+```typescript
+// List products
+const products = await podium.products.list();
+
+// Get a creator by slug
+const creator = await podium.creators.getBySlug('clean-beauty-co');
+
+// Create a user
+const user = await podium.users.create({
+  email: 'user@example.com',
+  username: 'jane_doe'
+});
+
+// Get points balance
+const points = await podium.points.getBalance(user.id);
+```
+
+## Error Handling
+
+The SDK throws typed errors with status codes:
+
+```typescript
+try {
+  const product = await podium.products.get('nonexistent');
+} catch (error) {
+  if (error.status === 404) {
+    console.log('Product not found');
+  } else if (error.status === 429) {
+    console.log(`Rate limited, retry after ${error.retryAfter}s`);
+  }
+}
+```
+
+## SDK Generation
+
+The SDK uses a hybrid generation approach:
+
+1. **OpenAPI spec** generated from Zod schemas via a build script
+2. **Service classes** auto-generated via `openapi-typescript-codegen`
+3. **Wrapper layer** maps generated services to clean namespaces
+
+To regenerate after API changes:
+
+```bash
+cd podium-elysia
+bun run sdk:generate  # Generate OpenAPI spec + service classes
+bun run sdk:build     # Build + publish
+```

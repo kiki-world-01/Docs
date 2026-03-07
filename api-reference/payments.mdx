@@ -1,0 +1,70 @@
+---
+title: Payments
+description: Stripe card payments, x402 USDC, Coinbase Commerce, embedded wallet checkout, and crypto payment intents
+---
+
+## Overview
+
+Podium supports four payment methods, each suited to different use cases:
+
+| Method | Use Case | Currency |
+|--------|----------|----------|
+| **Stripe** | Traditional card payments for consumer checkout | USD (fiat) |
+| **x402** | Machine-native agent payments | USDC on Base |
+| **Embedded wallet** | Privy-managed wallet for automated checkout | USDC on Base |
+| **Coinbase Commerce** | Crypto checkout with multiple token support | Various |
+
+## Stripe
+
+### Payment Intent Flow
+
+1. `POST /user/{id}/order/{orderId}/checkout` — creates a Stripe PaymentIntent
+2. Client completes payment using Stripe.js or redirect
+3. Stripe webhook confirms payment → order status updated to `PAID`
+
+### Webhook Events
+
+| Endpoint | Event |
+|----------|-------|
+| `/webhooks/stripe/payment-intent/succeeded` | Payment confirmed |
+| `/webhooks/stripe/payment-intent/processing` | Payment processing |
+| `/webhooks/stripe/payment-intent/failed` | Payment failed |
+| `/webhooks/stripe/account/updated` | Connect account status change |
+| `/webhooks/stripe/transfer/created` | Creator payout transferred |
+
+### Stripe Connect
+
+Creators receive payouts through Stripe Connect. The platform takes an application fee (`STRIPE_PLATFORM_APPLICATION_FEE_BPS`) on each transaction.
+
+## x402 (USDC)
+
+Machine-native payment via HTTP 402 protocol. See [x402 Payments](/agentic/x402-payments) for the full protocol documentation.
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /x402/orders/{orderId}/pay` | Pay for an order with USDC via x402 |
+
+## Embedded Wallet
+
+For automated checkout using Privy server wallets:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /user/{id}/order/{orderId}/checkout/embedded-wallet` | Checkout using Privy embedded wallet |
+
+## Coinbase Commerce
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /user/{id}/order/{orderId}/checkout/coinbase` | Create Coinbase Commerce checkout |
+
+## Payment Models
+
+| Model | Purpose |
+|-------|---------|
+| `StripePaymentIntent` | Links Stripe PaymentIntents to orders |
+| `StripeAccount` | Creator Stripe Connect accounts |
+| `StripeCustomer` | Stripe customer mappings |
+| `CoinbasePayment` | Coinbase Commerce checkout records |
+| `CryptoPaymentIntent` | Direct crypto payment intents |
+| `X402Payment` | x402 protocol payment records (PENDING → VERIFIED → SETTLED / FAILED) |

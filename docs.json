@@ -1,68 +1,148 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Podium",
+  "theme": "quill",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#3D38F5",
+    "light": "#6C69F8",
+    "dark": "#2A26C4"
   },
-  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png",
+    "href": "https://podiumcommerce.xyz"
+  },
+  "favicon": "/logo/favicon.png",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Platform",
         "groups": [
           {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
+            "group": "Getting Started",
+            "pages": ["index", "quickstart"]
           },
           {
-            "group": "Customization",
+            "group": "Platform",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "platform/architecture",
+              "platform/authentication",
+              "platform/concepts"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Agentic Intelligence",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
+            "pages": ["agentic/overview"]
+          },
+          {
+            "group": "Intelligence Layer",
             "pages": [
-              "api-reference/introduction"
+              "agentic/enrichment-pipeline",
+              "agentic/product-feed"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Commerce Primitives",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "agentic/x402-payments"
+            ]
+          },
+          {
+            "group": "Building on Podium",
+            "pages": ["agentic/beauty-companion"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/introduction"]
+          },
+          {
+            "group": "Commerce",
+            "pages": [
+              "api-reference/products",
+              "api-reference/creators",
+              "api-reference/orders",
+              "api-reference/payments"
+            ]
+          },
+          {
+            "group": "Users & Engagement",
+            "pages": [
+              "api-reference/users",
+              "api-reference/points",
+              "api-reference/campaigns",
+              "api-reference/nfts"
+            ]
+          },
+          {
+            "group": "Intelligence & Agents",
+            "pages": [
+              "api-reference/companion",
+              "api-reference/task-pool-api",
+              "api-reference/search"
+            ]
+          },
+          {
+            "group": "Platform",
+            "pages": [
+              "api-reference/webhooks",
+              "api-reference/admin"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Smart Contracts",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["contracts/overview"]
+          },
+          {
+            "group": "Contract Systems",
+            "pages": [
+              "contracts/task-pool",
+              "contracts/v1-intent-settlers"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "contracts/deployment",
+              "contracts/reference"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK & Guides",
+        "groups": [
+          {
+            "group": "TypeScript SDK",
+            "pages": ["sdk/setup", "sdk/examples"]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/integrations",
+              "guides/use-cases"
+            ]
+          },
+          {
+            "group": "AI Tools",
+            "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
             ]
           }
         ]
@@ -71,45 +151,52 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "API Playground",
+          "href": "https://api.podiumcommerce.xyz/docs",
+          "icon": "play"
         },
         {
-          "anchor": "Community",
-          "href": "https://mintlify.com/community",
-          "icon": "slack"
+          "anchor": "GitHub",
+          "href": "https://github.com/kiki-world-01",
+          "icon": "github"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "npm SDK",
+          "href": "https://www.npmjs.com/package/@podiumcommerce/node-sdk",
+          "icon": "npm"
         }
       ]
     }
   },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "API Playground",
+        "href": "https://api.podiumcommerce.xyz/docs"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Get API Key",
+      "href": "https://podiumcommerce.xyz"
     }
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/kiki-world-01",
+      "x": "https://x.com/podaboratory"
     }
+  },
+  "api": {
+    "baseUrl": "https://api.podiumcommerce.xyz/api/v1",
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "feedback": {
+    "thumbsRating": true
+  },
+  "modeToggle": {
+    "default": "dark"
   }
 }

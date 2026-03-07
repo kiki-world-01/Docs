@@ -1,0 +1,82 @@
+---
+title: Webhooks
+description: Inbound webhooks from Stripe, Shopify, and Privy, plus 25 QStash async event handlers and 8 cron jobs
+---
+
+## Overview
+
+Podium processes inbound webhooks from external services and uses QStash for reliable async event processing. All webhook endpoints are public (no API key required) but authenticated via service-specific signature verification.
+
+## External Webhooks
+
+### Stripe
+
+| Endpoint | Events |
+|----------|--------|
+| `/webhooks/stripe/payment-intent/succeeded` | Payment confirmed |
+| `/webhooks/stripe/payment-intent/processing` | Payment processing |
+| `/webhooks/stripe/payment-intent/failed` | Payment failed |
+| `/webhooks/stripe/account/updated` | Connect account status change |
+| `/webhooks/stripe/transfer/created` | Creator payout transferred |
+
+All Stripe webhooks verify the `Stripe-Signature` header against the configured webhook secret.
+
+### Shopify
+
+| Endpoint | Events |
+|----------|--------|
+| `/webhooks/shopify` | Product updates, order notifications, app uninstall |
+
+### Privy
+
+| Endpoint | Events |
+|----------|--------|
+| `/webhooks/privy` | User creation, wallet creation |
+
+## QStash Event Queues
+
+QStash provides reliable async event processing with automatic retries. All handlers authenticate via QStash signature verification.
+
+### 25 Event Types
+
+| Event | Trigger |
+|-------|---------|
+| `purchase-processed` | Order payment confirmed |
+| `order-confirmation` | Send order confirmation email |
+| `creator-order-confirmation` | Notify creator of new order |
+| `campaign-published` | Campaign goes live |
+| `campaign-ended` | Campaign closes |
+| `campaign-reviewed` | Campaign review completed |
+| `campaign-vote` | New vote cast |
+| `nft-received` | NFT minted to user |
+| `nft-redeemed` | NFT reward redeemed |
+| `nft-reward-published` | New NFT reward available |
+| `follow` | User followed a creator |
+| `points-received` | Points awarded |
+| `user-created` | New user registered |
+| `airdrop` | Process airdrop distribution |
+| `shopify-order-push` | Push order to Shopify |
+| `shopify-products-sync` | Sync products from Shopify |
+| `product-published` | Product goes live |
+| `presale-purchase-processed` | Token presale purchase |
+| `api-key-changed` | API key created/rotated/revoked (cache invalidation) |
+| `stripe-onboarding-reminder` | Remind creator to complete Stripe setup |
+| `task-pool-deployed` | New TaskPool deployed for tenant |
+| `task-created` | New task created in pool |
+| `task-verification-requested` | Task submitted for verification |
+| `enrichment-crawl` | Run enrichment data ingestion |
+| `enrichment-extract` | Extract attributes from raw records |
+| `enrichment-baseline` | Recompute attribute baselines |
+
+### 8 Cron Jobs
+
+| Job | Schedule | Purpose |
+|-----|----------|---------|
+| Airdrop monitor | Periodic | Check pending airdrop deliveries |
+| Campaign monitor | Periodic | End campaigns past their deadline |
+| Contract monitor | Periodic | Sync on-chain contract state |
+| Enrichment baseline recompute | Periodic | Recompute stale attribute baselines |
+| Mint queue processor | Frequent | Process pending NFT mints |
+| Payouts sweep | Periodic | Transfer eligible creator payouts |
+| Stripe onboarding reminder | Daily | Remind incomplete Stripe setups |
+| Token presale monitor | Periodic | Monitor presale status changes |

@@ -1,0 +1,154 @@
+---
+title: Core Concepts
+description: The domain model behind Podium — organizations, creators, users, products, orders, and the systems that connect them
+---
+
+## Organizations
+
+An organization is the root tenant in Podium. Everything — products, users, orders, campaigns, API keys — belongs to an organization. PostgreSQL Row-Level Security ensures complete data isolation between organizations.
+
+Organizations have:
+- A **subscription tier** (BUILDER, GROWTH, PRO, ADMIN) controlling rate limits and endpoint access
+- **Settings** including blockchain network configuration, x402 preferences, and reward modes
+- **App configurations** for per-application behavior customization
+
+## Creators
+
+Creators are merchants or brands within an organization. They have public-facing storefronts and manage products, orders, and payouts.
+
+| Field | Purpose |
+|-------|---------|
+| `slug` | URL-friendly unique identifier (e.g., `tatcha`, `the-ordinary`) |
+| `displayName` | Brand name shown to consumers |
+| `heroImageUrl` | Storefront banner |
+| `shippingSettings` | Default shipping configuration |
+| `pointsConfig` | Per-creator points earning rules |
+
+Creators connect to **Stripe Connect** for payment processing and receive payouts through the platform's payout sweep system. The `CreatorUser` model links a `User` to their `Creator` identity — a user can be both a consumer and a merchant.
+
+## Users
+
+Users are end consumers who browse, interact, and purchase within the platform.
+
+| Field | Purpose |
+|-------|---------|
+| `username` | Unique handle |
+| `email` | Contact and order notifications |
+| `avatarUrl` | Profile image |
+| `bio`, `city`, `state` | Profile details |
+
+Users link to external identity providers through `PrivyUser` and `DynamicUser` mapping tables. Wallets are tracked in `UserWallet` — each user can have multiple wallets (Privy embedded, self-custodied, or platform-managed).
+
+### Social Graph
+
+Users can follow creators (`CreatorFollow`) and other users (`Follow`). Creators can organize followers into `Group` membership for segmented engagement.
+
+## Products
+
+Products represent items available for purchase. They support configurable attributes (size, color, etc.) through a variant system.
+
+| Model | Purpose |
+|-------|---------|
+| `Product` | Core product: name, price, supply, status, shipping type, point eligibility |
+| `ProductAttribute` | Configurable option (e.g., "Color") |
+| `ProductAttributeVariant` | Specific value (e.g., "Rose Gold") with optional price modifier and supply |
+| `ProductMedia` | Images and videos |
+| `CreatorProduct` | Maps products to creators |
+
+Products go through a lifecycle: `DRAFT` → `PUBLISHED` → `ARCHIVED`. Published products appear in search, discovery feeds, and the agentic product feed.
+
+## Orders
+
+An order captures a purchase transaction from creation through fulfillment:
+
+```mermaid
+graph LR
+    OPEN --> PAYMENT_PENDING --> PAID --> PAYMENT_FAILED
+    PAID --> Fulfillment
+    subgraph Fulfillment
+        PROCESSING --> SHIPPED --> DELIVERED
+    end
+```
+
+| Model | Purpose |
+|-------|---------|
+| `Order` | Order header: status, shipping status, points applied, total |
+| `OrderItem` | Line items with quantity, price, selected attribute variants |
+| `UserOrder` | Links authenticated users to orders |
+| `GuestOrder` | Links anonymous buyers to orders |
+
+### Payment Methods
+
+Orders can be paid through multiple channels:
+- **Stripe** — Credit card via PaymentIntents
+- **x402** — USDC on Base via HTTP 402 protocol
+- **Embedded wallet** — Privy server wallet for automated agent purchases
+- **Coinbase Commerce** — Crypto checkout
+
+### Creator Payouts
+
+When an order is paid, the platform tracks a `CreatorPayout` record that moves through `PENDING` → `ELIGIBLE` → `TRANSFERRED`. A scheduled payout sweep cron job processes eligible payouts via Stripe Connect transfers.
+
+## Points & Loyalty
+
+Podium includes a programmable points ledger with double-entry bookkeeping:
+
+| Transaction Type | Source |
+|-----------------|--------|
+| `API` | Programmatic grants via the API |
+| `CAMPAIGN` | Earned through campaign participation |
+| `PURCHASE` | Earned from purchases (based on creator's points-per-dollar config) |
+| `NFT_REDEMPTION` | Spent when redeeming NFT rewards |
+| `PRESALE` | Spent on token presale purchases |
+
+Points are tracked per-user with full transaction history. The ledger supports both earning and spending with atomic balance checks.
+
+## Campaigns
+
+Campaigns are structured engagement mechanics that capture user intent:
+
+| Type | Mechanic |
+|------|---------|
+| `SWIPE` | Binary preference selection (like Tinder for products) |
+| `MULTIVARIANT` | Vote between multiple attribute options |
+| `SURVEY` | Structured question/answer collection |
+| `UGC` | User-generated content submission |
+
+Campaigns follow a lifecycle: `DRAFT` → `SUBMITTED` → `APPROVED` → `PUBLISHED` → `ENDED`. Each participation generates a `CampaignJourney` record, and associated rewards are tracked through `CampaignReward` and `CampaignRewardTransaction`.
+
+## NFTs & Rewards
+
+Podium supports on-chain NFT minting and reward redemption:
+
+| Model | Purpose |
+|-------|---------|
+| `NftContract` | Deployed smart contract (name, symbol, proxy/implementation addresses, chain, max supply) |
+| `Nft` | Individual minted token with owner address |
+| `NftReward` | Reward program definition |
+| `NftRedemption` | Tracks when a reward is redeemed |
+| `QueuedMint` | Mint queue for batched minting via Privy server wallets |
+| `Airdrop` | Scheduled bulk NFT distribution |
+
+NFT rewards support six types: `POINTS`, `FREE_PRODUCT`, `DISCOUNT_CODE`, `EVENT_PASS`, `CUSTOM`, and `EXCLUSIVE_ACCESS`.
+
+## Intents & Settlement
+
+The intent layer bridges off-chain commerce with on-chain settlement:
+
+| Model | Purpose |
+|-------|---------|
+| `IntentSettlement` | On-chain reward intent lifecycle (PENDING → LOCKED → FULFILLED / EXPIRED / CANCELLED) |
+| `MerchantTreasury` | Per-organization USDC treasury with on-chain balance tracking |
+| `SolverPerformance` | Solver fulfillment metrics and reputation data |
+
+## Task Pool (V2)
+
+The Task Pool system enables on-chain bounty distribution:
+
+| Model | Purpose |
+|-------|---------|
+| `TenantContractPool` | Per-organization deployed TaskPool + RewardPool contract addresses |
+| `Task` | Generalized task definition (solver-agnostic, human or AI) |
+| `VerificationRequest` | Task completion verification tracking |
+
+See [Smart Contracts](/contracts/overview) for the on-chain architecture.

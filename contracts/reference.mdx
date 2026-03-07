@@ -1,0 +1,140 @@
+---
+title: Contract Reference
+description: All contract interfaces, function signatures, events, and custom errors
+---
+
+## V2 Contracts
+
+### TaskPoolFactory
+
+```solidity
+function createTenantPools(bytes32 tenantId, TenantConfig config) external onlyOwner
+function upgradeTaskPool(address newImplementation) external onlyOwner
+function upgradeRewardPool(address newImplementation) external onlyOwner
+function deactivateTenant(bytes32 tenantId) external onlyOwner
+function computeTaskPoolAddress(bytes32 tenantId) external view returns (address)
+function computeRewardPoolAddress(bytes32 tenantId) external view returns (address)
+function getTenantPools(bytes32 tenantId) external view returns (TenantPools memory)
+function getAllTenantIds() external view returns (bytes32[] memory)
+```
+
+### TaskPoolImplementation
+
+```solidity
+function initialize(bytes32 _tenantId, address _usdc, address _verificationEngine, address _solverRegistry, address _intentRegistry, address _rewardPool, address _owner) external initializer
+function depositFunds(uint256 amount) external
+function withdrawFunds(uint256 amount) external
+function createTask(address merchant, uint256 amount, uint256 duration, bytes32 campaignId, VerificationMethod method, bytes calldata criteria) external onlyOwner returns (bytes32)
+function claimTask(bytes32 taskId) external
+function submitTask(bytes32 taskId, bytes32 submissionHash) external
+function settleTask(bytes32 taskId, address solver) external onlyVerificationEngine
+function cancelTask(bytes32 taskId) external
+function setPaused(bool _paused) external onlyOwner
+function getMerchantBalance(address merchant) external view returns (uint256)
+function getTask(bytes32 taskId) external view returns (Task memory)
+```
+
+### RewardPoolImplementation
+
+```solidity
+function initialize(bytes32 _tenantId, address _usdc, address _solverRegistry, address _intentRegistry, address _taskPool, address _protocolFeeRecipient, uint256 _protocolFeeBps, uint256 _solverFeeBps, address _owner) external initializer
+function queuePayout(bytes32 taskId, address solver, uint256 grossAmount) external onlyTaskPool
+function claimRewards() external
+function setFees(uint256 _protocolFeeBps, uint256 _solverFeeBps) external onlyOwner
+function setProtocolFeeRecipient(address _recipient) external onlyOwner
+function getPendingPayout(address account) external view returns (uint256)
+function getPayoutRecord(bytes32 taskId) external view returns (PayoutRecord memory)
+```
+
+### SolverRegistry
+
+```solidity
+function initialize(address _owner) external initializer
+function register(bytes calldata metadata) external
+function isEligible(address solver, bytes32 taskId) external view returns (bool)
+function accrueReward(address solver, uint256 amount) external onlyAuthorizedRewardPool
+function recordClaim(address solver) external
+function banSolver(address solver) external onlyOwner
+function deactivateSolver(address solver) external onlyOwner
+function authorizeRewardPool(address pool) external onlyOwner
+function getSolver(address solver) external view returns (SolverProfile memory)
+function getAllSolvers() external view returns (address[] memory)
+```
+
+### VerificationEngine
+
+```solidity
+function initialize(address _owner, address _aiOracle) external initializer
+function requestVerification(bytes32 taskId, address solver, bytes32 submissionHash, bytes calldata criteria, VerificationMethod method) external onlyAuthorizedTaskPool
+function resolveVerification(bytes32 taskId, bool approved) external onlyOracle
+function addOracle(address oracle) external onlyOwner
+function removeOracle(address oracle) external onlyOwner
+function setAiOracle(address _aiOracle) external onlyOwner
+function authorizeTaskPool(address pool) external onlyOwner
+function revokeTaskPool(address pool) external onlyOwner
+function getRequest(bytes32 taskId) external view returns (VerificationRequest memory)
+```
+
+### IntentRegistryV2
+
+```solidity
+function initialize(address _owner) external initializer
+function registerIntent(bytes32 intentId, address merchant, address recipient, uint256 amount) external onlyAuthorized
+function markFulfilled(bytes32 intentId, address solver) external onlyAuthorized
+function addAuthorizedCaller(address caller) external onlyOwner
+function removeAuthorizedCaller(address caller) external onlyOwner
+function isAuthorizedCaller(address caller) external view returns (bool)
+function getIntent(bytes32 intentId) external view returns (IntentRecord memory)
+function getAllIntents(uint256 offset, uint256 limit) external view returns (IntentRecord[] memory)
+```
+
+## Events
+
+### TaskPoolImplementation
+
+```solidity
+event FundsDeposited(address indexed merchant, uint256 amount)
+event FundsWithdrawn(address indexed merchant, uint256 amount)
+event TaskCreated(bytes32 indexed taskId, address merchant, uint256 amount, uint256 deadline)
+event TaskClaimed(bytes32 indexed taskId, address solver)
+event TaskSubmitted(bytes32 indexed taskId, bytes32 submissionHash)
+event TaskSettled(bytes32 indexed taskId, address solver, uint256 amount)
+event TaskCancelled(bytes32 indexed taskId)
+event PoolPaused(bool paused)
+```
+
+### RewardPoolImplementation
+
+```solidity
+event PayoutQueued(bytes32 indexed taskId, address solver, uint256 gross, uint256 net, uint256 protocolFee, uint256 solverFee)
+event RewardsClaimed(address indexed account, uint256 amount)
+event FeesUpdated(uint256 protocolFeeBps, uint256 solverFeeBps)
+```
+
+### SolverRegistry
+
+```solidity
+event SolverRegistered(address indexed solver, uint256 registeredAt)
+event SolverBanned(address indexed solver)
+event SolverDeactivated(address indexed solver)
+event RewardAccrued(address indexed solver, uint256 amount, uint256 newReputation)
+event RewardPoolAuthorized(address indexed pool)
+```
+
+### VerificationEngine
+
+```solidity
+event VerificationRequested(bytes32 indexed taskId, address solver, VerificationMethod method)
+event VerificationResolved(bytes32 indexed taskId, bool approved, address resolver)
+event TaskPoolAuthorized(address indexed pool)
+event TaskPoolRevoked(address indexed pool)
+```
+
+## Enums
+
+```solidity
+enum TaskStatus { Open, Claimed, SubmittedForVerification, Verified, Settled, Expired, Cancelled }
+enum VerificationMethod { Consensus, Oracle, AIEval }
+enum VerificationStatus { Pending, Approved, Rejected }
+enum IntentStatus { Pending, Locked, Fulfilled, Expired, Cancelled }
+```

@@ -1,33 +1,154 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: API Reference
+description: Base URLs, authentication, error handling, pagination, and conventions for the Podium REST API
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URLs
 
-## Welcome
+| Environment | Base URL |
+|------------|----------|
+| **Production** | `https://api.podiumcommerce.xyz/api/v1` |
+| **Staging** | `https://api.test.podiumcommerce.xyz/api/v1` |
+| **Local** | `http://localhost:3030/api/v1` |
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+All endpoints are prefixed with `/api/v1`. The interactive API playground is available at [api.podiumcommerce.xyz/docs](https://api.podiumcommerce.xyz/docs).
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Most endpoints require a Bearer token:
+
+```bash
+curl -X GET https://api.podiumcommerce.xyz/api/v1/products \
+  -H "Authorization: Bearer podium_live_your_key_here"
+```
+
+Keys prefixed with `podium_test_` route to staging; `podium_live_` routes to production. See [Authentication](/platform/authentication) for details on key management, subscription tiers, and rate limiting.
+
+### Public Endpoints
+
+Some endpoints require no authentication:
+
+- `/agentic/*` — AI agent product discovery and checkout
+- `/webhooks/*` — Inbound webhook handlers
+- `/solver/*` — Solver discovery for Task Pool
+
+## Request Format
+
+All request bodies use JSON with `Content-Type: application/json`. Every endpoint validates its input with Zod schemas — invalid requests return a 422 with field-level error details.
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/product \
+  -H "Authorization: Bearer podium_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Organic Face Serum",
+    "price": 2500,
+    "currency": "USD",
+    "description": "Lightweight hydrating serum"
+  }'
+```
+
+## Response Format
+
+Successful responses return JSON. Single resources return the object directly; collections return arrays. All responses include standard HTTP status codes.
+
+### Success Responses
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success — resource returned |
+| `201` | Created — new resource |
+| `204` | No content — successful deletion |
+
+### Error Responses
+
+Errors return a consistent shape:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "status": 422,
+  "error": "Validation failed",
+  "details": [
+    {
+      "field": "price",
+      "message": "Expected number, received string"
+    }
+  ]
+}
 ```
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Bad request — malformed input |
+| `401` | Unauthorized — missing or invalid API key |
+| `402` | Payment required — x402 crypto payment needed |
+| `403` | Forbidden — insufficient subscription tier or role |
+| `404` | Not found |
+| `409` | Conflict — duplicate resource |
+| `422` | Validation error — request body failed schema validation |
+| `429` | Rate limited — retry after the indicated delay |
+| `500` | Internal server error |
+
+## Pagination
+
+Collection endpoints support offset-based pagination:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 20 | Items per page (1–100) |
+| `offset` | integer | 0 | Number of items to skip |
+
+```bash
+GET /api/v1/products?limit=10&offset=20
+```
+
+## IDs
+
+Podium uses [CUID2](https://github.com/paralleldrive/cuid2) for all entity IDs. These are collision-resistant, URL-safe, and sortable by creation time.
+
+```
+clxyz1234567890abcdef  # Example CUID2
+```
+
+## Endpoint Groups
+
+The API is organized into these groups:
+
+<CardGroup cols={2}>
+  <Card title="Products" icon="box" href="/api-reference/products">
+    Product CRUD, attributes, media, categories
+  </Card>
+  <Card title="Creators" icon="store" href="/api-reference/creators">
+    Creator profiles, storefronts, orders, payouts
+  </Card>
+  <Card title="Users" icon="user" href="/api-reference/users">
+    User profiles, wallets, following, notifications
+  </Card>
+  <Card title="Orders" icon="receipt" href="/api-reference/orders">
+    Order lifecycle, checkout, shipping
+  </Card>
+  <Card title="Payments" icon="credit-card" href="/api-reference/payments">
+    Stripe, x402, Coinbase, embedded wallet
+  </Card>
+  <Card title="Points" icon="coins" href="/api-reference/points">
+    Points ledger, earning, spending, history
+  </Card>
+  <Card title="Campaigns" icon="bullhorn" href="/api-reference/campaigns">
+    Swipe, vote, survey, UGC campaigns
+  </Card>
+  <Card title="NFTs" icon="gem" href="/api-reference/nfts">
+    Contracts, minting, rewards, airdrops
+  </Card>
+  <Card title="Companion" icon="robot" href="/api-reference/companion">
+    Intent profiles, interactions, recommendations
+  </Card>
+  <Card title="Task Pool" icon="list-check" href="/api-reference/task-pool-api">
+    Tasks, pools, solvers, verification
+  </Card>
+  <Card title="Search" icon="magnifying-glass" href="/api-reference/search">
+    Full-text search, autocomplete, discovery
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
+    Stripe, Shopify, Privy, QStash events
+  </Card>
+</CardGroup>
