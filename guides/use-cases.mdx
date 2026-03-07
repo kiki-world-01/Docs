@@ -14,7 +14,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
 | **Campaign Engine** | `/campaign/*` | Swipe/vote/quiz intent capture linked to rewards |
 | **Task Pool V2** | `/tasks/*`, `/solver/*` + on-chain | USDC bounties with escrow and solver settlement |
 | **Points Ledger** | `/user/{id}/points` | Earn + spend double-entry, real-time balance |
-| **NFT Rewards** | `/nft-reward/*`, `/airdrop/*` | On-chain reward minting (6 reward types) |
+| **Rewards** | `/nft-reward/*`, `/airdrop/*` | On-chain reward minting (6 reward types) |
 | **Agentic Endpoints** | `/agentic/*` | Agent-native product feed + checkout (no auth required) |
 | **Search** | `/search/*`, `/universal-search/*` | Product + creator + campaign discovery |
 | **Commerce** | `/order/*`, `/product/*` | Full transaction pipeline with Stripe + x402 |
@@ -59,9 +59,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Taste Profile Builder">
-    Swipe campaigns produce a shareable taste profile — a structured representation of preferences that can serve as a lookalike seed, an exportable NFT, or a social object. Other agents can read the profile to make recommendations without re-learning.
+    Swipe campaigns produce a shareable taste profile — a structured representation of preferences that can serve as a lookalike seed, an exportable on-chain credential, or a social object. Other agents can read the profile to make recommendations without re-learning.
 
-    **User flow:** Complete swipe campaigns → profile artifact generated → mint as NFT or share as link → other agents/apps can import the profile.
+    **User flow:** Complete swipe campaigns → profile artifact generated → mint as on-chain credential or share as link → other agents/apps can import the profile.
 
     **Primitives:** Campaign engine (swipe), intent signals, earned rewards, NftReward minting, `/airdrop`
   </Accordion>
@@ -85,15 +85,15 @@ Every experience below is assembled from the same live infrastructure. No new pr
 
 <AccordionGroup>
   <Accordion title="Points & Rewards Wallet">
-    The canonical consumer loyalty surface. View USDC and points balance, transaction history, available rewards, earned NFTs. Tap to redeem. The double-entry points ledger ensures balances are always consistent.
+    The canonical consumer loyalty surface. View USDC and points balance, transaction history, available rewards, and earned on-chain collectibles. Tap to redeem. The double-entry points ledger ensures balances are always consistent.
 
-    **User flow:** Open wallet → view balances → browse redeemable rewards → tap to redeem → NFT or discount applied.
+    **User flow:** Open wallet → view balances → browse redeemable rewards → tap to redeem → reward or discount applied.
 
-    **Primitives:** Points ledger (`/user/{id}/points`), earned rewards, NFT rewards, NftRedemption, airdrop, Privy wallet
+    **Primitives:** Points ledger (`/user/{id}/points`), earned rewards, on-chain rewards, redemption, airdrop, Privy wallet
   </Accordion>
 
-  <Accordion title="Taste Graph NFT">
-    Style profile campaign completion mints an NFT representing the user's taste identity. Tradeable on Base, redeemable for perks. Other platforms or agents can read the on-chain profile for cross-platform personalization.
+  <Accordion title="Taste Graph Credential">
+    Style profile campaign completion mints an on-chain credential representing the user's taste identity. Tradeable on Base, redeemable for perks. Other platforms or agents can read the on-chain profile for cross-platform personalization.
 
     **Primitives:** Campaign (swipe), NftReward, Base Mainnet minting, `/nft`, `/airdrop`
   </Accordion>
@@ -105,7 +105,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Event Pass Wallet">
-    Store and display NFT event passes. QR code at the door with on-chain verification. Passes can be minted as campaign rewards or purchased directly.
+    Store and display on-chain event passes. QR code at the door with on-chain verification. Passes can be minted as campaign rewards or purchased directly.
 
     **Primitives:** NftReward (EVENT_PASS), Base Mainnet, NftRedemption, QR generation
   </Accordion>
@@ -113,7 +113,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Brand Community Rewards Hub">
     White-labeled loyalty app: points history, campaign feed, reward catalog, referrals. Each brand gets an isolated tenant with its own points economy, but users can participate across brands.
 
-    **Primitives:** Multi-tenant API, campaign engine, points ledger, earned rewards, NFT rewards, Shopify product sync
+    **Primitives:** Multi-tenant API, campaign engine, points ledger, earned rewards, on-chain rewards, Shopify product sync
   </Accordion>
 
   <Accordion title="Referral Engine">
@@ -243,7 +243,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Loyalty Wallet (Native)">
-    Points, NFTs, earned rewards, redemption history. Home screen widget via iOS WidgetKit pulls live data from the points ledger API.
+    Points, on-chain collectibles, earned rewards, redemption history. Home screen widget via iOS WidgetKit pulls live data from the points ledger API.
 
     **Primitives:** Points ledger, earned rewards, NftReward, iOS WidgetKit + Podium API
   </Accordion>
@@ -267,7 +267,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Event Pass Wallet (Native)">
-    Native app for storing and displaying NFT event passes. Scan QR at the door. On-chain verification confirms the pass is valid and unredeemed.
+    Native app for storing and displaying on-chain event passes. Scan QR at the door. On-chain verification confirms the pass is valid and unredeemed.
 
     **Primitives:** NftReward (EVENT_PASS), Base Mainnet, NftRedemption, QR verification
   </Accordion>
@@ -303,7 +303,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Reward Claimer">
-    After campaign completion, users receive a Telegram notification with a "Claim Reward" button. Opens a Mini App for claiming USDC or NFT rewards.
+    After campaign completion, users receive a Telegram notification with a "Claim Reward" button. Opens a Mini App for claiming USDC or on-chain rewards.
 
     **Primitives:** Campaign reward transactions, QStash + Telegram webhook, Privy wallet, RewardPool
   </Accordion>
@@ -443,7 +443,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Kiosk Event Redemption">
-    iPad app at physical events. Attendees show their NFT event pass (QR code). Kiosk verifies on-chain that the pass is valid and unredeemed, then marks it as used.
+    iPad app at physical events. Attendees show their on-chain event pass (QR code). Kiosk verifies on-chain that the pass is valid and unredeemed, then marks it as used.
 
     **Primitives:** NftReward (EVENT_PASS), Base Mainnet, NftRedemption, kiosk UI
   </Accordion>

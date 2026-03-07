@@ -66,6 +66,14 @@
             "pages": ["api-reference/introduction"]
           },
           {
+            "group": "Intelligence & Agents",
+            "pages": [
+              "api-reference/companion",
+              "api-reference/task-pool-api",
+              "api-reference/search"
+            ]
+          },
+          {
             "group": "Commerce",
             "pages": [
               "api-reference/products",
@@ -81,14 +89,6 @@
               "api-reference/points",
               "api-reference/campaigns",
               "api-reference/nfts"
-            ]
-          },
-          {
-            "group": "Intelligence & Agents",
-            "pages": [
-              "api-reference/companion",
-              "api-reference/task-pool-api",
-              "api-reference/search"
             ]
           },
           {

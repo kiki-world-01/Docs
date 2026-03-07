@@ -98,7 +98,7 @@ Podium includes a programmable points ledger with double-entry bookkeeping:
 | `API` | Programmatic grants via the API |
 | `CAMPAIGN` | Earned through campaign participation |
 | `PURCHASE` | Earned from purchases (based on creator's points-per-dollar config) |
-| `NFT_REDEMPTION` | Spent when redeeming NFT rewards |
+| `NFT_REDEMPTION` | Spent when redeeming on-chain rewards |
 | `PRESALE` | Spent on token presale purchases |
 
 Points are tracked per-user with full transaction history. The ledger supports both earning and spending with atomic balance checks.
@@ -116,9 +116,9 @@ Campaigns are structured engagement mechanics that capture user intent:
 
 Campaigns follow a lifecycle: `DRAFT` → `SUBMITTED` → `APPROVED` → `PUBLISHED` → `ENDED`. Each participation generates a `CampaignJourney` record, and associated rewards are tracked through `CampaignReward` and `CampaignRewardTransaction`.
 
-## NFTs & Rewards
+## Rewards & Airdrops
 
-Podium supports on-chain NFT minting and reward redemption:
+Podium supports on-chain reward minting and redemption:
 
 | Model | Purpose |
 |-------|---------|
@@ -127,9 +127,9 @@ Podium supports on-chain NFT minting and reward redemption:
 | `NftReward` | Reward program definition |
 | `NftRedemption` | Tracks when a reward is redeemed |
 | `QueuedMint` | Mint queue for batched minting via Privy server wallets |
-| `Airdrop` | Scheduled bulk NFT distribution |
+| `Airdrop` | Scheduled bulk reward distribution |
 
-NFT rewards support six types: `POINTS`, `FREE_PRODUCT`, `DISCOUNT_CODE`, `EVENT_PASS`, `CUSTOM`, and `EXCLUSIVE_ACCESS`.
+Rewards support six types: `POINTS`, `FREE_PRODUCT`, `DISCOUNT_CODE`, `EVENT_PASS`, `CUSTOM`, and `EXCLUSIVE_ACCESS`.
 
 ## Intents & Settlement
 

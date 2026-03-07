@@ -1,6 +1,6 @@
 ---
 title: Usage Examples
-description: Complete workflow examples with the Podium SDK — products, orders, campaigns, companion agents, tasks, NFTs, and agentic commerce
+description: Complete workflow examples with the Podium SDK — products, orders, campaigns, companion agents, tasks, rewards, and agentic commerce
 ---
 
 These examples use the [Podium TypeScript SDK](/sdk/setup). Each section is a self-contained workflow you can adapt for your application.
@@ -378,24 +378,24 @@ const status = await podium.tasks.getStatus(taskId);
 
 ---
 
-## NFT Rewards
+## On-Chain Rewards
 
-### Create and Redeem NFT Rewards
+### Create and Redeem Rewards
 
 ```typescript
-// Create an NFT reward program
+// Create a reward program
 const reward = await podium.nfts.createReward({
   type: "FREE_PRODUCT",
   productId: "prod_abc123",
   contractAddress: "0xNftContract...",
-  name: "Free Serum NFT",
+  name: "Free Serum Reward",
   description: "Redeem for a free Organic Face Serum",
 });
 
-// Check user's redeemable NFTs
+// Check user's redeemable rewards
 const redeemable = await podium.nfts.getRedeemable(userId);
 
-// Redeem an NFT
+// Redeem a reward
 await podium.nfts.redeem(userId, {
   network: "base",
   contractAddress: "0xNftContract...",
@@ -403,7 +403,7 @@ await podium.nfts.redeem(userId, {
 });
 ```
 
-### NFT Reward Types
+### Reward Types
 
 | Type | Description |
 |------|-------------|

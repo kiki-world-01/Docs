@@ -48,9 +48,9 @@ QStash provides reliable async event processing with automatic retries. All hand
 | `campaign-ended` | Campaign closes |
 | `campaign-reviewed` | Campaign review completed |
 | `campaign-vote` | New vote cast |
-| `nft-received` | NFT minted to user |
-| `nft-redeemed` | NFT reward redeemed |
-| `nft-reward-published` | New NFT reward available |
+| `nft-received` | Reward minted to user |
+| `nft-redeemed` | Reward redeemed |
+| `nft-reward-published` | New reward available |
 | `follow` | User followed a creator |
 | `points-received` | Points awarded |
 | `user-created` | New user registered |
@@ -76,7 +76,7 @@ QStash provides reliable async event processing with automatic retries. All hand
 | Campaign monitor | Periodic | End campaigns past their deadline |
 | Contract monitor | Periodic | Sync on-chain contract state |
 | Enrichment baseline recompute | Periodic | Recompute stale attribute baselines |
-| Mint queue processor | Frequent | Process pending NFT mints |
+| Mint queue processor | Frequent | Process pending reward mints |
 | Payouts sweep | Periodic | Transfer eligible creator payouts |
 | Stripe onboarding reminder | Daily | Remind incomplete Stripe setups |
 | Token presale monitor | Periodic | Monitor presale status changes |

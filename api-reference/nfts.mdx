@@ -1,32 +1,32 @@
 ---
-title: NFTs & Airdrops
-description: On-chain NFT minting, reward programs, airdrop distribution, and redemption tracking
+title: Rewards & Airdrops
+description: On-chain reward minting, reward programs, airdrop distribution, and redemption tracking
 ---
 
 ## Overview
 
-Podium supports minting NFTs on EVM chains (Base, Polygon, Arc Testnet) with a queued minting system via Privy server wallets. NFTs serve as reward vehicles with six distinct reward types.
+Podium supports minting on-chain rewards on EVM chains (Base, Polygon, Arc Testnet) with a queued minting system via Privy server wallets. Rewards serve as verifiable, on-chain incentives with six distinct reward types.
 
 ## Endpoints
 
-### NFT Queries
+### Reward Queries
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/nft` | Query NFTs by contract/owner |
-| `GET` | `/user/{id}/nfts` | User's NFT collection |
-| `GET` | `/user/{id}/nfts/earned` | NFTs earned through rewards |
+| `GET` | `/nft` | Query rewards by contract/owner |
+| `GET` | `/user/{id}/nfts` | User's reward collection |
+| `GET` | `/user/{id}/nfts/earned` | Rewards earned through programs |
 | `GET` | `/user/{id}/nfts/redeemable` | Available for redemption |
 | `GET` | `/user/{id}/nfts/redeemed` | Already redeemed |
-| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | NFT status |
+| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | Reward status |
 
-### NFT Rewards
+### Reward Programs
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/nft-reward` | Create an NFT reward program |
+| `POST` | `/nft-reward` | Create a reward program |
 | `GET` | `/nft-reward/{id}` | Get reward details |
-| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem an NFT |
+| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem a reward |
 
 ### Airdrops
 
@@ -44,7 +44,7 @@ Podium supports minting NFTs on EVM chains (Base, Polygon, Arc Testnet) with a q
 | `GET` | `/creator/{slug}/collectibles/metadata` | Collectible metadata |
 | `GET` | `/creator/id/{creatorId}/collectibles` | Authenticated collectibles management |
 
-## NFT Reward Types
+## Reward Types
 
 | Type | Description |
 |------|-------------|
@@ -57,14 +57,14 @@ Podium supports minting NFTs on EVM chains (Base, Polygon, Arc Testnet) with a q
 
 ## Minting System
 
-NFTs are minted through a queue system for reliability:
+Rewards are minted on-chain through a queue system for reliability:
 
 1. Mint request created → `QueuedMint` with status `PENDING`
 2. Mint queue cron job processes pending mints
 3. Privy server wallet executes the on-chain transaction
 4. Status updated to `COMPLETED` or `ERROR`
 
-## NFT Contract Model
+## Reward Contract Model
 
 | Field | Type | Description |
 |-------|------|-------------|

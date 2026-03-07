@@ -1,11 +1,11 @@
 ---
 title: Users
-description: User profiles, wallets, orders, points, NFTs, social graph, and notifications
+description: User profiles, wallets, orders, points, rewards, social graph, and notifications
 ---
 
 ## Overview
 
-Users are end consumers within an organization. They browse products, earn points, follow creators, collect NFTs, and manage wallets.
+Users are end consumers within an organization. They browse products, earn points, follow creators, collect rewards, and manage wallets.
 
 ## Endpoints
 
@@ -51,16 +51,16 @@ Users are end consumers within an organization. They browse products, earn point
 | `POST` | `/user/{id}/order/{orderId}/points/finalize` | Finalize point spend |
 | `POST` | `/user/{id}/order/{orderId}/points/revert` | Revert point application |
 
-### NFTs
+### Rewards
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/user/{id}/nfts` | User's NFT collection |
-| `GET` | `/user/{id}/nfts/earned` | Earned NFT rewards |
+| `GET` | `/user/{id}/nfts` | User's reward collection |
+| `GET` | `/user/{id}/nfts/earned` | Earned rewards |
 | `GET` | `/user/{id}/nfts/redeemable` | Available to redeem |
 | `GET` | `/user/{id}/nfts/redeemed` | Already redeemed |
-| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem an NFT reward |
-| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | NFT redemption status |
+| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem a reward |
+| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | Reward redemption status |
 
 ### Social
 
