@@ -1,20 +1,42 @@
 ---
 title: Quick Start
-description: Get an API key, make your first call, and install the SDK
+description: Create an account, get an API key, and make your first call in under 5 minutes
 ---
 
-## 1. Get Your API Key
+## 1. Create Your Account
 
-Every request to the Podium API requires an API key passed as a Bearer token. Keys are scoped to an organization and prefixed to indicate environment:
+<Steps>
+  <Step title="Sign up">
+    Head to the [Podium Developer Portal](https://www.app.podiumcommerce.xyz) and sign in with email, Google, or a crypto wallet (powered by Privy).
+  </Step>
+  <Step title="Create an organization">
+    During onboarding you'll create an **Organization** — this is your tenant. All API keys, products, orders, and data are scoped to your organization.
+  </Step>
+  <Step title="Choose a plan">
+    Pick a subscription tier that matches your usage. You can upgrade any time from the dashboard.
 
-| Prefix | Environment | API Base URL |
-|--------|------------|--------------|
-| `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
-| `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
+    | Tier | Price | Requests/Month | Rate Limit |
+    |------|-------|---------------|------------|
+    | **Builder** | Free | 10,000 | 5/sec |
+    | **Growth** | $99/mo | 100,000 | 20/sec |
+    | **Pro** | $499/mo | 1,000,000 | 50/sec |
+    | **Enterprise** | Custom | Unlimited | Custom |
+  </Step>
+  <Step title="Generate an API key">
+    The onboarding flow generates your first API key automatically. You can create additional keys from **Dashboard > Settings > API Keys**.
 
-<Info>
-  Contact the Podium team to provision an organization and receive your API keys. Each organization can have multiple keys with independent rate limits.
-</Info>
+    Keys are prefixed by environment:
+
+    | Prefix | Environment | API Base URL |
+    |--------|------------|--------------|
+    | `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
+    | `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
+  </Step>
+</Steps>
+
+<Warning>
+  Your full API key is only shown once at creation time. Copy it immediately and store it securely. The dashboard only displays the key prefix after that.
+</Warning>
 
 ## 2. Make Your First Call
 
@@ -101,38 +123,13 @@ const user     = await podium.users.get('user_xyz');
   </Card>
 </CardGroup>
 
-## Local Development
+## 6. Manage Your Keys
 
-To run podium-elysia locally for development:
+From the [Dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/api-keys) you can:
 
-<Steps>
-  <Step title="Prerequisites">
-    Install [Bun](https://bun.sh) (>= 1.0) and Docker.
-  </Step>
-  <Step title="Clone and install">
-    ```bash
-    git clone https://github.com/kiki-world-01/podium-elysia.git
-    cd podium-elysia
-    bun install
-    ```
-  </Step>
-  <Step title="Start infrastructure">
-    ```bash
-    bun run db:start    # PostgreSQL on port 5432
-    bun run redis:start # Redis on port 6379
-    ```
-  </Step>
-  <Step title="Configure environment">
-    ```bash
-    cp .env .env.local
-    ```
-    At minimum, set `DATABASE_URL`, `DIRECT_URL`, `REDIS_URL`, `PLATFORM_ORG_ID`, `API_KEY_PREFIX`, and `API_SHARED_KEY`.
-  </Step>
-  <Step title="Push schema and start">
-    ```bash
-    bun run db:push  # Sync Prisma schema + apply RLS policies
-    bun run dev      # http://localhost:3030
-    ```
-    Verify at `http://localhost:3030/docs` for the interactive API explorer.
-  </Step>
-</Steps>
+- **Create** additional API keys (up to your tier's limit)
+- **Rotate** a key — generates a new key while the old one remains valid for 30 minutes
+- **Enable/Disable** keys without deleting them
+- **Delete** keys permanently
+
+All key changes take effect immediately (cached keys expire within 15–150 seconds).

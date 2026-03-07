@@ -1,6 +1,6 @@
 ---
 title: Authentication
-description: API key authentication, subscription tiers, rate limiting, and public endpoint access
+description: API key authentication, subscription tiers, rate limiting, key management, and public endpoint access
 ---
 
 ## API Key Authentication
@@ -21,13 +21,33 @@ API keys are scoped to a single organization. When the platform receives a reque
 
 Failed lookups are also cached (15 seconds) to prevent brute-force probing from hitting the database.
 
+## Getting Your API Key
+
+API keys are self-service through the [Podium Developer Portal](https://www.app.podiumcommerce.xyz):
+
+1. **Sign up** with email, Google, or a crypto wallet
+2. **Create an organization** during onboarding
+3. **Choose a subscription tier** (see pricing below)
+4. **Generate your first key** — the onboarding flow creates one automatically
+
+Additional keys can be created from **Dashboard > Settings > API Keys**.
+
+<Warning>
+  Your full API key is only shown once at creation. Copy it immediately and store it securely. The dashboard only displays the key prefix after creation.
+</Warning>
+
 ### Key Management
 
-Organizations can have multiple active API keys. Keys support:
+From the [API Keys dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/api-keys), you can:
 
-- **Rotation**: Generate a new key and deprecate the old one with zero downtime via `POST /admin/api-keys/{id}/rotate`
-- **Expiration**: Keys can be set to expire at a specific timestamp
-- **Revocation**: Immediately invalidate a key; cache is purged via a QStash `api-key-changed` event
+| Action | Description |
+|--------|-------------|
+| **Create** | Generate a new key (up to your tier's limit) |
+| **Rotate** | Generate a replacement key. The old key remains valid for 30 minutes, giving you time to update your application. |
+| **Enable/Disable** | Toggle a key without deleting it |
+| **Delete** | Permanently revoke a key |
+
+Key changes propagate immediately. Cached keys expire within 15–150 seconds. Immediate invalidation is triggered via a QStash `api-key-changed` event that purges the Redis cache.
 
 ### Environments
 
@@ -40,14 +60,16 @@ The TypeScript SDK auto-detects the environment from the key prefix and routes t
 
 ## Subscription Tiers
 
-Each organization has a subscription tier that controls rate limits, request quotas, and endpoint access:
+Each organization has a subscription tier that controls rate limits, request quotas, and endpoint access. Manage your subscription from **Dashboard > Settings > Subscription**.
 
-| Tier | Requests/Month | Rate Limit/Second | Max API Keys | Endpoint Access |
-|------|---------------|-------------------|-------------|----------------|
-| **BUILDER** | 10,000 | 5 | 2 | Core commerce endpoints |
-| **GROWTH** | 100,000 | 20 | 5 | + Campaigns, NFTs, search |
-| **PRO** | 1,000,000 | 50 | 20 | + Enrichment, agentic, analytics |
-| **ADMIN** | Unlimited | 100 | Unlimited | Full platform access |
+| Tier | Price | Requests/Month | Rate Limit/Second | Max API Keys | Endpoint Access |
+|------|-------|---------------|-------------------|-------------|----------------|
+| **Builder** | Free | 10,000 | 5 | 2 | Core commerce endpoints |
+| **Growth** | $99/mo | 100,000 | 20 | 5 | + Campaigns, NFTs, search |
+| **Pro** | $499/mo | 1,000,000 | 50 | 20 | + Enrichment, agentic, analytics |
+| **Enterprise** | Custom | Unlimited | Custom | Unlimited | Full platform access |
+
+Growth and Pro tiers support overage billing for requests beyond the monthly quota.
 
 ### Rate Limiting
 
@@ -74,6 +96,17 @@ The access control middleware checks each endpoint against the organization's ti
   "requiredTier": "PRO"
 }
 ```
+
+Upgrade your tier from the [Dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/subscription) to unlock additional API surface.
+
+## x402 Payment Configuration
+
+To accept USDC payments via the x402 protocol, configure your receiving wallet from **Dashboard > Settings > x402 Payments**:
+
+1. Enable x402 payments for your organization
+2. Set your USDC receiving address (on Base)
+
+Once configured, your organization's endpoints can accept x402 payment headers, and companion/agentic orders can settle in USDC.
 
 ## Public Endpoints
 

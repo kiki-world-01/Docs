@@ -30,6 +30,7 @@ View at `http://localhost:3000`.
 
 | Repo | Purpose |
 |------|---------|
-| [podium-elysia](https://github.com/kiki-world-01/podium-elysia) | API server (Bun/Elysia, PostgreSQL, Redis, QStash) |
+| [Podium API](https://github.com/kiki-world-01/podium-elysia) | API server (Bun/Elysia, PostgreSQL, Redis, QStash) |
+| [Podium Developer Portal](https://github.com/kiki-world-01/Podium-API-Web) | Developer webapp for account management, API keys, and billing |
 | [smart-contracts-podium](https://github.com/kiki-world-01/smart-contracts-podium) | Solidity contracts (Foundry, Base, Arc Testnet) |
 | [beauty-companion](https://github.com/kiki-world-01/beauty-companion) | Reference implementation: personal shopping agent |

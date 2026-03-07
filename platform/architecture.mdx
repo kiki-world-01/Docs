@@ -144,9 +144,10 @@ All events are authenticated via QStash signature verification and are idempoten
 
 ## Project Structure
 
+The Podium API server is organized as follows:
+
 ```
-podium-elysia/
-├── src/
+src/
 │   ├── index.ts              # Server bootstrap, middleware chain
 │   ├── api/v1/               # Route handlers (thin, delegate to services)
 │   ├── services/             # Business logic (36 service files)
@@ -161,8 +162,8 @@ podium-elysia/
 │   ├── contracts/abis/       # Smart contract ABIs
 │   ├── utils/                # Config, logging, blockchain helpers
 │   └── validation/           # Shared Zod schemas
-├── sdk/                      # Generated TypeScript SDK
-├── prisma/schema.prisma      # Database schema (80+ models)
-├── scripts/                  # Build tools, OpenAPI generation
-└── docker/                   # Local PostgreSQL + Redis
+sdk/                          # Generated TypeScript SDK
+prisma/schema.prisma          # Database schema (80+ models)
+scripts/                      # Build tools, OpenAPI generation
+docker/                       # Local PostgreSQL + Redis
 ```

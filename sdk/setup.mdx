@@ -88,10 +88,4 @@ The SDK uses a hybrid generation approach:
 2. **Service classes** auto-generated via `openapi-typescript-codegen`
 3. **Wrapper layer** maps generated services to clean namespaces
 
-To regenerate after API changes:
-
-```bash
-cd podium-elysia
-bun run sdk:generate  # Generate OpenAPI spec + service classes
-bun run sdk:build     # Build + publish
-```
+The SDK is regenerated from the Podium API's OpenAPI spec whenever the API surface changes. Published versions on npm always reflect the latest API.
