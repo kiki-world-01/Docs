@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Podium",
-  "theme": "quill",
+  "theme": "palm",
   "colors": {
     "primary": "#3D38F5",
     "light": "#6C69F8",
