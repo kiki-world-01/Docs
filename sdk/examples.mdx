@@ -1,160 +1,499 @@
 ---
 title: Usage Examples
-description: Common workflows with the Podium SDK — products, orders, campaigns, NFTs, and agentic commerce
+description: Complete workflow examples with the Podium SDK — products, orders, campaigns, companion agents, tasks, NFTs, and agentic commerce
 ---
 
-## Create and Publish a Product
+These examples use the [Podium TypeScript SDK](/sdk/setup). Each section is a self-contained workflow you can adapt for your application.
+
+## Product Catalog Management
+
+### Create, Configure, and Publish a Product
 
 ```typescript
-import Podium from '@podiumcommerce/node-sdk';
+import Podium from "@podiumcommerce/node-sdk";
 const podium = new Podium({ apiKey: process.env.PODIUM_API_KEY });
 
-// Create product
-const product = await podium.products.create({
-  name: 'Organic Face Serum',
-  price: 2500, // $25.00 in cents
-  currency: 'USD',
-  description: 'Lightweight hydrating serum with hyaluronic acid',
-  supply: 100,
-  pointEligible: true
+const product = await podium.products.create(creatorId, {
+  name: "Organic Face Serum",
+  slug: "organic-face-serum",
+  description: "Lightweight hydrating serum with hyaluronic acid and vitamin C",
+  price: 2500,
+  maxDiscount: 500,
+  media: [
+    { url: "https://cdn.example.com/serum-hero.jpg", type: "IMAGE", order: 0 },
+    { url: "https://cdn.example.com/serum-texture.jpg", type: "IMAGE", order: 1 },
+  ],
 });
 
-// Add attribute variants
-await podium.products.addAttribute(product.id, {
-  name: 'Size',
-  variants: [
-    { value: '30ml', priceModifier: 0 },
-    { value: '50ml', priceModifier: 1000 }
-  ]
+await podium.products.update(creatorId, product.id, {
+  supply: 200,
+  pointEligibility: "ELIGIBLE",
+  shippingType: "STANDARD",
+  attributes: [
+    {
+      name: "Size",
+      type: "VARIANT",
+      variants: [
+        { value: "30ml", price: 2500, supply: 100, order: 0 },
+        { value: "50ml", price: 3500, supply: 60, order: 1 },
+        { value: "100ml", price: 5000, supply: 40, order: 2 },
+      ],
+    },
+  ],
 });
 
-// Publish
 await podium.creators.publishProduct(creatorId, product.id);
 ```
 
-## Process an Order
+### List and Filter Products
 
 ```typescript
-// User adds product to order
-const order = await podium.orders.addProduct(userId, orderId, productId);
-
-// Apply points discount
-await podium.points.applyToOrder(userId, orderId, { points: 500 });
-
-// Checkout via Stripe
-const checkout = await podium.orders.checkout(userId, orderId);
-// Returns Stripe PaymentIntent client secret
-
-// After payment succeeds (via webhook), finalize points
-await podium.points.finalizeOrder(userId, orderId);
-```
-
-## Run a Swipe Campaign
-
-```typescript
-// Create campaign
-const campaign = await podium.campaigns.create({
-  type: 'SWIPE',
-  title: 'What moisturizer do you prefer?',
-  startsAt: new Date(),
-  endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+const published = await podium.products.list({
+  categories: ["serum", "moisturizer"],
+  limit: 20,
 });
 
-// Submit and publish
+const creatorProducts = await podium.creators.listProducts(creatorId);
+```
+
+---
+
+## Order and Checkout Workflows
+
+### Stripe Checkout (Consumer App)
+
+```typescript
+const order = await podium.orders.create(userId, {
+  productId: "clx9prod001",
+  variantIds: ["clx9var_30ml"],
+  quantity: 1,
+});
+
+await podium.points.applyToOrder(userId, order.id, { points: 500 });
+
+const shippingQuote = await podium.orders.getShippingQuote(order.id, {
+  firstName: "Jane",
+  lastName: "Doe",
+  address: {
+    line1: "123 Main St",
+    city: "San Francisco",
+    state: "CA",
+    postalCode: "94102",
+    countryCode: "US",
+  },
+});
+
+const { clientSecret } = await podium.orders.checkout(userId, order.id, {
+  points: 500,
+});
+// Pass clientSecret to Stripe.js on the frontend
+
+// After Stripe webhook confirms payment:
+await podium.points.finalizeOrder(userId, order.id);
+```
+
+### x402 Checkout (Agent)
+
+```typescript
+const response = await fetch(
+  `https://api.podiumcommerce.xyz/api/v1/x402/orders/${orderId}/pay`,
+  { method: "POST" }
+);
+
+if (response.status === 402) {
+  const requirements = response.headers.get("X-PAYMENT-REQUIREMENTS");
+  const parsed = JSON.parse(atob(requirements));
+
+  // Sign a USDC transfer matching the requirements
+  const paymentPayload = await signUsdcTransfer({
+    to: parsed.payTo,
+    amount: parsed.maxAmountRequired,
+    network: "base",
+  });
+
+  const receipt = await fetch(
+    `https://api.podiumcommerce.xyz/api/v1/x402/orders/${orderId}/pay`,
+    {
+      method: "POST",
+      headers: { "X-PAYMENT": btoa(JSON.stringify(paymentPayload)) },
+    }
+  );
+}
+```
+
+### Buy Now (Single-Step Purchase)
+
+```typescript
+const result = await podium.products.buyNow(productId, {
+  quantity: 1,
+  variantIds: ["clx9var_30ml"],
+  shouldUseStripe: true,
+});
+// Returns order + Stripe PaymentIntent in one call
+```
+
+### Guest Checkout
+
+```typescript
+const guestOrder = await podium.guest.createOrder({
+  productId: "clx9prod001",
+  quantity: 1,
+});
+
+const { clientSecret } = await podium.guest.checkout(guestOrder.id);
+```
+
+---
+
+## Campaign Workflows
+
+### Run a Swipe Campaign
+
+```typescript
+const campaign = await podium.campaigns.create({
+  type: "SWIPE",
+  title: "What moisturizer matches your skin?",
+  startsAt: new Date(),
+  endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+});
+
+// Add products/options as swipeable items
+// ...
+
 await podium.campaigns.submit(campaign.id);
 await podium.campaigns.publish(campaign.id);
 
-// Record votes
+// Users vote
 await podium.campaigns.vote(campaign.id, {
-  userId: 'user_123',
-  attributeId: 'attr_abc',
-  optionId: 'opt_xyz'
+  userId: "user_123",
+  attributeId: "attr_abc",
+  optionId: "opt_xyz",
 });
 
-// Get analytics
 const analytics = await podium.campaigns.getAnalytics(campaign.id);
 ```
 
-## Build a Companion Agent
+### Run a Vote Campaign
 
 ```typescript
-// Create user and profile
+const campaign = await podium.campaigns.create({
+  type: "VOTE",
+  title: "Which color should we launch next?",
+  startsAt: new Date(),
+  endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+});
+
+await podium.campaigns.submit(campaign.id);
+await podium.campaigns.publish(campaign.id);
+
+await podium.campaigns.vote(campaign.id, {
+  userId: "user_456",
+  attributeId: "attr_color",
+  optionId: "opt_rose",
+});
+
+const results = await podium.campaigns.getAnalytics(campaign.id);
+```
+
+---
+
+## Companion Agent Workflows
+
+### Full Agent Lifecycle
+
+```typescript
+// 1. Create user and intent profile
 const user = await podium.users.create({
-  email: 'agent_user@example.com',
-  username: 'agent_user'
+  email: "shopper@example.com",
+  username: "skincare_fan",
 });
 
 const profile = await podium.companion.createProfile(user.id, {
-  skinType: 'Oily',
-  concerns: ['Acne', 'SPF protection'],
+  skinType: "Oily",
+  concerns: ["Acne", "SPF protection"],
   priceRange: { min: 15, max: 50 },
-  brands: ['CeraVe', 'The Ordinary']
+  brands: ["CeraVe", "The Ordinary"],
+  avoidances: ["fragrance", "alcohol"],
 });
 
-// Get recommendations
+// 2. Populate catalog (one-time or periodic)
+await podium.companion.batchCreateProducts({
+  items: [
+    {
+      name: "CeraVe Moisturizing Cream",
+      brand: "CeraVe",
+      category: "moisturizer",
+      price: 18.99,
+      productUrl: "https://cerave.com/moisturizing-cream",
+      imageUrl: "https://cdn.example.com/cerave.jpg",
+    },
+    {
+      name: "The Ordinary Niacinamide 10%",
+      brand: "The Ordinary",
+      category: "serum",
+      price: 5.9,
+      productUrl: "https://theordinary.com/niacinamide",
+      imageUrl: "https://cdn.example.com/niacinamide.jpg",
+    },
+  ],
+});
+
+// 3. Get AI-powered recommendations
 const recs = await podium.companion.getRecommendations(user.id, {
   count: 5,
-  category: 'moisturizer'
+  category: "moisturizer",
 });
 
-// Record interactions
-for (const product of recs) {
+// 4. Record user feedback
+for (const product of recs.slice(0, 3)) {
   await podium.companion.recordInteraction({
     userId: user.id,
     productId: product.id,
-    action: 'RANK_UP'
+    action: "RANK_UP",
   });
 }
 
-// Place order
+await podium.companion.recordInteraction({
+  userId: user.id,
+  productId: recs[3].id,
+  action: "RANK_DOWN",
+});
+
+// 5. Place a concierge order
 const order = await podium.companion.createOrder({
   userId: user.id,
   productId: recs[0].id,
-  shippingAddress: { street: '123 Main St', city: 'SF', state: 'CA', zip: '94102', country: 'US' },
-  email: 'agent_user@example.com'
+  shippingAddress: {
+    street: "123 Main St",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94102",
+    country: "US",
+  },
+  email: "shopper@example.com",
+});
+
+// 6. Award points for engagement
+await podium.companion.awardPoints(user.id, {
+  amount: 25,
+  details: { reason: "order_placed", orderId: order.id },
+});
+
+// 7. Track order
+const orders = await podium.companion.listOrders(user.id);
+const detail = await podium.companion.getOrder(order.id);
+```
+
+### Link a Telegram User
+
+```typescript
+const podiumUser = await podium.companion.findByTelegram(telegramUserId, {
+  privyId: "did:privy:abc123",
 });
 ```
 
-## Create and Fund a Task Pool Task
+### Browse Products with Filters
 
 ```typescript
-// Create a task with USDC bounty
+const affordable = await podium.companion.listProducts({
+  category: "serum",
+  maxPrice: 30,
+  inStock: true,
+  search: "vitamin c",
+  limit: 10,
+});
+```
+
+---
+
+## Points and Loyalty
+
+### Earn and Spend Points
+
+```typescript
+// Award points for completing a campaign
+await podium.points.earn(userId, {
+  amount: 50,
+  source: "CAMPAIGN",
+  details: { campaignId: "campaign_abc" },
+});
+
+// Check balance
+const balance = await podium.points.getBalance(userId);
+
+// Apply to an order
+await podium.points.applyToOrder(userId, orderId, { points: 200 });
+
+// Finalize after payment succeeds
+await podium.points.finalizeOrder(userId, orderId);
+```
+
+---
+
+## Task Pool (On-Chain Bounties)
+
+### Create and Fund a Task
+
+```typescript
 const task = await podium.tasks.create({
   amount: 5000000, // $5.00 USDC (6 decimals)
-  duration: 86400,  // 24 hours
-  campaignId: 'campaign_abc',
-  verificationMethod: 'Oracle',
+  duration: 86400, // 24 hours
+  campaignId: "campaign_abc",
+  verificationMethod: "Oracle",
   acceptanceCriteria: JSON.stringify({
-    description: 'Write a product review of at least 200 words',
-    requirements: ['Include personal experience', 'Rate 1-5 stars']
-  })
+    description: "Write a 200+ word product review",
+    requirements: ["Personal experience", "Star rating 1-5", "Photo"],
+  }),
 });
 
-// Check pool status
 const pools = await podium.tasks.getPools();
-console.log('TaskPool:', pools.taskPool);
-console.log('RewardPool:', pools.rewardPool);
+console.log("TaskPool:", pools.taskPool);
+console.log("RewardPool:", pools.rewardPool);
 ```
 
-## Mint an NFT Reward
+### Solver Workflow
 
 ```typescript
-// Create NFT reward program
+// Register as solver
+const solver = await podium.solver.register({
+  walletAddress: "0xSolverAddress...",
+});
+
+// Browse available tasks
+const tasks = await podium.solver.listTasks({ status: "OPEN" });
+
+// Claim a task
+await podium.solver.claim(taskId, { solverId: solver.id });
+
+// Submit proof
+await podium.solver.submit(taskId, {
+  proof: "https://example.com/review-link",
+  metadata: { wordCount: 342, rating: 4 },
+});
+
+// Check status — on-chain verification happens automatically
+const status = await podium.tasks.getStatus(taskId);
+// When verified, USDC is released from RewardPool to solver
+```
+
+---
+
+## NFT Rewards
+
+### Create and Redeem NFT Rewards
+
+```typescript
+// Create an NFT reward program
 const reward = await podium.nfts.createReward({
-  type: 'FREE_PRODUCT',
-  productId: 'prod_abc123',
-  contractAddress: '0x...',
-  name: 'Free Serum NFT',
-  description: 'Redeem for a free Organic Face Serum'
+  type: "FREE_PRODUCT",
+  productId: "prod_abc123",
+  contractAddress: "0xNftContract...",
+  name: "Free Serum NFT",
+  description: "Redeem for a free Organic Face Serum",
 });
 
 // Check user's redeemable NFTs
 const redeemable = await podium.nfts.getRedeemable(userId);
 
-// Redeem
+// Redeem an NFT
 await podium.nfts.redeem(userId, {
-  network: 'base',
-  contractAddress: '0x...',
-  tokenId: '42'
+  network: "base",
+  contractAddress: "0xNftContract...",
+  tokenId: "42",
 });
 ```
+
+### NFT Reward Types
+
+| Type | Description |
+|------|-------------|
+| `FREE_PRODUCT` | Redeem for a free product |
+| `DISCOUNT` | Percentage or fixed discount |
+| `EVENT_PASS` | Access pass for events |
+| `POINTS` | Bonus point grant |
+
+---
+
+## Agentic Commerce (Public Endpoints)
+
+### Query the Agentic Product Feed
+
+No API key required — designed for machine consumption:
+
+```typescript
+const response = await fetch(
+  "https://api.podiumcommerce.xyz/api/v1/agentic/products/feed",
+  {
+    headers: {
+      "X-INTENT-CONTEXT": JSON.stringify({
+        concerns: ["hydration"],
+        priceRange: { min: 10, max: 50 },
+      }),
+    },
+  }
+);
+
+const products = await response.json();
+// Each product includes intent scores and provenance metadata
+```
+
+### Create an Agentic Checkout Session
+
+```typescript
+const session = await fetch(
+  "https://api.podiumcommerce.xyz/api/v1/agentic/checkout/sessions",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: "clx9prod001",
+      quantity: 1,
+    }),
+  }
+);
+// Returns a checkout session URL or x402 payment requirements
+```
+
+---
+
+## Shopify Sync
+
+### List Available Shopify Products
+
+```typescript
+const shopifyProducts = await podium.shopify.listAvailable(creatorId);
+```
+
+### Sync Products from Shopify
+
+Products imported from Shopify have a `shopifyProductId` linking them back to the Shopify catalog. Inventory and pricing sync happens via QStash-driven background jobs.
+
+---
+
+## Error Handling
+
+All SDK methods throw typed errors:
+
+```typescript
+import Podium, { PodiumError } from "@podiumcommerce/node-sdk";
+
+try {
+  const product = await podium.products.get(creatorId, "invalid_id");
+} catch (error) {
+  if (error instanceof PodiumError) {
+    console.error(`${error.status}: ${error.message}`);
+    // 404: Product not found
+  }
+}
+```
+
+Common error codes:
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Validation error (check request body) |
+| `401` | Missing or invalid API key |
+| `403` | Insufficient permissions for this resource |
+| `404` | Resource not found |
+| `409` | Conflict (e.g., duplicate slug) |
+| `429` | Rate limit exceeded |
