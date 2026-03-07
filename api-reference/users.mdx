@@ -5,96 +5,515 @@ description: User profiles, wallets, orders, points, rewards, social graph, and 
 
 ## Overview
 
-Users are end consumers within an organization. They browse products, earn points, follow creators, collect rewards, and manage wallets.
+Users are end consumers within an organization. They browse products, earn points, follow creators, collect rewards, and manage wallets. Every user belongs to a single organization (your tenant) and is uniquely identified by a CUID2 `id`.
 
-## Endpoints
+Users are created through Privy authentication — when a user signs in via email, Google, or wallet, the Podium backend creates a `User` record linked to their Privy identity.
 
-### Profile
+## Create a User
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/user` | Create a user |
-| `GET` | `/user/{id}` | Get user profile |
-| `PATCH` | `/user/{id}` | Update profile |
-| `GET` | `/user/username/{username}` | Look up by username |
-| `GET` | `/user/privy/{privyId}` | Look up by Privy ID |
-| `GET` | `/user/privy/{privyId}/profile` | Full profile by Privy ID |
+<CodeGroup>
 
-### Wallets
+```bash cURL
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane@example.com",
+    "privyId": "did:privy:abc123",
+    "walletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+  }'
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/wallets` | List user's wallets |
-| `GET` | `/user/{id}/wallets/{address}` | Wallet detail |
-| `GET` | `/user/{id}/wallets/{address}/transactions` | Wallet transactions |
-| `POST` | `/user/{id}/wallets/{address}/send` | Send from wallet |
+```typescript SDK
+const user = await podium.users.create({
+  email: "jane@example.com",
+  privyId: "did:privy:abc123",
+  walletAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+});
+```
 
-### Orders
+</CodeGroup>
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/orders` | Order history |
-| `GET` | `/user/{id}/order/{orderId}` | Order detail |
-| `POST` | `/user/{id}/order/{orderId}/checkout` | Stripe checkout |
-| `POST` | `/user/{id}/order/{orderId}/checkout/coinbase` | Coinbase checkout |
-| `POST` | `/user/{id}/order/{orderId}/checkout/embedded-wallet` | Embedded wallet checkout |
-| `POST` | `/user/{id}/order/{orderId}/product/{productId}` | Add product to order |
-| `DELETE` | `/user/{id}/order/{orderId}/item/{itemId}` | Remove order item |
+### Request Body
 
-### Points
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Valid email address |
+| `privyId` | string | Yes | Privy DID (`did:privy:...`) |
+| `walletAddress` | string | No | Initial ETH wallet address |
+| `walletId` | string | No | Privy wallet ID for embedded wallets |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/points` | Current points balance |
-| `GET` | `/user/{id}/points/history` | Points transaction history |
-| `POST` | `/user/{id}/order/{orderId}/points` | Apply points to order |
-| `POST` | `/user/{id}/order/{orderId}/points/finalize` | Finalize point spend |
-| `POST` | `/user/{id}/order/{orderId}/points/revert` | Revert point application |
+### Response
 
-### Rewards
+```json
+{
+  "id": "clxyz1234567890",
+  "email": "jane@example.com",
+  "username": null,
+  "avatarUrl": null,
+  "bio": null,
+  "city": null,
+  "state": null,
+  "emailVerified": false,
+  "createdAt": "2026-03-07T12:00:00.000Z",
+  "updatedAt": "2026-03-07T12:00:00.000Z",
+  "wallets": [
+    {
+      "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+      "type": "EXTERNAL"
+    }
+  ],
+  "socialProfiles": [],
+  "interests": []
+}
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/nfts` | User's reward collection |
-| `GET` | `/user/{id}/nfts/earned` | Earned rewards |
-| `GET` | `/user/{id}/nfts/redeemable` | Available to redeem |
-| `GET` | `/user/{id}/nfts/redeemed` | Already redeemed |
-| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem a reward |
-| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | Reward redemption status |
+## Update a User Profile
 
-### Social
+<CodeGroup>
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/followers` | User's followers |
-| `POST` | `/user/{id}/followers/follow` | Follow a user |
-| `GET` | `/user/{id}/following` | Users being followed |
-| `GET` | `/user/{id}/following/creators` | Creators being followed |
-| `GET` | `/user/{id}/following/count` | Following count |
+```bash cURL
+curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890 \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "jane_doe",
+    "bio": "Clean beauty enthusiast",
+    "avatarUrl": "https://cdn.example.com/avatar.jpg",
+    "categoryIds": [1, 3, 7],
+    "socialProfiles": [
+      { "platform": "INSTAGRAM", "url": "https://instagram.com/jane_doe" },
+      { "platform": "TIKTOK", "url": "https://tiktok.com/@jane_doe" }
+    ]
+  }'
+```
 
-### Notifications
+```typescript SDK
+const updated = await podium.users.update("clxyz1234567890", {
+  username: "jane_doe",
+  bio: "Clean beauty enthusiast",
+  avatarUrl: "https://cdn.example.com/avatar.jpg",
+  categoryIds: [1, 3, 7],
+  socialProfiles: [
+    { platform: "INSTAGRAM", url: "https://instagram.com/jane_doe" },
+    { platform: "TIKTOK", url: "https://tiktok.com/@jane_doe" }
+  ]
+});
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/user/{id}/notifications` | Notification list |
-| `GET` | `/user/{id}/notification/{notificationId}` | Single notification |
-| `POST` | `/user/{id}/notification` | Create notification |
+</CodeGroup>
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | No | Unique handle |
+| `bio` | string \| null | No | Biography text |
+| `avatarUrl` | string \| null | No | Valid URL for profile image |
+| `categoryIds` | number[] | No | Interest category IDs |
+| `socialProfiles` | array | No | Social platform links |
+
+All fields are optional — only include fields you want to update. Pass `null` to clear a field.
+
+## Lookup by Privy ID
+
+Resolve a Privy DID to a Podium user. This is the primary way to link Privy-authenticated sessions to Podium user records.
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.podiumcommerce.xyz/api/v1/user/privy/did:privy:abc123/profile \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```typescript SDK
+const user = await podium.users.getByPrivyId("did:privy:abc123");
+```
+
+</CodeGroup>
+
+## Wallets
+
+Each user can have multiple wallets from different providers.
+
+### Wallet Types
+
+| Provider | Description | Use Case |
+|----------|-------------|----------|
+| Privy embedded | Auto-created on login, user-controlled | Consumer payments, reward redemption |
+| Privy server | Platform-managed for automated operations | Agent-initiated x402 payments, minting |
+| External | User's own self-custodied wallet address | Direct USDC transfers, existing Web3 users |
+
+### List Wallets
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+[
+  {
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+    "type": "EMBEDDED",
+    "chainId": 8453,
+    "createdAt": "2026-03-07T12:00:00.000Z"
+  },
+  {
+    "address": "0x1234567890abcdef1234567890abcdef12345678",
+    "type": "SERVER",
+    "chainId": 8453,
+    "createdAt": "2026-03-07T12:00:00.000Z"
+  }
+]
+```
+
+### Send from Wallet
+
+Transfer tokens from a user's Privy server wallet. This is used for automated x402 payments and agent-initiated transfers.
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets/0x742d.../send \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipient": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "amount": "1000000",
+    "decimals": 6,
+    "chainId": 8453
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `recipient` | string | Yes | Destination ETH address |
+| `tokenAddress` | string | Yes | ERC-20 token contract address |
+| `amount` | string \| number | Yes | Amount in smallest unit (e.g., 1 USDC = 1000000) |
+| `decimals` | number | No | Token decimals (default: 18) |
+| `chainId` | number | No | Target chain (default: Base Mainnet 8453) |
+
+## Orders
+
+### Get Order History
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/orders \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns paginated list of all orders for the user, including status, line items, and payment details.
+
+### Create an Order
+
+Create a new order by adding an initial product:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "clprod_abc123",
+    "variantIds": ["clvar_size_m", "clvar_color_black"],
+    "quantity": 2
+  }'
+```
+
+```typescript SDK
+const order = await podium.orders.create("clxyz1234567890", {
+  productId: "clprod_abc123",
+  variantIds: ["clvar_size_m", "clvar_color_black"],
+  quantity: 2
+});
+```
+
+</CodeGroup>
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `productId` | string | Yes | CUID of the product |
+| `variantIds` | string[] | No | Selected variant IDs |
+| `quantity` | number | No | Quantity (default: 1, must be positive integer) |
+
+### Add a Product to an Existing Order
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/product/clprod_def456 \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "quantity": 1, "variantIds": ["clvar_size_l"] }'
+```
+
+### Remove an Item from an Order
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/item/clitem_abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "quantity": 1 }'
+```
+
+Pass `quantity` to reduce the count rather than removing the entire line item.
+
+## Points
+
+### Get Points Balance
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "balance": 2500,
+  "creatorBalances": [
+    { "creatorId": "clcreator_abc", "balance": 1500 },
+    { "creatorId": "clcreator_def", "balance": 1000 }
+  ]
+}
+```
+
+Optionally scope to a single creator with `?creatorId=clcreator_abc`.
+
+### Grant or Deduct Points
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "creatorId": "clcreator_abc",
+    "details": { "source": "welcome-bonus", "campaignId": "clcamp_xyz" }
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | integer | Yes | Non-zero integer. Positive = earn, negative = deduct |
+| `creatorId` | string | No | Scope points to a specific creator |
+| `details` | object | No | Arbitrary metadata stored with the transaction |
+
+### Points Transaction History
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points/history?page=1&limit=20&creatorId=clcreator_abc" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns paginated transaction records with type, amount, timestamp, and linked metadata.
+
+## Rewards
+
+### Get User's Reward Collection
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Filter by Status
+
+| Endpoint | Returns |
+|----------|---------|
+| `/user/{id}/nfts/earned` | All rewards earned through programs |
+| `/user/{id}/nfts/redeemable` | Rewards available for redemption |
+| `/user/{id}/nfts/redeemed` | Previously redeemed rewards |
+
+### Redeem a Reward
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/redeem \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Path parameters: `{network}` / `{contractAddress}` / `{tokenId}`. The redeem endpoint checks eligibility, deducts any required points, and processes the reward (free product, discount code, event pass, etc.).
+
+### Check Redemption Status
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/status \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "status": "REDEEMED",
+  "redeemedAt": "2026-03-07T15:30:00.000Z",
+  "rewardType": "FREE_PRODUCT",
+  "rewardDetails": {
+    "productId": "clprod_abc123",
+    "orderId": "clord_reward_xyz"
+  }
+}
+```
+
+## Social Graph
+
+### Follow a User
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/followers/follow \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "followingId": "cluser_target" }'
+```
+
+### Unfollow a User
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/followers/follow \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "followingId": "cluser_target" }'
+```
+
+### Follow a Creator
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/clcreator_abc/followers/follow \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### List Following
+
+| Endpoint | Returns |
+|----------|---------|
+| `/user/{id}/following` | All users being followed |
+| `/user/{id}/following/creators` | All creators being followed |
+| `/user/{id}/following/creators/count` | Creator following count |
+| `/user/{id}/followers` | Users following this user |
+
+## Notifications
+
+### List Notifications
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notifications \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Mark as Read
+
+```bash
+curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notification/clnotif_abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "READ" }'
+```
+
+### Delete a Notification
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notification/clnotif_abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+## Create a Creator (via User)
+
+Users can create creator profiles (storefronts) from their account:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "displayName": "Jane's Clean Beauty",
+    "slug": "janes-clean-beauty",
+    "categoryIds": [1, 3]
+  }'
+```
+
+Check slug availability first:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/check-availability \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "displayName": "Jane'\''s Clean Beauty", "slug": "janes-clean-beauty" }'
+```
+
+## Initialize Chat
+
+Set up a Stream Chat channel between a user and a creator:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/chat \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestorId": "clcreator_abc",
+    "requestorType": "Creator"
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requestorId` | string | Yes | CUID of the other party |
+| `requestorType` | string | Yes | `"User"` or `"Creator"` |
 
 ## User Model
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | CUID2 identifier |
-| `username` | string | Unique handle |
-| `email` | string | Contact email |
-| `avatarUrl` | string | Profile image URL |
-| `bio` | string | User biography |
-| `city`, `state` | string | Location |
+| `username` | string \| null | Unique handle |
+| `email` | string | Contact email (unique) |
+| `emailVerified` | boolean | Email verification status |
+| `avatarUrl` | string \| null | Profile image URL |
+| `bio` | string \| null | User biography |
+| `city` | string \| null | City |
+| `state` | string \| null | State/region |
+| `createdAt` | datetime | Account creation timestamp |
+| `updatedAt` | datetime | Last update timestamp |
+| `organizationId` | string | Parent organization (your tenant) |
 
-## Wallet Types
+## Endpoint Summary
 
-| Provider | Description |
-|----------|-------------|
-| Privy embedded | Auto-created on login, user-controlled |
-| Privy server | Platform-managed for automated operations |
-| Self-custodied | User's own external wallet address |
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/user` | Create a user |
+| `PATCH` | `/user/{id}` | Update profile |
+| `GET` | `/user/username/{username}` | Lookup by username |
+| `GET` | `/user/privy/{privyId}/profile` | Lookup by Privy ID |
+| `GET` | `/user/privy/{privyId}/creators` | Creators for Privy user |
+| `GET` | `/user/{id}/wallets` | List wallets |
+| `GET` | `/user/{id}/wallets/{address}` | Wallet detail |
+| `POST` | `/user/{id}/wallets/{address}/send` | Send from wallet |
+| `GET` | `/user/{id}/wallets/{address}/transactions` | Wallet transactions |
+| `GET` | `/user/{id}/shipping-address` | Shipping address |
+| `GET` | `/user/{id}/points` | Points balance |
+| `POST` | `/user/{id}/points` | Grant/deduct points |
+| `GET` | `/user/{id}/points/history` | Points history |
+| `GET` | `/user/{id}/orders` | Order history |
+| `GET` | `/user/{id}/order` | Open order |
+| `POST` | `/user/{id}/order` | Create order |
+| `GET` | `/user/{id}/order/{orderId}` | Order detail |
+| `POST` | `/user/{id}/order/{orderId}/checkout` | Stripe checkout |
+| `PATCH` | `/user/{id}/order/{orderId}/checkout/embedded-wallet` | Embedded wallet checkout |
+| `PATCH` | `/user/{id}/order/{orderId}/checkout/coinbase` | Coinbase checkout |
+| `POST` | `/user/{id}/order/{orderId}/product/{productId}` | Add product to order |
+| `DELETE` | `/user/{id}/order/{orderId}/item/{itemId}` | Remove item |
+| `PUT` | `/user/{id}/order/{orderId}/points/finalize` | Finalize points |
+| `POST` | `/user/{id}/order/{orderId}/points/revert` | Revert points |
+| `GET` | `/user/{id}/nfts` | Reward collection |
+| `GET` | `/user/{id}/nfts/earned` | Earned rewards |
+| `GET` | `/user/{id}/nfts/redeemable` | Redeemable rewards |
+| `GET` | `/user/{id}/nfts/redeemed` | Redeemed rewards |
+| `POST` | `/user/{id}/nfts/{network}/{address}/{tokenId}/redeem` | Redeem reward |
+| `GET` | `/user/{id}/nfts/{network}/{address}/{tokenId}/status` | Redemption status |
+| `GET` | `/user/{id}/followers` | Followers |
+| `POST` | `/user/{id}/followers/follow` | Follow a user |
+| `DELETE` | `/user/{id}/followers/follow` | Unfollow a user |
+| `GET` | `/user/{id}/following` | Following |
+| `GET` | `/user/{id}/following/creators` | Following creators |
+| `GET` | `/user/{id}/following/creators/count` | Following count |
+| `GET` | `/user/{id}/notifications` | Notifications |
+| `PUT` | `/user/{id}/notification/{notificationId}` | Mark notification read |
+| `DELETE` | `/user/{id}/notification/{notificationId}` | Delete notification |
+| `POST` | `/user/{id}/creator` | Create creator profile |
+| `POST` | `/user/{id}/creator/check-availability` | Check slug availability |
+| `POST` | `/user/{id}/chat` | Initialize chat |

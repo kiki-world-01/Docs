@@ -5,78 +5,269 @@ description: Inbound webhooks from Stripe, Shopify, and Privy, plus 25 QStash as
 
 ## Overview
 
-Podium processes inbound webhooks from external services and uses QStash for reliable async event processing. All webhook endpoints are public (no API key required) but authenticated via service-specific signature verification.
+Podium processes inbound webhooks from external services and uses [QStash](https://upstash.com/docs/qstash) for reliable async event processing. All webhook endpoints are public (no API key required) but authenticated via service-specific signature verification.
 
 ## External Webhooks
 
 ### Stripe
 
-| Endpoint | Events |
-|----------|--------|
-| `/webhooks/stripe/payment-intent/succeeded` | Payment confirmed |
-| `/webhooks/stripe/payment-intent/processing` | Payment processing |
-| `/webhooks/stripe/payment-intent/failed` | Payment failed |
-| `/webhooks/stripe/account/updated` | Connect account status change |
-| `/webhooks/stripe/transfer/created` | Creator payout transferred |
+Stripe webhooks handle payment lifecycle events. Each endpoint verifies the `Stripe-Signature` header against the configured webhook secret before processing.
 
-All Stripe webhooks verify the `Stripe-Signature` header against the configured webhook secret.
+| Endpoint | Event | What Happens |
+|----------|-------|-------------|
+| `/webhooks/stripe/payment-intent/succeeded` | `payment_intent.succeeded` | Confirms order, triggers `purchase-processed` event, creates `CreatorPayout` |
+| `/webhooks/stripe/payment-intent/processing` | `payment_intent.processing` | Updates order status to `PROCESSING` |
+| `/webhooks/stripe/payment-intent/payment-failed` | `payment_intent.payment_failed` | Marks order payment as failed, triggers point revert |
+| `/webhooks/stripe/account/updated` | `account.updated` | Updates creator's Stripe Connect account status |
+| `/webhooks/stripe/transfer/created` | `transfer.created` | Records payout transfer, updates `CreatorPayout` to `TRANSFERRED` |
+
+#### Stripe Signature Verification
+
+```typescript
+import Stripe from "stripe";
+
+const stripe = new Stripe(STRIPE_SECRET_KEY);
+const event = stripe.webhooks.constructEvent(
+  rawBody,
+  request.headers["stripe-signature"],
+  STRIPE_WEBHOOK_SECRET
+);
+```
+
+Every Stripe webhook validates the signature before processing. If verification fails, the endpoint returns `400`.
+
+#### Example Payload: payment_intent.succeeded
+
+```json
+{
+  "id": "evt_1234567890",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_1234567890",
+      "amount": 2900,
+      "currency": "usd",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "clord_xyz",
+        "userId": "clxyz1234567890",
+        "organizationId": "clorg_abc"
+      }
+    }
+  }
+}
+```
 
 ### Shopify
 
-| Endpoint | Events |
-|----------|--------|
-| `/webhooks/shopify` | Product updates, order notifications, app uninstall |
+Shopify sends webhooks to a single endpoint that dispatches based on the `X-Shopify-Topic` header:
+
+| Topic | Handler | What Happens |
+|-------|---------|-------------|
+| `products/create` | Sync product | Creates `ShopifyProduct` + linked `Product` |
+| `products/update` | Sync product | Updates product data, variants, media |
+| `products/delete` | Archive product | Soft-deletes the linked product |
+| `app/uninstalled` | Cleanup | Removes store connection |
+
+Shopify webhook verification uses HMAC-SHA256 with the app's shared secret against the `X-Shopify-Hmac-Sha256` header.
 
 ### Privy
 
-| Endpoint | Events |
-|----------|--------|
-| `/webhooks/privy` | User creation, wallet creation |
+Privy sends blockchain transaction confirmations:
 
-## QStash Event Queues
+| Event Type | What Happens |
+|-----------|-------------|
+| `transaction.confirmed` | Updates transaction status, processes pending operations |
+| `transaction.execution_reverted` | Marks transaction as failed, queues retry if applicable |
 
-QStash provides reliable async event processing with automatic retries. All handlers authenticate via QStash signature verification.
+```json
+{
+  "chainId": 8453,
+  "eventType": "transaction.confirmed",
+  "txHash": "0xabc...",
+  "txId": "privy_tx_123",
+  "walletId": "privy_wallet_456"
+}
+```
 
-### 25 Event Types
+### Task Verification (Oracle)
 
-| Event | Trigger |
-|-------|---------|
-| `purchase-processed` | Order payment confirmed |
-| `order-confirmation` | Send order confirmation email |
-| `creator-order-confirmation` | Notify creator of new order |
-| `campaign-published` | Campaign goes live |
-| `campaign-ended` | Campaign closes |
-| `campaign-reviewed` | Campaign review completed |
-| `campaign-vote` | New vote cast |
-| `nft-received` | Reward minted to user |
-| `nft-redeemed` | Reward redeemed |
-| `nft-reward-published` | New reward available |
-| `follow` | User followed a creator |
-| `points-received` | Points awarded |
-| `user-created` | New user registered |
-| `airdrop` | Process airdrop distribution |
-| `shopify-order-push` | Push order to Shopify |
-| `shopify-products-sync` | Sync products from Shopify |
-| `product-published` | Product goes live |
-| `presale-purchase-processed` | Token presale purchase |
-| `api-key-changed` | API key created/rotated/revoked (cache invalidation) |
-| `stripe-onboarding-reminder` | Remind creator to complete Stripe setup |
-| `task-pool-deployed` | New TaskPool deployed for tenant |
-| `task-created` | New task created in pool |
-| `task-verification-requested` | Task submitted for verification |
-| `enrichment-crawl` | Run enrichment data ingestion |
-| `enrichment-extract` | Extract attributes from raw records |
-| `enrichment-baseline` | Recompute attribute baselines |
+The verification oracle callback is used by external verification services:
 
-### 8 Cron Jobs
+```bash
+POST /webhooks/task-verify/{taskId}
+```
 
-| Job | Schedule | Purpose |
-|-----|----------|---------|
-| Airdrop monitor | Periodic | Check pending airdrop deliveries |
-| Campaign monitor | Periodic | End campaigns past their deadline |
-| Contract monitor | Periodic | Sync on-chain contract state |
-| Enrichment baseline recompute | Periodic | Recompute stale attribute baselines |
-| Mint queue processor | Frequent | Process pending reward mints |
-| Payouts sweep | Periodic | Transfer eligible creator payouts |
-| Stripe onboarding reminder | Daily | Remind incomplete Stripe setups |
-| Token presale monitor | Periodic | Monitor presale status changes |
+```json
+{
+  "approved": true,
+  "resolverSignature": "0xabc...",
+  "timestamp": 1709827200,
+  "resolutionMetadata": {
+    "evaluationType": "ai",
+    "confidence": 0.95,
+    "notes": "Task output meets acceptance criteria"
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `approved` | boolean | Yes | Whether the task passed verification |
+| `resolverSignature` | string | Yes | Oracle's cryptographic signature |
+| `timestamp` | number | Yes | Unix timestamp of resolution |
+| `resolutionMetadata` | object | No | Additional verification context |
+
+## QStash Event System
+
+QStash provides at-least-once delivery with automatic retries and dead-letter queues. All QStash handlers verify the `Upstash-Signature` header.
+
+### QStash Signature Verification
+
+```typescript
+import { Receiver } from "@upstash/qstash";
+
+const receiver = new Receiver({
+  currentSigningKey: QSTASH_CURRENT_SIGNING_KEY,
+  nextSigningKey: QSTASH_NEXT_SIGNING_KEY
+});
+
+const isValid = await receiver.verify({
+  signature: request.headers["upstash-signature"],
+  body: rawBody
+});
+```
+
+### Event Types (25 Queues)
+
+#### Commerce Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `purchase-processed` | Order payment confirmed | Award purchase points, update inventory, notify creator |
+| `order-confirmation` | Order created | Send confirmation email to buyer via SendGrid |
+| `creator-order-confirmation` | Order for a creator | Notify creator of new order via email/push |
+| `shopify-order-push` | Shopify-linked order | Push order data to connected Shopify store |
+
+#### Campaign Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `campaign-published` | Campaign goes live | Send notifications to followers |
+| `campaign-ended` | Campaign closes | Calculate final analytics, process reward distributions |
+| `campaign-reviewed` | Admin review completed | Notify creator of approval/rejection |
+| `campaign-vote` | New vote cast | Update attribute tallies, check for campaign completion |
+
+#### Reward & Points Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `nft-received` | Reward minted to user | Send notification to user |
+| `nft-redeemed` | Reward redeemed | Process redemption (create order, grant points, etc.) |
+| `nft-reward-published` | New reward available | Notify eligible users |
+| `points-received` | Points awarded | Send notification, update leaderboard |
+| `airdrop` | Airdrop triggered | Queue mints for all eligible users |
+
+#### User & Social Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `user-created` | New user registered | Send welcome email, create Stream Chat token |
+| `follow` | User followed a creator | Notify creator, update follower counts |
+
+#### Product Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `product-published` | Product goes live | Index in search, notify followers |
+| `shopify-products-sync` | Shopify sync triggered | Batch sync products from Shopify store |
+
+#### Platform Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `api-key-changed` | API key created/rotated/revoked | Flush Redis caches across all instances |
+| `stripe-onboarding-reminder` | Creator hasn't completed Stripe setup | Send reminder email |
+| `presale-purchase-processed` | Token presale purchase | Process presale reward, update presale state |
+
+#### Task Pool Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `task-pool-deployed` | New TaskPool deployed for tenant | Record contract addresses |
+| `task-created` | New task in pool | Notify registered solvers |
+| `task-verification-requested` | Task submitted for verification | Route to oracle or AI evaluator |
+
+#### Enrichment Events
+
+| Event | Trigger | Side Effects |
+|-------|---------|-------------|
+| `enrichment-crawl` | Crawl triggered | Fetch data from enrichment source via Firecrawl |
+| `enrichment-extract` | Raw data ingested | Extract attributes via rule engine or LLM |
+| `enrichment-baseline` | Extraction complete | Recompute attribute baselines |
+
+### Retry & Idempotency
+
+QStash provides automatic retries with exponential backoff:
+
+- **Max retries**: 3 (configurable per queue)
+- **Backoff**: Exponential with jitter
+- **Dead letter**: Failed events after max retries are logged for manual review
+
+<Warning>
+  QStash delivers at-least-once. Your handlers should be idempotent — processing the same event twice must produce the same result. Use database unique constraints and conditional updates to guard against duplicate processing.
+</Warning>
+
+### Idempotency Patterns
+
+```typescript
+// Use unique constraints to prevent duplicate processing
+const existing = await prisma.creatorPayout.findUnique({
+  where: { orderId: event.orderId }
+});
+if (existing) return; // already processed
+
+await prisma.creatorPayout.create({
+  data: { orderId: event.orderId, /* ... */ }
+});
+```
+
+## Cron Jobs (8 Scheduled Tasks)
+
+| Job | Schedule | Purpose | Details |
+|-----|----------|---------|---------|
+| `airdrop-monitor` | Every 5 min | Process pending airdrop deliveries | Checks `Airdrop` records with `PENDING` status, queues mints |
+| `campaign-monitor` | Every 15 min | End campaigns past their deadline | Sets `ENDED` status, triggers `campaign-ended` event |
+| `contract-monitor` | Every 10 min | Sync on-chain contract state | Verifies deployment status of reward contracts |
+| `enrichment-baseline-recompute` | Every 6 hours | Recompute stale attribute baselines | Recalculates `AttributeBaseline` values for enrichment |
+| `mint-queue` | Every 1 min | Process pending reward mints | Batches `PENDING` QueuedMints, executes via Privy server wallet |
+| `payouts-sweep` | Every 30 min | Transfer eligible creator payouts | Queries `ELIGIBLE` CreatorPayouts, executes Stripe transfers |
+| `stripe-onboarding-reminder` | Daily | Remind incomplete Stripe setups | Emails creators who started but didn't finish Connect onboarding |
+| `token-presale-monitor` | Every 15 min | Monitor presale status changes | Checks presale deadlines and token distribution status |
+
+All cron jobs are triggered by QStash scheduled messages to their respective `/webhooks/qstash/cron/` endpoints.
+
+## Webhook Security Summary
+
+| Source | Verification Method | Header |
+|--------|-------------------|--------|
+| Stripe | HMAC-SHA256 with webhook secret | `Stripe-Signature` |
+| Shopify | HMAC-SHA256 with app secret | `X-Shopify-Hmac-Sha256` |
+| QStash | Upstash signing keys | `Upstash-Signature` |
+| Privy | Privy webhook secret | Standard signature header |
+| Task Oracle | Custom signature | `resolverSignature` in body |
+
+## Endpoint Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/webhooks/stripe/payment-intent/succeeded` | Payment confirmed |
+| `POST` | `/webhooks/stripe/payment-intent/processing` | Payment processing |
+| `POST` | `/webhooks/stripe/payment-intent/payment-failed` | Payment failed |
+| `POST` | `/webhooks/stripe/account/updated` | Connect account update |
+| `POST` | `/webhooks/stripe/transfer/created` | Payout transferred |
+| `POST` | `/webhooks/shopify` | Shopify product/order events |
+| `POST` | `/webhooks/privy` | Blockchain transaction events |
+| `POST` | `/webhooks/task-verify/{taskId}` | Oracle verification callback |
+| `POST` | `/webhooks/qstash/queues/{event}` | QStash event handler (25 queues) |
+| `POST` | `/webhooks/qstash/cron/{job}` | QStash cron handler (8 jobs) |

@@ -1,118 +1,382 @@
 ---
 title: Integration Guides
-description: Connecting Podium with Shopify, Stripe Connect, Privy wallets, and Stream Chat
+description: Connecting Podium with Shopify, Stripe Connect, Privy wallets, Stream Chat, and Shippo shipping
 ---
 
 ## Shopify
 
-Podium syncs products and orders with Shopify stores.
+Podium syncs products and orders with Shopify stores via OAuth and webhooks.
 
-### Setup
+### OAuth Installation
 
-1. **Install**: `GET /shopify/install?shop=your-store.myshopify.com` — initiates OAuth flow
-2. **Callback**: Shopify redirects to `/shopify/callback` with access token
-3. **Sync**: Products are synced automatically via webhooks or manually via `/shopify/sync/manual`
+<Steps>
+  <Step title="Initiate OAuth">
+    Redirect the merchant to the Shopify install endpoint:
 
-### Synced Data
+    ```bash
+    GET /api/v1/shopify/install?shop=your-store.myshopify.com
+    ```
 
-| Shopify Entity | Podium Model |
-|---------------|-------------|
-| Products | `ShopifyProduct` → linked to `Product` |
-| Variants | `ShopifyVariant` → linked to `ProductAttributeVariant` |
-| Options | `ShopifyOption` |
-| Media | `ShopifyMedia` → linked to `ProductMedia` |
-| Orders | `ShopifyOrder` |
+    This generates a Shopify OAuth authorization URL with the required scopes.
+  </Step>
+  <Step title="Authorize">
+    Shopify redirects the merchant to grant permissions. Required scopes:
+    - `read_products`, `write_products`
+    - `read_orders`, `write_orders`
+    - `read_inventory`
+  </Step>
+  <Step title="Callback">
+    Shopify redirects to `/api/v1/shopify/callback` with an access token. Podium stores the token in a `ShopifyStore` record linked to the creator.
+  </Step>
+  <Step title="Initial sync">
+    After OAuth completes, trigger an initial product sync:
 
-### Webhooks
+    ```bash
+    POST /api/v1/shopify/sync/manual
+    ```
 
-Shopify sends webhooks to `/webhooks/shopify` for product updates, order creation, and app uninstall events. Product sync runs async via the `shopify-products-sync` QStash queue.
+    This dispatches a `shopify-products-sync` QStash event that fetches all products from the Shopify store.
+  </Step>
+</Steps>
+
+### Synced Data Mapping
+
+| Shopify Entity | Podium Model | Sync Direction |
+|---------------|-------------|----------------|
+| Products | `ShopifyProduct` → `Product` | Shopify → Podium |
+| Variants | `ShopifyVariant` → `ProductAttributeVariant` | Shopify → Podium |
+| Options | `ShopifyOption` | Shopify → Podium |
+| Media/Images | `ShopifyMedia` → `ProductMedia` | Shopify → Podium |
+| Orders | `ShopifyOrder` | Podium → Shopify |
+
+Product data flows from Shopify into Podium. Order data flows from Podium back to Shopify via the `shopify-order-push` QStash event.
+
+### Webhook Events
+
+Shopify sends webhooks to `POST /webhooks/shopify` with the `X-Shopify-Topic` header:
+
+| Topic | Handler |
+|-------|---------|
+| `products/create` | Create new `ShopifyProduct` + linked `Product` |
+| `products/update` | Update product data, variants, media |
+| `products/delete` | Soft-delete the linked product |
+| `app/uninstalled` | Remove store connection, clean up tokens |
+
+### Webhook Verification
+
+```typescript
+import crypto from 'crypto';
+
+const hmac = crypto.createHmac('sha256', SHOPIFY_API_SECRET);
+hmac.update(rawBody);
+const digest = hmac.digest('base64');
+
+if (digest !== request.headers['x-shopify-hmac-sha256']) {
+  throw new Error('Invalid Shopify webhook signature');
+}
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|---------|
+| Products not syncing | Verify the Shopify app has `read_products` scope. Trigger manual sync via `/shopify/sync/manual` |
+| Duplicate products | Check if the Shopify product already has a linked `ShopifyProduct` record |
+| Orders not pushing to Shopify | Verify the store connection is active and the app has `write_orders` scope |
+| Webhook failures | Check the QStash dead letter queue for failed `shopify-products-sync` events |
 
 ## Stripe Connect
 
-Creators receive payouts through Stripe Connect.
+Creators receive payouts through Stripe Connect Express accounts.
 
-### Setup
+### Setup Flow
 
-1. Creator initiates Stripe onboarding via `GET /creator/id/{creatorId}/stripe/account`
-2. Stripe redirects for identity verification and bank account setup
-3. Account status tracked in `StripeAccount`
-4. Periodic reminders sent via `stripe-onboarding-reminder` cron if setup is incomplete
+<Steps>
+  <Step title="Create Stripe account">
+    ```bash
+    POST /api/v1/creator/id/{creatorId}/stripe/account
+    ```
 
-### Payment Flow
+    Creates a Stripe Express account and returns an onboarding URL.
+  </Step>
+  <Step title="Complete onboarding">
+    Redirect the creator to the Stripe onboarding URL. They'll complete identity verification and bank account setup directly with Stripe.
+  </Step>
+  <Step title="Account activation">
+    Stripe sends an `account.updated` webhook when onboarding is complete. Podium updates the `StripeAccount` status to active.
+  </Step>
+</Steps>
 
-1. Customer pays via Stripe PaymentIntent
-2. Platform takes application fee (`STRIPE_PLATFORM_APPLICATION_FEE_BPS`)
-3. Net amount tracked in `CreatorPayout` (PENDING → ELIGIBLE → TRANSFERRED)
-4. Payout sweep cron transfers eligible payouts to creator's Connect account
+### Platform Fee Configuration
+
+Podium takes a platform application fee on every transaction:
+
+```
+STRIPE_PLATFORM_APPLICATION_FEE_BPS=500   # 5% platform fee
+```
+
+The fee is applied when creating the Stripe PaymentIntent:
+
+```typescript
+const paymentIntent = await stripe.paymentIntents.create({
+  amount: orderTotal,
+  currency: 'usd',
+  application_fee_amount: Math.floor(orderTotal * (feeBps / 10000)),
+  transfer_data: {
+    destination: creatorStripeAccountId
+  }
+});
+```
+
+### Payout Flow
+
+1. Customer pays → Stripe PaymentIntent succeeds
+2. Platform fee deducted automatically
+3. `CreatorPayout` record created with `PENDING` status
+4. After hold period → status changes to `ELIGIBLE`
+5. `payouts-sweep` cron transfers eligible payouts to creator's Connect account
+6. `transfer.created` webhook confirms → status updates to `TRANSFERRED`
+
+### Onboarding Reminders
+
+If a creator doesn't complete Stripe onboarding within 48 hours, the `stripe-onboarding-reminder` cron sends an email reminder. The reminder tracks:
+
+- `stripeOnboardingReminderSentAt` — when the last reminder was sent
+- `stripeOnboardingReminderClaimedUntil` — suppresses reminders until this date
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|---------|
+| Creator can't receive payouts | Verify their Stripe account status via `GET /creator/id/{id}/stripe/account`. If `restricted`, the creator needs to complete additional verification |
+| Payouts stuck in PENDING | Check the `payouts-sweep` cron job is running. Verify the hold period hasn't been extended |
+| Application fee incorrect | Verify `STRIPE_PLATFORM_APPLICATION_FEE_BPS` in your environment |
 
 ## Privy Wallets
 
 Privy provides embedded wallet infrastructure for both server-side automation and client-side user wallets.
 
-### Server Wallets (Bots / Backend)
+### Environment Variables
+
+```bash
+PRIVY_APP_ID=your_privy_app_id
+PRIVY_APP_SECRET=your_privy_app_secret
+```
+
+### Server Wallets (Backend / Agents)
+
+Server wallets are platform-managed — your backend controls signing. Used for automated x402 payments, reward minting, and agent-initiated transfers.
 
 ```typescript
 import { PrivyClient } from '@privy-io/server-auth';
 
-const privy = new PrivyClient(appId, appSecret);
+const privy = new PrivyClient(
+  process.env.PRIVY_APP_ID,
+  process.env.PRIVY_APP_SECRET
+);
 
-// Create a server wallet
-const wallet = await privy.wallets().create({ chain_type: 'ethereum' });
-
-// Use for automated x402 payments, NFT minting, etc.
+const wallet = await privy.wallets().create({
+  chain_type: 'ethereum'
+});
 ```
 
 ### Embedded Wallets (Frontend)
 
+Embedded wallets are auto-created for end users on first login, giving them a non-custodial wallet without seed phrase management.
+
 ```typescript
 import { PrivyProvider } from '@privy-io/react-auth';
 
-<PrivyProvider
-  appId={PRIVY_APP_ID}
-  config={{
-    loginMethods: ['email', 'telegram'],
-    embeddedWallets: {
-      ethereum: { createOnLogin: 'all-users' }
-    }
-  }}
->
-  <App />
-</PrivyProvider>
+function App() {
+  return (
+    <PrivyProvider
+      appId={process.env.PRIVY_APP_ID}
+      config={{
+        loginMethods: ['email', 'telegram', 'google'],
+        embeddedWallets: {
+          ethereum: { createOnLogin: 'all-users' }
+        },
+        supportedChains: [base]
+      }}
+    >
+      <YourApp />
+    </PrivyProvider>
+  );
+}
 ```
-
-Users get a wallet auto-created on first login. They can fund it via Apple Pay, Google Pay, Coinbase, or direct USDC transfer.
 
 ### User Linking
 
-Privy users are linked to Podium users via the `PrivyUser` mapping table. The `/user/privy/{privyId}` endpoint resolves Privy DIDs to Podium user profiles.
+Privy users are linked to Podium users via the `PrivyUser` model:
+
+| Privy DID | Podium User |
+|-----------|-------------|
+| `did:privy:abc123` | `clxyz1234567890` |
+
+Resolve the link with:
+
+```bash
+GET /api/v1/user/privy/{privyId}/profile
+```
+
+### Funding Embedded Wallets
+
+Users can fund their embedded wallets via:
+- Apple Pay / Google Pay (through Privy's fiat on-ramp)
+- Coinbase transfer
+- Direct USDC transfer from any wallet
+- Points-to-USDC conversion (if enabled)
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|---------|
+| Wallet not created on login | Verify `createOnLogin: 'all-users'` in Privy config |
+| Transaction failures | Check the Privy dashboard for transaction logs. Verify sufficient gas/USDC balance |
+| User can't link external wallet | Ensure `walletConnectors` includes the desired provider |
 
 ## Stream Chat
 
 Podium integrates Stream Chat for real-time messaging between users and creators.
 
-### Setup
-
-1. Server generates Stream Chat tokens via `GET /creator/id/{creatorId}/chat` or `GET /user/{id}/chat`
-2. Client connects using the Stream Chat SDK with the generated token
-3. Channels are created per creator-user pair
-
-### Environment
+### Environment Variables
 
 ```bash
-STREAM_ACCESS_KEY=your_key
-STREAM_ACCESS_SECRET=your_secret
+STREAM_ACCESS_KEY=your_stream_key
+STREAM_ACCESS_SECRET=your_stream_secret
 ```
+
+### Setup
+
+<Steps>
+  <Step title="Generate tokens">
+    Server generates Stream Chat tokens:
+
+    ```bash
+    POST /api/v1/user/{id}/chat
+    ```
+
+    or for creator-initiated chats:
+
+    ```bash
+    POST /api/v1/creator/id/{creatorId}/chat
+    ```
+  </Step>
+  <Step title="Client connection">
+    Connect using the Stream Chat SDK with the generated token:
+
+    ```typescript
+    import { StreamChat } from 'stream-chat';
+
+    const client = StreamChat.getInstance(STREAM_ACCESS_KEY);
+    await client.connectUser(
+      { id: userId, name: username },
+      streamChatToken
+    );
+    ```
+  </Step>
+  <Step title="Channel creation">
+    Channels are created per user-creator pair. The server creates and manages channels to enforce access control.
+  </Step>
+</Steps>
+
+### Request Body
+
+```json
+{
+  "requestorId": "clcreator_abc",
+  "requestorType": "Creator",
+  "userId": "clxyz1234567890"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requestorId` | string | Yes | CUID of the initiating party |
+| `requestorType` | enum | Yes | `"User"` or `"Creator"` |
+| `userId` | string | No | Target user (for creator-initiated chats) |
 
 ## Shippo Shipping
 
 Podium uses Shippo for shipping rate calculation and label generation.
 
-### Setup
+### OAuth Installation
 
-1. **Install**: `GET /shippo/install` — initiates Shippo OAuth
-2. **Callback**: `/shippo/callback` — stores access token in `ShippoAccount`
+<Steps>
+  <Step title="Initiate OAuth">
+    ```bash
+    GET /api/v1/shippo/install
+    ```
+  </Step>
+  <Step title="Callback">
+    Shippo redirects to `/api/v1/shippo/callback` with an access token. Stored in `ShippoAccount` linked to the creator.
+  </Step>
+</Steps>
 
-### Usage
+### Get Shipping Quotes
 
-- `GET /order/{id}/shipping/quote` — get available shipping rates
-- `POST /creator/id/{creatorId}/order/{orderId}/shipping/label` — generate and purchase a shipping label
+```bash
+GET /api/v1/order/{id}/shipping/quote
+```
+
+Returns available shipping rates from Shippo based on the order's weight, dimensions, and destination:
+
+```json
+{
+  "rates": [
+    {
+      "carrier": "USPS",
+      "service": "Priority Mail",
+      "amount": 7.99,
+      "currency": "USD",
+      "estimatedDays": 3,
+      "rateId": "rate_abc123"
+    },
+    {
+      "carrier": "UPS",
+      "service": "Ground",
+      "amount": 12.50,
+      "currency": "USD",
+      "estimatedDays": 5,
+      "rateId": "rate_def456"
+    }
+  ]
+}
+```
+
+### Generate Shipping Label
+
+```bash
+POST /api/v1/creator/id/{creatorId}/order/{orderId}/shipping/label
+```
+
+Generates and purchases a shipping label via Shippo. Returns the label URL and tracking number.
+
+### Flat Rate Fallback
+
+Creators can set a `flatShippingRate` (in cents) on their profile as a default when Shippo quotes aren't available or desired:
+
+```bash
+PATCH /api/v1/creator/id/{creatorId}
+{ "flatShippingRate": 799 }
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|---------|
+| No shipping quotes | Verify the order has valid shipping addresses and product weights |
+| Label generation fails | Check the creator's Shippo account is connected and has a valid payment method |
+| Rates seem high | Review product weight/dimension data — incorrect values inflate shipping costs |
+
+## External Documentation Links
+
+| Service | Documentation |
+|---------|-------------|
+| [Shopify API](https://shopify.dev/docs/api) | Admin API, webhooks, OAuth |
+| [Stripe Connect](https://docs.stripe.com/connect) | Express accounts, payouts, platform fees |
+| [Privy](https://docs.privy.io/) | Embedded wallets, server wallets, auth |
+| [Stream Chat](https://getstream.io/chat/docs/) | Real-time messaging SDK |
+| [Shippo](https://docs.goshippo.com/) | Shipping rates, labels, tracking |
+| [QStash](https://upstash.com/docs/qstash) | Async messaging, retries, scheduling |
+| [Firecrawl](https://docs.firecrawl.dev/) | Web crawling for enrichment |

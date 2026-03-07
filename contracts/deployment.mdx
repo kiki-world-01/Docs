@@ -21,74 +21,304 @@ solc = "0.8.24"
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
+
+remappings = [
+  "forge-std/=lib/forge-std/src/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+]
+```
+
+### Etherscan Verification
+
+```toml
+[etherscan]
+base_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+base_mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.basescan.org/api" }
 ```
 
 ## Deployment Scripts
 
-### V1: `script/Deploy.s.sol`
+### V1: Intent Settlers (`script/Deploy.s.sol`)
 
-Deploys the intent settler suite:
+Deploys the original intent settlement suite.
 
-1. `IntentRegistry`
-2. `PodiumOriginSettler(registry)`
-3. `PodiumDestinationSettler(origin, registry)`
-4. Wire: `registry.setOriginSettler(origin)` + `origin.setDestinationSettler(destination)`
-5. On testnet (chainId != 8453): deploys `MockUSDC`
-
-```bash
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify
-```
-
-### V2: `script/DeployV2.s.sol`
-
-Deploys the full multi-tenant system:
-
-1. **MockUSDC** (testnet) or canonical USDC address (mainnet)
-2. **SolverRegistry** — implementation + ERC1967Proxy
-3. **VerificationEngine** — implementation + ERC1967Proxy
-4. **IntentRegistryV2** — implementation + ERC1967Proxy
-5. **TaskPoolImplementation** + **RewardPoolImplementation** — bare implementations
-6. **TaskPoolFactory** — creates UpgradeableBeacons, wires all references
-7. Authorizes factory as caller on IntentRegistryV2
-8. Optionally transfers all ownership to `SAFE_MULTISIG_ADDRESS`
+<Steps>
+  <Step title="Deploy IntentRegistry">
+    No constructor arguments. Deployed as a standalone contract.
+  </Step>
+  <Step title="Deploy PodiumOriginSettler">
+    Constructor: `PodiumOriginSettler(address registry)`
+  </Step>
+  <Step title="Deploy PodiumDestinationSettler">
+    Constructor: `PodiumDestinationSettler(address originSettler, address registry)`
+  </Step>
+  <Step title="Wire references">
+    ```solidity
+    registry.setOriginSettler(address(originSettler));
+    originSettler.setDestinationSettler(address(destinationSettler));
+    ```
+  </Step>
+  <Step title="Deploy MockUSDC (testnet only)">
+    On non-mainnet chains (`chainId != 8453`), deploys a MockUSDC for testing.
+  </Step>
+</Steps>
 
 ```bash
-forge script script/DeployV2.s.sol --rpc-url $RPC_URL --broadcast --verify
+forge script script/Deploy.s.sol \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  --verify \
+  --etherscan-api-key $ETHERSCAN_API_KEY
 ```
 
-### Upgrade: `script/Upgrade.s.sol`
+### V2: Task Pool System (`script/DeployV2.s.sol`)
 
-Upgrades TaskPool and/or RewardPool beacon implementations:
+Deploys the full multi-tenant system with proxy patterns.
+
+<Steps>
+  <Step title="USDC">
+    Testnet: deploys MockUSDC. Mainnet: uses canonical address `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
+  </Step>
+  <Step title="SolverRegistry">
+    Deploy implementation + ERC1967Proxy.
+
+    ```solidity
+    SolverRegistry solverImpl = new SolverRegistry();
+    ERC1967Proxy solverProxy = new ERC1967Proxy(
+        address(solverImpl),
+        abi.encodeCall(SolverRegistry.initialize, (deployer))
+    );
+    ```
+  </Step>
+  <Step title="VerificationEngine">
+    Deploy implementation + ERC1967Proxy.
+
+    ```solidity
+    VerificationEngine veImpl = new VerificationEngine();
+    ERC1967Proxy veProxy = new ERC1967Proxy(
+        address(veImpl),
+        abi.encodeCall(VerificationEngine.initialize, (deployer, oracleAddress))
+    );
+    ```
+
+    `oracleAddress` defaults to deployer if `AI_ORACLE_ADDRESS` is not set.
+  </Step>
+  <Step title="IntentRegistryV2">
+    Deploy implementation + ERC1967Proxy.
+
+    ```solidity
+    IntentRegistryV2 irImpl = new IntentRegistryV2();
+    ERC1967Proxy irProxy = new ERC1967Proxy(
+        address(irImpl),
+        abi.encodeCall(IntentRegistryV2.initialize, (deployer))
+    );
+    ```
+  </Step>
+  <Step title="Pool Implementations">
+    Deploy bare implementations (no proxy — these are used as Beacon targets):
+
+    ```solidity
+    TaskPoolImplementation taskPoolImpl = new TaskPoolImplementation();
+    RewardPoolImplementation rewardPoolImpl = new RewardPoolImplementation();
+    ```
+  </Step>
+  <Step title="TaskPoolFactory">
+    Deploy factory, which internally creates UpgradeableBeacons for both pool types:
+
+    ```solidity
+    TaskPoolFactory factory = new TaskPoolFactory(
+        address(taskPoolImpl),
+        address(rewardPoolImpl),
+        address(solverRegistry),
+        address(verificationEngine),
+        address(intentRegistry),
+        address(usdc)
+    );
+    ```
+  </Step>
+  <Step title="Authorize factory">
+    ```solidity
+    intentRegistry.addAuthorizedCaller(address(factory));
+    ```
+  </Step>
+  <Step title="Transfer ownership (optional)">
+    If `SAFE_MULTISIG_ADDRESS` is set:
+
+    ```solidity
+    solverRegistry.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    verificationEngine.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    intentRegistry.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    factory.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    ```
+  </Step>
+</Steps>
+
+```bash
+forge script script/DeployV2.s.sol \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast \
+  --verify \
+  --etherscan-api-key $ETHERSCAN_API_KEY
+```
+
+### Output
+
+The deploy script logs all addresses:
+
+```
+USDC_ADDRESS=0x...
+TASK_POOL_FACTORY_ADDRESS=0x...
+SOLVER_REGISTRY_ADDRESS=0x...
+VERIFICATION_ENGINE_ADDRESS=0x...
+INTENT_REGISTRY_ADDRESS=0x...
+```
+
+Save these to your `.env` for the Podium API server.
+
+### Upgrade: Beacon Implementations (`script/Upgrade.s.sol`)
+
+Upgrades TaskPool and/or RewardPool beacon implementations. All existing tenant pools are upgraded atomically via the beacon pattern.
 
 ```bash
 UPGRADE_TASK_POOL=true UPGRADE_REWARD_POOL=true \
-  forge script script/Upgrade.s.sol --rpc-url $RPC_URL --broadcast
+  forge script script/Upgrade.s.sol \
+  --rpc-url $BASE_SEPOLIA_RPC_URL \
+  --broadcast
 ```
+
+The upgrade script:
+1. Deploys new implementation contract(s)
+2. Calls `factory.upgradeTaskPool(newImpl)` and/or `factory.upgradeRewardPool(newImpl)`
+3. All beacon proxies immediately point to the new implementation
 
 ## Supported Networks
 
-| Network | Chain ID | USDC | Purpose |
-|---------|----------|------|---------|
+| Network | Chain ID | USDC Address | Purpose |
+|---------|----------|-------------|---------|
 | **Base Mainnet** | 8453 | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Production |
-| **Base Sepolia** | 84532 | MockUSDC deployed per environment | Testnet |
-| **Arc Testnet** | — | `0x3600000000000000000000000000000000000000` | Development |
+| **Base Sepolia** | 84532 | MockUSDC (deployed per environment) | Testnet |
+| **Arc Testnet** | 1637450 | `0x3600000000000000000000000000000000000000` | Development |
+
+### Base Mainnet (Production)
+
+- Chain ID: `8453`
+- RPC: Set via `BASE_MAINNET_RPC_URL`
+- Block explorer: [basescan.org](https://basescan.org)
+- USDC: Circle's canonical deployment
+- Gas token: ETH
+
+### Base Sepolia (Testnet)
+
+- Chain ID: `84532`
+- RPC: Set via `BASE_SEPOLIA_RPC_URL`
+- Block explorer: [sepolia.basescan.org](https://sepolia.basescan.org)
+- USDC: MockUSDC deployed by the deploy script
+- Gas token: Sepolia ETH (free from faucets)
+
+### Arc Testnet (Development)
+
+- USDC is the native gas token (no separate ERC-20)
+- USDC address: `0x3600000000000000000000000000000000000000`
+- Circle SDK targets `ARC-TESTNET` blockchain identifier
 
 ## Environment Variables
 
 ```bash
-# Required for deployment
+# Deployer
 DEPLOYER_PRIVATE_KEY=0x...
-RPC_URL=https://...
 
-# V2 specific
-AI_ORACLE_ADDRESS=0x...        # VerificationEngine oracle (defaults to deployer)
-SAFE_MULTISIG_ADDRESS=0x...    # Optional: transfer ownership to multisig
+# Network RPC
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+BASE_MAINNET_RPC_URL=https://mainnet.base.org
 
-# Upgrade specific
+# Verification
+ETHERSCAN_API_KEY=your_basescan_api_key
+
+# V2 Deployment
+AI_ORACLE_ADDRESS=0x...           # VerificationEngine oracle (defaults to deployer)
+SAFE_MULTISIG_ADDRESS=0x...       # Optional: transfer ownership to multisig
+
+# Upgrade
 UPGRADE_TASK_POOL=true|false
 UPGRADE_REWARD_POOL=true|false
-TASK_POOL_FACTORY_ADDRESS=0x...
+TASK_POOL_FACTORY_ADDRESS=0x...   # Required for upgrades
 ```
+
+## Contract Verification
+
+After deployment, verify contracts on Basescan:
+
+```bash
+forge verify-contract \
+  --chain-id 84532 \
+  --constructor-args $(cast abi-encode "constructor(address)" 0xRegistryAddr) \
+  0xDeployedAddr \
+  src/PodiumOriginSettler.sol:PodiumOriginSettler \
+  --etherscan-api-key $ETHERSCAN_API_KEY
+```
+
+For proxy contracts (V2), verify both the implementation and the proxy:
+
+```bash
+forge verify-contract \
+  --chain-id 84532 \
+  0xImplementationAddr \
+  src/SolverRegistry.sol:SolverRegistry \
+  --etherscan-api-key $ETHERSCAN_API_KEY
+
+forge verify-contract \
+  --chain-id 84532 \
+  0xProxyAddr \
+  lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+  --etherscan-api-key $ETHERSCAN_API_KEY
+```
+
+## Mainnet Deployment Checklist
+
+<Steps>
+  <Step title="Audit">
+    Ensure all contracts have been audited. Review any changes since the last audit.
+  </Step>
+  <Step title="Test on Sepolia">
+    Deploy to Base Sepolia first. Run the full test suite against the testnet deployment.
+
+    ```bash
+    forge test --fork-url $BASE_SEPOLIA_RPC_URL
+    ```
+  </Step>
+  <Step title="Prepare multisig">
+    Set up a Gnosis Safe multisig on Base Mainnet for ownership. At least 3 signers with 2/3 threshold recommended.
+  </Step>
+  <Step title="Deploy">
+    ```bash
+    SAFE_MULTISIG_ADDRESS=0xYourSafe... \
+    forge script script/DeployV2.s.sol \
+      --rpc-url $BASE_MAINNET_RPC_URL \
+      --broadcast \
+      --verify
+    ```
+  </Step>
+  <Step title="Verify on Basescan">
+    Verify all deployed contracts on Basescan for transparency.
+  </Step>
+  <Step title="Configure Podium API">
+    Update the Podium API server environment with the new contract addresses.
+  </Step>
+  <Step title="Test tenant pool creation">
+    Create a test tenant pool via the API to verify the full flow works end-to-end.
+  </Step>
+  <Step title="Transfer ownership">
+    If not done during deployment, transfer ownership of all V2 contracts to the multisig:
+
+    ```solidity
+    solverRegistry.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    verificationEngine.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    intentRegistry.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    factory.transferOwnership(SAFE_MULTISIG_ADDRESS);
+    ```
+  </Step>
+</Steps>
 
 ## Circle SDK Integration
 
@@ -114,9 +344,7 @@ The `circle-sdk/` directory provides a Node.js/TypeScript integration layer usin
 - USDC address on Arc: `0x3600000000000000000000000000000000000000`
 - Circle SDK targets `ARC-TESTNET` blockchain identifier
 
-## Shell Scripts
-
-Utility scripts for quick operations:
+## Shell Utility Scripts
 
 | Script | Purpose |
 |--------|---------|

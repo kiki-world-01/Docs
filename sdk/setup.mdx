@@ -28,45 +28,121 @@ The SDK auto-detects the environment from your key prefix:
 | `podium_test_` | `https://api.test.podiumcommerce.xyz/api/v1` |
 | `podium_live_` | `https://api.podiumcommerce.xyz/api/v1` |
 
+### Environment Setup
+
+Add your API key to your `.env` file:
+
+```bash
+# Get your key from https://www.app.podiumcommerce.xyz
+PODIUM_API_KEY=podium_test_sk_your_key_here
+```
+
+<Warning>
+  Never commit API keys to version control. Always load them from environment variables or a secrets manager.
+</Warning>
+
+### Custom Base URL
+
+Override the auto-detected base URL for local development or custom deployments:
+
+```typescript
+const podium = new Podium({
+  apiKey: process.env.PODIUM_API_KEY,
+  baseUrl: 'https://your-custom-api.example.com/api/v1'
+});
+```
+
+## Multi-Tenant Context
+
+Every API call is scoped to the organization that owns your API key. You don't need to pass an `organizationId` — the Podium middleware extracts it from your key automatically.
+
+If your organization manages multiple creators, all creator-scoped operations (products, orders, campaigns) are accessible through your single API key:
+
+```typescript
+const creatorA = await podium.creators.getBySlug('brand-a');
+const creatorB = await podium.creators.getBySlug('brand-b');
+```
+
 ## SDK Namespaces
 
 The SDK is organized into namespaces that mirror the API structure:
 
 | Namespace | Covers |
 |-----------|--------|
-| `podium.products` | Product CRUD, listing, search |
-| `podium.creators` | Creator profiles, products, orders |
-| `podium.users` | User profiles, wallets, following |
-| `podium.orders` | Order management, checkout |
-| `podium.campaigns` | Campaign CRUD, participation |
-| `podium.nfts` | NFT queries, rewards, airdrops |
-| `podium.points` | Points balance, history |
+| `podium.products` | Product CRUD, listing, variants, publish lifecycle |
+| `podium.creators` | Creator profiles, products, orders, payouts |
+| `podium.users` | User profiles, wallets, following, notifications |
+| `podium.orders` | Order management, checkout, shipping |
+| `podium.campaigns` | Campaign CRUD, participation, analytics |
+| `podium.nfts` | Reward programs, minting, airdrops, redemption |
+| `podium.points` | Points balance, history, grants |
 | `podium.companion` | Intent profiles, interactions, recommendations |
-| `podium.search` | Full-text search, autocomplete |
+| `podium.search` | Full-text search, universal search, discovery |
+| `podium.tasks` | Task Pool V2, solver, verification |
 | `podium.admin` | API keys, organizations, enrichment |
 
 ## Basic Usage
 
 ```typescript
-// List products
 const products = await podium.products.list();
 
-// Get a creator by slug
 const creator = await podium.creators.getBySlug('clean-beauty-co');
 
-// Create a user
 const user = await podium.users.create({
   email: 'user@example.com',
-  username: 'jane_doe'
+  privyId: 'did:privy:abc123'
 });
 
-// Get points balance
-const points = await podium.points.getBalance(user.id);
+const balance = await podium.points.getBalance(user.id);
+```
+
+## Pagination
+
+List endpoints return paginated results. Use `page` and `limit` parameters:
+
+```typescript
+const page1 = await podium.products.list({ page: 1, limit: 20 });
+
+const page2 = await podium.products.list({ page: 2, limit: 20 });
+```
+
+### Pagination Response Shape
+
+All paginated responses include a `pagination` object:
+
+```typescript
+interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+```
+
+### Iterate All Pages
+
+```typescript
+async function getAllProducts(podium: Podium) {
+  const products = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await podium.products.list({ page, limit: 100 });
+    products.push(...result.data);
+    hasMore = result.data.length === 100;
+    page++;
+  }
+
+  return products;
+}
 ```
 
 ## Error Handling
 
-The SDK throws typed errors with status codes:
+The SDK throws typed errors with HTTP status codes and structured error bodies:
 
 ```typescript
 try {
@@ -74,10 +150,102 @@ try {
 } catch (error) {
   if (error.status === 404) {
     console.log('Product not found');
+  } else if (error.status === 401) {
+    console.log('Invalid API key');
   } else if (error.status === 429) {
-    console.log(`Rate limited, retry after ${error.retryAfter}s`);
+    const retryAfter = error.headers?.['retry-after'];
+    console.log(`Rate limited, retry after ${retryAfter}s`);
+  } else if (error.status === 402) {
+    console.log('x402 payment required:', error.body);
   }
 }
+```
+
+### Error Codes
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Bad request — invalid parameters |
+| `401` | Unauthorized — invalid or missing API key |
+| `402` | Payment required — x402 payment needed |
+| `403` | Forbidden — insufficient permissions |
+| `404` | Not found |
+| `409` | Conflict — duplicate resource |
+| `422` | Validation error — request body failed Zod validation |
+| `429` | Rate limited — check `Retry-After` header |
+| `500` | Server error |
+
+### Validation Errors (422)
+
+Podium uses Zod for request validation. Validation errors include field-level details:
+
+```json
+{
+  "status": 422,
+  "error": "Validation Error",
+  "details": [
+    {
+      "path": ["email"],
+      "message": "Invalid email",
+      "code": "invalid_string"
+    },
+    {
+      "path": ["amount"],
+      "message": "Expected number, received string",
+      "code": "invalid_type"
+    }
+  ]
+}
+```
+
+## Retry and Backoff
+
+The SDK does not include automatic retries. Implement retry logic for transient errors:
+
+```typescript
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelayMs = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const isRetryable = [429, 500, 502, 503].includes(error.status);
+      if (!isRetryable || attempt === maxRetries) throw error;
+
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw new Error('Unreachable');
+}
+
+const product = await withRetry(() =>
+  podium.products.get('clprod_abc123')
+);
+```
+
+For `429` responses, respect the `Retry-After` header when available.
+
+## Rate Limits
+
+Rate limits are per-API-key and based on your subscription tier:
+
+| Tier | Calls/Month | Burst Rate |
+|------|-------------|------------|
+| Builder (Free) | 10,000 | 10 req/s |
+| Growth ($99/mo) | 100,000 | 50 req/s |
+| Pro ($499/mo) | 1,000,000 | 200 req/s |
+| Enterprise | Custom | Custom |
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit: 50
+X-RateLimit-Remaining: 47
+X-RateLimit-Reset: 1709827260
 ```
 
 ## SDK Generation
@@ -89,3 +257,13 @@ The SDK uses a hybrid generation approach:
 3. **Wrapper layer** maps generated services to clean namespaces
 
 The SDK is regenerated from the Podium API's OpenAPI spec whenever the API surface changes. Published versions on npm always reflect the latest API.
+
+## Versioning
+
+The SDK follows semver. Breaking changes increment the major version:
+
+```bash
+npm install @podiumcommerce/node-sdk@latest
+```
+
+Check the [Podium API Playground](https://api.podiumcommerce.xyz/docs) for the latest endpoint documentation. The playground is always in sync with the production API.

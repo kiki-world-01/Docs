@@ -9,59 +9,313 @@ The Task Pool API provides REST endpoints for managing the on-chain Task Pool V2
 
 See [Smart Contracts: Task Pool V2](/contracts/task-pool) for the on-chain architecture.
 
-## Endpoints
+## Create a Task
 
-### Tasks
+<CodeGroup>
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/tasks` | Create a task (deploys on-chain intent) |
-| `GET` | `/tasks` | List tasks for the organization |
-| `GET` | `/tasks/{taskId}` | Get task details |
-| `POST` | `/tasks/{taskId}/verify` | Submit task for verification |
+```bash cURL
+curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+    "amountUSDC": 25.00,
+    "acceptanceCriteria": "Submit a 500-word product review with at least 2 photos",
+    "verificationMethod": "Oracle",
+    "durationSeconds": 86400,
+    "campaignId": "clcamp_xyz"
+  }'
+```
 
-### Pools
+```typescript SDK
+const task = await podium.tasks.create({
+  merchantAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+  amountUSDC: 25.00,
+  acceptanceCriteria: "Submit a 500-word product review with at least 2 photos",
+  verificationMethod: "Oracle",
+  durationSeconds: 86400,
+  campaignId: "clcamp_xyz"
+});
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/tasks/pools` | Get organization's deployed pool addresses |
+</CodeGroup>
 
-### Solver Discovery
+### Request Body
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/solver` | List registered solvers (public, no auth) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `merchantAddress` | string | Yes | EVM address of the merchant funding the task |
+| `amountUSDC` | number | Yes | Reward amount in USDC |
+| `acceptanceCriteria` | string | Yes | Human/machine-readable criteria for task completion |
+| `verificationMethod` | enum | No | `Consensus`, `Oracle`, or `AIEval` (default: `Oracle`) |
+| `durationSeconds` | integer | No | Task deadline in seconds (default: 3600) |
+| `campaignId` | string | No | Link task to a campaign |
+| `journeyId` | string | No | Link task to a campaign journey |
 
-### Verification Webhook
+### Response
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/webhooks/task-verify` | Verification oracle callback |
+```json
+{
+  "taskId": "0xabc123...",
+  "status": "Open",
+  "merchantAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+  "amountUSDC": 25.00,
+  "acceptanceCriteria": "Submit a 500-word product review with at least 2 photos",
+  "verificationMethod": "Oracle",
+  "deadline": "2026-03-08T12:00:00.000Z",
+  "campaignId": "clcamp_xyz",
+  "createdAt": "2026-03-07T12:00:00.000Z"
+}
+```
 
-### Admin
+### Creation Flow
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/admin/tasks` | Admin task management |
+```mermaid
+sequenceDiagram
+    participant A as API Client
+    participant P as Podium API
+    participant F as TaskPoolFactory
+    participant TP as TaskPool
+    participant IR as IntentRegistryV2
 
-## Task Creation Flow
+    A->>P: POST /tasks
+    P->>P: Verify org has deployed pools
+    P->>TP: createTask(merchant, amount, duration, campaignId, method, criteria)
+    TP->>TP: Debit merchant balance
+    TP->>IR: registerIntent(taskId, merchant, recipient, amount)
+    TP-->>P: taskId
+    P->>P: Create Task record in database
+    P->>P: Emit task-created QStash event
+    P-->>A: Task response
+```
 
-1. **API call**: `POST /tasks` with amount, duration, campaign ID, verification method, and acceptance criteria
-2. **Pool check**: Verifies the organization has a deployed TaskPool (via `TenantContractPool`)
-3. **On-chain**: Calls `TaskPool.createTask()` which registers with IntentRegistry
-4. **Database**: Creates a `Task` record tracking the off-chain state
+## List Tasks
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/tasks?status=Open&limit=20&offset=0" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Query Parameters
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `status` | enum | Filter by status: `Open`, `Claimed`, `SubmittedForVerification`, `Verified`, `Settled`, `Expired`, `Cancelled` |
+| `campaignId` | string | Filter by campaign |
+| `limit` | integer | Max results (default: 20) |
+| `offset` | integer | Pagination offset |
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "taskId": "0xabc123...",
+      "status": "Open",
+      "amountUSDC": 25.00,
+      "deadline": "2026-03-08T12:00:00.000Z",
+      "verificationMethod": "Oracle",
+      "claimedBy": null
+    }
+  ],
+  "total": 42,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+## Get Task Details
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/tasks/0xabc123... \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+## Cancel a Task
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/tasks/0xabc123... \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Only `Open` tasks can be cancelled. Cancellation refunds the escrowed amount to the merchant's pool balance.
+
+## Analytics
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/tasks/analytics/summary \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns aggregate task metrics: total created, active, completed, expired, total value escrowed.
+
+## Pool Management
+
+### Get Organization Pools
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/tasks/pools \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "taskPoolAddress": "0x1234...",
+  "rewardPoolAddress": "0x5678...",
+  "tenantId": "0xorgbytes...",
+  "active": true,
+  "createdAt": "2026-01-15T10:00:00.000Z"
+}
+```
+
+### Provision Pools
+
+If your organization doesn't have pools yet, provision them:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+This calls `TaskPoolFactory.createTenantPools()` on-chain, deploying a dedicated `TaskPool` and `RewardPool` pair for your organization.
+
+### Deposit USDC
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools/deposit \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amountUSDC": 1000.00,
+    "txHash": "0xabc..."
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amountUSDC` | number | Yes | Amount to deposit |
+| `txHash` | string | Yes | On-chain transaction hash of the USDC transfer |
+
+### Withdraw USDC
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools/withdraw \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "amountUSDC": 500.00 }'
+```
+
+## Solver Endpoints
+
+Solvers are agents or humans that claim and complete tasks for USDC rewards.
+
+### Register as a Solver
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "solverAddress": "0xSolverAddr...",
+    "metadata": {
+      "name": "Beauty Review Agent",
+      "type": "ai_agent",
+      "capabilities": ["product_review", "photo_analysis"]
+    },
+    "signedTx": "0x..."
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `solverAddress` | string | Yes | Solver's EVM address |
+| `metadata` | object | No | `{ name, type, capabilities }` |
+| `metadata.type` | enum | No | `human`, `ai_agent`, or `hybrid` |
+| `signedTx` | string | No | Pre-signed registration transaction |
+
+### Browse Open Tasks
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/solver/tasks
+```
+
+No auth required — open tasks are public to enable solver discovery.
+
+### Claim a Task
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../claim \
+  -H "Content-Type: application/json" \
+  -d '{
+    "solverAddress": "0xSolverAddr...",
+    "signedTx": "0x..."
+  }'
+```
+
+### Submit Task Completion
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "solverAddress": "0xSolverAddr...",
+    "submissionHash": "0xbytes32hash...",
+    "metadata": {
+      "reviewUrl": "https://example.com/review/123",
+      "wordCount": 520,
+      "photoCount": 3
+    }
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `solverAddress` | string | Yes | Solver's EVM address |
+| `submissionHash` | string | Yes | bytes32 hash of the submission content |
+| `metadata` | object | No | Submission details for verification |
+| `signedTx` | string | No | Pre-signed submit transaction |
+
+### Solver Performance
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/solver/performance/0xSolverAddr...
+```
+
+```json
+{
+  "solver": "0xSolverAddr...",
+  "totalTasksClaimed": 47,
+  "totalTasksCompleted": 42,
+  "totalRewardsEarned": 1250000000,
+  "reputationScore": 892,
+  "completionRate": 0.89
+}
+```
+
+### Get Solver Profile
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/solver/0xSolverAddr...
+```
 
 ## Verification Methods
 
-| Method | Description |
+| Method | How It Works |
 |--------|-------------|
-| `Consensus` | Multiple parties must agree on completion |
-| `Oracle` | Authorized oracle evaluates the submission |
-| `AIEval` | AI evaluation against acceptance criteria |
+| `Consensus` | Multiple authorized parties must agree the task is complete |
+| `Oracle` | A single authorized oracle evaluates the submission. The Podium API acts as the oracle, receiving callbacks at `/webhooks/task-verify/{taskId}` |
+| `AIEval` | AI evaluation against the `acceptanceCriteria`. Uses Anthropic/OpenAI to score the submission |
 
-The Podium API backend acts as the oracle — it receives verification requests, evaluates submissions (via AI, consensus, or custom logic), and calls `VerificationEngine.resolveVerification()` on-chain.
+The verification flow:
+1. Solver submits → `VerificationEngine.requestVerification()` on-chain
+2. `task-verification-requested` QStash event fires
+3. Oracle/AI evaluates the submission
+4. `VerificationEngine.resolveVerification(taskId, approved)` settles on-chain
+5. If approved: `TaskPool.settleTask()` → `RewardPool.queuePayout()` → solver claims USDC
 
 ## Intents
+
+Legacy intent endpoints for V1 compatibility:
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -69,3 +323,49 @@ The Podium API backend acts as the oracle — it receives verification requests,
 | `GET` | `/intents/analytics` | Intent analytics (total, fulfilled, pending, expired) |
 | `GET` | `/intents/treasury` | Treasury balance and status |
 | `POST` | `/intents/treasury/create` | Create merchant treasury |
+
+## Admin Task Management
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/tasks/pending-review` | Tasks flagged for manual review |
+| `POST` | `/admin/tasks/{taskId}/resolve` | Manual approval/rejection |
+| `POST` | `/admin/tasks/{taskId}/retry-verification` | Retry oracle verification |
+
+### Manual Resolve
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/tasks/0xabc123.../resolve \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approved": true,
+    "adminNotes": "Review meets all criteria, photos verified"
+  }'
+```
+
+## Endpoint Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/tasks` | Create task |
+| `GET` | `/tasks` | List tasks |
+| `GET` | `/tasks/{taskId}` | Get task |
+| `DELETE` | `/tasks/{taskId}` | Cancel task |
+| `POST` | `/tasks/{taskId}/verify` | Internal verify |
+| `GET` | `/tasks/analytics/summary` | Analytics |
+| `GET` | `/tasks/pools` | Get org pools |
+| `POST` | `/tasks/pools` | Provision pools |
+| `POST` | `/tasks/pools/deposit` | Deposit USDC |
+| `POST` | `/tasks/pools/withdraw` | Withdraw USDC |
+| `POST` | `/solver/register` | Register solver |
+| `GET` | `/solver/tasks` | Browse open tasks |
+| `POST` | `/solver/tasks/{taskId}/claim` | Claim task |
+| `POST` | `/solver/tasks/{taskId}/submit` | Submit completion |
+| `GET` | `/solver/performance/{address}` | Solver stats |
+| `GET` | `/solver/{address}` | Solver profile |
+| `GET` | `/solver/intents/pending` | Pending intents (legacy) |
+| `GET` | `/intents` | List intents |
+| `GET` | `/intents/analytics` | Intent analytics |
+| `GET` | `/intents/treasury` | Treasury status |
+| `POST` | `/intents/treasury/create` | Create treasury |

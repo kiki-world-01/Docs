@@ -5,46 +5,298 @@ description: Full-text search, autocomplete, universal search, and curated disco
 
 ## Overview
 
-Podium provides multiple search and discovery surfaces powered by PostgreSQL `tsvector` full-text search with custom ranking.
+Podium provides multiple search and discovery surfaces powered by PostgreSQL `tsvector` full-text search with custom ranking. The search system spans products, creators, campaigns, rewards, and collectibles with both traditional keyword search and AI-enhanced universal search.
 
-## Endpoints
+## Full-Text Search
 
-### Search
+### Entity Search
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/search` | Full-text search across products, creators, and campaigns |
-| `GET` | `/autocomplete` | Autocomplete suggestions as user types |
-| `GET` | `/universal-search` | Unified search across all entity types |
-| `GET` | `/universal-search/suggestions` | Search suggestions |
+<CodeGroup>
 
-### Discovery Feeds
+```bash cURL
+curl "https://api.podiumcommerce.xyz/api/v1/search?query=hyaluronic+serum&type=product&limit=20&page=1" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/discover` | Curated discovery feed |
-| `GET` | `/discover/campaigns` | Discoverable campaigns |
-| `GET` | `/discover/collectibles` | Discoverable NFT collectibles |
-| `GET` | `/discover/creators` | Discoverable creators |
+```typescript SDK
+const results = await podium.search.query({
+  query: "hyaluronic serum",
+  type: "product",
+  limit: 20,
+  page: 1
+});
+```
 
-### Personalized
+</CodeGroup>
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/for-you` | Personalized feed (requires user context) |
-| `GET` | `/for-you/creators` | Recommended creators |
-| `GET` | `/featured` | Featured/editorial content |
+### Query Parameters
 
-### Saved Items
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Search query |
+| `type` | enum | No | `campaign`, `creator`, `user`, `product`, or `reward` |
+| `orderBy` | string | No | Sort order |
+| `page` | integer | No | Page number (1-indexed) |
+| `limit` | integer | No | Results per page |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/saved-item` | Save an item (wishlist) |
-| `GET` | `/saved-item` | List saved items |
-| `DELETE` | `/saved-item/{id}` | Remove saved item |
+When `type` is omitted, the search returns results across all entity types, grouped by category.
 
-Saved items support three types: `PRODUCT`, `CAMPAIGN`, and `REWARD`.
+### Response
+
+```json
+{
+  "data": [
+    {
+      "type": "product",
+      "id": "clprod_abc123",
+      "name": "Hyaluronic Acid Serum",
+      "slug": "hyaluronic-acid-serum",
+      "description": "Lightweight hydrating serum...",
+      "creatorSlug": "clean-beauty-co",
+      "price": 2900,
+      "imageUrl": "https://cdn.example.com/product.jpg",
+      "score": 0.892
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 8
+  }
+}
+```
+
+## Universal Search
+
+Universal search provides a unified search experience with optional LLM-powered synthesis that generates natural-language answers alongside traditional results.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.podiumcommerce.xyz/api/v1/universal-search?query=best+moisturizer+for+dry+skin&entityTypes=product,campaign&llmMode=auto&limit=10" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```typescript SDK
+const results = await podium.search.universal({
+  query: "best moisturizer for dry skin",
+  entityTypes: ["product", "campaign"],
+  llmMode: "auto",
+  limit: 10
+});
+```
+
+</CodeGroup>
+
+### Query Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Search query |
+| `entityTypes` | string | No | Comma-separated: `product`, `campaign`, `creator` |
+| `page` | integer | No | Page number |
+| `limit` | integer | No | Results per page |
+| `llm` | boolean | No | Enable LLM synthesis |
+| `llmMode` | enum | No | `auto`, `force`, or `off` — controls when LLM is invoked |
+| `answer` | boolean | No | Include LLM-generated answer |
+| `includeSuggestions` | boolean | No | Include search suggestions |
+
+### LLM Modes
+
+| Mode | Behavior |
+|------|----------|
+| `auto` | LLM is invoked when the query appears conversational or complex |
+| `force` | Always invoke LLM synthesis |
+| `off` | Traditional search only (default) |
+
+### Response with LLM Synthesis
+
+```json
+{
+  "results": [
+    {
+      "type": "product",
+      "id": "clprod_abc",
+      "name": "Ultra Hydrating Cream",
+      "score": 0.95
+    }
+  ],
+  "answer": "For dry skin, look for moisturizers with hyaluronic acid and ceramides. Clean Beauty Co's Ultra Hydrating Cream is a top pick with its triple-layer moisture barrier technology.",
+  "suggestions": ["ceramide cream", "barrier repair", "overnight mask"]
+}
+```
+
+### Search Suggestions
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/universal-search/suggestions?query=hya&limit=5" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `query` | string | — | Partial query for suggestions |
+| `limit` | integer | 10 | Max suggestions (max: 50) |
+
+```json
+{
+  "suggestions": [
+    "hyaluronic acid serum",
+    "hyaluronic moisturizer",
+    "hydrating face mask"
+  ]
+}
+```
+
+## Autocomplete
+
+Legacy autocomplete endpoint for backward compatibility:
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/autocomplete?query=clea&limit=10" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `query` | string | — | Partial query |
+| `limit` | integer | 10 | Max results |
+
+Prefer `/universal-search/suggestions` for new integrations.
+
+## Discovery Feeds
+
+Curated content surfaces for browsing.
+
+### Main Discovery
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.podiumcommerce.xyz/api/v1/discover?suggested=true&page=1&limit=20" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```typescript SDK
+const feed = await podium.search.discover({
+  suggested: true,
+  page: 1,
+  limit: 20
+});
+```
+
+</CodeGroup>
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Personalize for this user |
+| `suggested` | boolean | Include editorial suggestions |
+| `page` | integer | Page number |
+| `limit` | integer | Results per page |
+
+### Category-Specific Discovery
+
+| Endpoint | Returns |
+|----------|---------|
+| `/discover/campaigns` | Active discoverable campaigns |
+| `/discover/collectibles` | Discoverable on-chain collectibles |
+| `/discover/creators` | Featured creators |
+
+## Personalized Feeds
+
+### For-You Feed
+
+Returns a personalized product feed based on the user's intent profile, interactions, and enrichment data. This is the consumer-facing expression of the [agentic product feed](/agentic/product-feed).
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.podiumcommerce.xyz/api/v1/for-you/feed?userId=clxyz1234567890&page=1" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```typescript SDK
+const feed = await podium.search.forYou("clxyz1234567890", {
+  page: 1
+});
+```
+
+</CodeGroup>
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `userId` | string | Yes | User to personalize for |
+| `interests` | string | No | JSON array of interest overrides |
+| `page` | integer | No | Page number |
+
+### Recommended Creators
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/for-you/creators?userId=clxyz1234567890" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+## Saved Items (Wishlist)
+
+Users can save items for later across three entity types.
+
+### Save an Item
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/saved-item \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "clxyz1234567890",
+    "itemType": "PRODUCT",
+    "itemId": "clprod_abc123"
+  }'
+```
+
+### List Saved Items
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/saved-item?userId=clxyz1234567890" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Remove Saved Item
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/saved-item/clsaved_abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Supported Item Types
+
+| Type | Description |
+|------|-------------|
+| `PRODUCT` | Saved product |
+| `CAMPAIGN` | Saved campaign |
+| `REWARD` | Saved reward |
 
 ## Search Architecture
 
 Search uses PostgreSQL's built-in full-text search with `tsvector` columns on `SearchDoc` and `SearchChunk` models. Documents are indexed with custom ranking weights for relevance ordering.
+
+Products published via the `product-published` event are automatically indexed. Campaign and creator records are indexed on creation and update.
+
+The universal search layer adds optional LLM synthesis using Anthropic Claude to generate conversational answers grounded in the search results.
+
+## Endpoint Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/search` | Full-text search (by entity type) |
+| `GET` | `/autocomplete` | Legacy autocomplete |
+| `GET` | `/universal-search` | Unified search with optional LLM |
+| `GET` | `/universal-search/suggestions` | Search suggestions |
+| `GET` | `/discover` | Curated discovery feed |
+| `GET` | `/discover/campaigns` | Discoverable campaigns |
+| `GET` | `/discover/collectibles` | Discoverable collectibles |
+| `GET` | `/discover/creators` | Discoverable creators |
+| `GET` | `/for-you/feed` | Personalized feed |
+| `GET` | `/for-you/creators` | Recommended creators |
+| `POST` | `/saved-item` | Save an item |
+| `GET` | `/saved-item` | List saved items |
+| `DELETE` | `/saved-item/{id}` | Remove saved item |

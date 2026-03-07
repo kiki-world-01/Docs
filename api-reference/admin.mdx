@@ -7,58 +7,367 @@ description: API key management, organization settings, subscription tiers, and 
 
 Admin endpoints manage platform-level configuration including API keys, organizations, subscription tiers, and the enrichment pipeline. Most require `ADMIN` role access.
 
-## API Keys
+<Note>
+  Most developers interact with API keys and organization settings through the [Podium Developer Portal](https://www.app.podiumcommerce.xyz). The admin API is for programmatic management and platform-level automation.
+</Note>
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/admin/api-keys` | Create a new API key |
-| `GET` | `/admin/api-keys` | List organization's API keys |
-| `GET` | `/admin/api-keys/{id}` | Get key details (masked) |
-| `DELETE` | `/admin/api-keys/{id}` | Revoke a key |
-| `POST` | `/admin/api-keys/{id}/rotate` | Rotate key (generate new, deprecate old) |
+## API Key Management
 
-Key rotation generates a new key and invalidates the old one. A `api-key-changed` QStash event is published to flush Redis caches across all instances.
+### Create a Key
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "organizationId": "clorg_abc" }'
+```
+
+```json
+{
+  "id": "clkey_xyz",
+  "key": "podium_live_sk_abc123...",
+  "organizationId": "clorg_abc",
+  "isActive": true,
+  "createdAt": "2026-03-07T12:00:00.000Z"
+}
+```
+
+<Warning>
+  The full API key is only returned once at creation time. Store it securely — subsequent queries return a masked version.
+</Warning>
+
+### List Organization Keys
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/admin/api-keys?organizationId=clorg_abc" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+[
+  {
+    "id": "clkey_xyz",
+    "keyPrefix": "podium_live_sk_abc1...",
+    "isActive": true,
+    "lastUsedAt": "2026-03-07T11:45:00.000Z",
+    "createdAt": "2026-01-15T10:00:00.000Z"
+  }
+]
+```
+
+### Get Key Details
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Deactivate a Key
+
+```bash
+curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "isActive": false }'
+```
+
+Setting `isActive: false` immediately blocks all requests using this key.
+
+### Rotate a Key
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz/rotate \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "id": "clkey_xyz",
+  "key": "podium_live_sk_newkey456...",
+  "previousKeyId": "clkey_xyz_old",
+  "rotatedAt": "2026-03-07T12:00:00.000Z"
+}
+```
+
+Key rotation:
+1. Generates a new key value for the same key ID
+2. Invalidates the old key value
+3. Publishes an `api-key-changed` QStash event to flush Redis caches across all API instances
+4. Returns the new full key (one-time display)
+
+### Delete a Key
+
+```bash
+curl -X DELETE https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Permanently removes the key. This cannot be undone.
 
 ## Organizations
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/admin/organizations` | List organizations |
-| `GET` | `/admin/organizations/{id}` | Organization details |
-| `PATCH` | `/admin/organizations/{id}` | Update organization |
-| `GET` | `/admin/organizations/{id}/settings` | Organization settings (x402, blockchain, etc.) |
-| `PATCH` | `/admin/organizations/{id}/settings` | Update settings |
+### List Organizations
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/organizations \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Create an Organization
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/organizations \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Beauty",
+    "domain": "acmebeauty.com",
+    "subscriptionTierId": "tier_growth"
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Organization display name |
+| `domain` | string | No | Organization domain |
+| `subscriptionTierId` | string | No | Subscription tier to assign |
+
+### Get Organization Details
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Organization Settings
+
+Settings control organization-specific behavior like blockchain preferences, x402 configuration, and reward modes.
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "organizationId": "clorg_abc",
+  "x402Enabled": true,
+  "x402WalletAddress": "0x...",
+  "defaultChainId": 8453,
+  "rewardMode": "QUEUE",
+  "enrichmentEnabled": true,
+  "autoPublishProducts": false
+}
+```
+
+### Update Settings
+
+```bash
+curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "x402Enabled": true,
+    "x402WalletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+    "defaultChainId": 8453
+  }'
+```
 
 ## App Configuration
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/admin/app-config` | Get app configuration |
-| `PATCH` | `/admin/app-config` | Update app config (network, reward mode) |
+Global application configuration:
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/app-config \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```bash
+curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/app-config \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network": "base-mainnet",
+    "rewardMode": "QUEUE"
+  }'
+```
 
 ## Subscription Tiers
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/admin/subscription-tiers` | List all tiers |
-| `GET` | `/admin/subscription-tiers/{id}` | Tier details |
-| `PATCH` | `/admin/subscription-tiers/{id}` | Update tier limits |
+### List Tiers
 
-## Campaigns (Admin)
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/subscription-tiers \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/admin/campaigns` | All campaigns across the organization |
-| `PATCH` | `/admin/campaigns/{id}/status` | Approve/reject campaign submissions |
+```json
+[
+  {
+    "id": "tier_builder",
+    "name": "BUILDER",
+    "price": 0,
+    "monthlyApiCalls": 10000,
+    "maxApiKeys": 5,
+    "maxCreators": 2,
+    "features": ["Core commerce endpoints"]
+  },
+  {
+    "id": "tier_growth",
+    "name": "GROWTH",
+    "price": 9900,
+    "monthlyApiCalls": 100000,
+    "maxApiKeys": 20,
+    "maxCreators": 10,
+    "features": ["All endpoints", "Enrichment pipeline", "Priority support"]
+  },
+  {
+    "id": "tier_pro",
+    "name": "PRO",
+    "price": 49900,
+    "monthlyApiCalls": 1000000,
+    "maxApiKeys": 100,
+    "maxCreators": 50,
+    "features": ["All endpoints", "Enrichment pipeline", "Dedicated support", "Custom integrations"]
+  }
+]
+```
+
+### Get Tier Details
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/subscription-tiers/tier_growth \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+## Campaign Administration
+
+Admin-level campaign management across the organization:
+
+### List All Campaigns
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/campaigns \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Approve or Reject a Campaign
+
+```bash
+curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/campaigns/clcamp_xyz/status \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "APPROVED" }'
+```
+
+Valid transitions: `SUBMITTED` → `APPROVED` or `SUBMITTED` → `DRAFT` (rejection).
 
 ## Enrichment Pipeline
 
+Admin endpoints for managing the [enrichment pipeline](/agentic/enrichment-pipeline).
+
+### Trigger a Crawl
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sourceId": "clsource_sephora" }'
+```
+
+Dispatches an `enrichment-crawl` QStash event for the specified source. The crawl fetches data via Firecrawl and queues extraction.
+
+### Recompute Baselines
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/recompute \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "productId": "clprod_abc123" }'
+```
+
+Omit `productId` to recompute baselines for all products.
+
+### Pipeline Status
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+{
+  "sources": 12,
+  "totalRecords": 45000,
+  "pendingExtractions": 120,
+  "pendingBaselines": 45,
+  "lastCrawlAt": "2026-03-07T06:00:00.000Z",
+  "lastBaselineAt": "2026-03-07T08:00:00.000Z"
+}
+```
+
+### Manage Enrichment Sources
+
+#### Create a Source
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Sephora Product Pages",
+    "sourceType": "WEB_CRAWL",
+    "config": {
+      "url": "https://www.sephora.com/shop/*",
+      "schedule": "daily",
+      "selectors": { "name": "h1", "price": ".price-sales" }
+    }
+  }'
+```
+
+#### List Sources
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+## Task Administration
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /admin/tasks/pending-review` | Tasks flagged for manual review |
+| `POST /admin/tasks/{taskId}/resolve` | Manual approval/rejection |
+| `POST /admin/tasks/{taskId}/retry-verification` | Retry failed oracle verification |
+
+See [Task Pool API](/api-reference/task-pool-api) for details.
+
+## Endpoint Summary
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/admin/enrichment/run` | Trigger a crawl for a specific source |
-| `POST` | `/admin/enrichment/baseline/recompute` | Trigger baseline recomputation |
-| `GET` | `/admin/enrichment/status` | Pipeline status dashboard |
-| `POST` | `/admin/enrichment/sources` | Register a new enrichment source |
-| `GET` | `/admin/enrichment/sources` | List all configured sources |
-
-See [Enrichment Pipeline](/agentic/enrichment-pipeline) for the full pipeline architecture.
+| `POST` | `/admin/api-keys` | Create API key |
+| `GET` | `/admin/api-keys` | List keys |
+| `GET` | `/admin/api-keys/{id}` | Get key (masked) |
+| `PATCH` | `/admin/api-keys/{id}` | Activate/deactivate |
+| `DELETE` | `/admin/api-keys/{id}` | Delete key |
+| `POST` | `/admin/api-keys/{id}/rotate` | Rotate key |
+| `GET` | `/admin/organizations` | List organizations |
+| `POST` | `/admin/organizations` | Create organization |
+| `GET` | `/admin/organizations/{id}` | Get organization |
+| `GET` | `/admin/organizations/{id}/settings` | Get settings |
+| `PATCH` | `/admin/organizations/{id}/settings` | Update settings |
+| `GET` | `/admin/app-config` | Get app config |
+| `PATCH` | `/admin/app-config` | Update app config |
+| `GET` | `/admin/subscription-tiers` | List tiers |
+| `GET` | `/admin/subscription-tiers/{id}` | Get tier |
+| `GET` | `/admin/campaigns` | List campaigns |
+| `PATCH` | `/admin/campaigns/{id}/status` | Approve/reject campaign |
+| `POST` | `/admin/enrichment/run` | Trigger crawl |
+| `POST` | `/admin/enrichment/baseline/recompute` | Recompute baselines |
+| `GET` | `/admin/enrichment/status` | Pipeline status |
+| `POST` | `/admin/enrichment/sources` | Create source |
+| `GET` | `/admin/enrichment/sources` | List sources |
+| `GET` | `/admin/tasks/pending-review` | Tasks for review |
+| `POST` | `/admin/tasks/{taskId}/resolve` | Resolve task |
+| `POST` | `/admin/tasks/{taskId}/retry-verification` | Retry verification |
