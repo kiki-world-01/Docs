@@ -214,23 +214,13 @@ const session = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/check
 For agents that maintain user profiles:
 
 ```typescript
-const BASE = 'https://api.podiumcommerce.xyz/api/v1'
-const headers = {
-  'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,
-  'Content-Type': 'application/json',
-}
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
-// 1. Fetch user's intent profile (companion API — not yet in SDK)
-const profile = await fetch(`${BASE}/companion/profile/${userId}`, {
-  headers,
-}).then(r => r.json())
+const { data: profile } = await client.companion.listProfile({ userId })
 
-// 2. Get personalized recommendations (companion API)
-const recs = await fetch(`${BASE}/companion/recommendations/${userId}`, {
-  headers,
-}).then(r => r.json())
+const { data: recs } = await client.companion.listRecommendations({ userId })
 
-// 3. Cross-reference with enrichment baselines from the feed
 const feed = await client.agentic.listProductsFeed({ page: 1, limit: 20 })
 const enriched = feed.products.map(p => ({
   ...p,

@@ -260,20 +260,9 @@ const report = await client.campaigns.getSurveyReport({ id: survey.id })
 
 ## Companion Agent Workflows
 
-<Note>
-The Companion API routes (`/companion/*`) are not yet included in the published SDK (v0.4.0). Use HTTP requests until the SDK is updated. All companion routes require authentication.
-</Note>
-
-### Full Agent Lifecycle (HTTP)
+### Full Agent Lifecycle
 
 ```typescript
-const BASE = 'https://api.podiumcommerce.xyz/api/v1'
-const headers = {
-  'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,
-  'Content-Type': 'application/json',
-}
-
-// 1. Create user via SDK
 const user = await client.user.create({
   requestBody: {
     email: 'shopper@example.com',
@@ -281,49 +270,40 @@ const user = await client.user.create({
   },
 })
 
-// 2. Create intent profile (HTTP — not yet in SDK)
-const profile = await fetch(`${BASE}/companion/profile/${user.id}`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
+const { data: profile } = await client.companion.createProfile({
+  userId: user.id,
+  requestBody: {
     skinType: 'Oily',
     concerns: ['Acne', 'SPF protection'],
     priceRange: { min: 15, max: 50 },
     brands: ['CeraVe', 'The Ordinary'],
     avoidances: ['fragrance', 'alcohol'],
-  }),
-}).then(r => r.json())
-
-// 3. Get AI-powered recommendations (HTTP)
-const recs = await fetch(`${BASE}/companion/recommendations/${user.id}`, {
-  headers,
-}).then(r => r.json())
-
-// 4. Record interactions (HTTP)
-await fetch(`${BASE}/companion/interactions`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
-    userId: user.id,
-    productId: recs[0].id,
-    type: 'RANK_UP',
-  }),
+  },
 })
 
-// 5. Place a concierge order (HTTP)
-const order = await fetch(`${BASE}/companion/orders`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
+const { data: recs } = await client.companion.listRecommendations({
+  userId: user.id,
+})
+
+await client.companion.createInteractions({
+  requestBody: {
     userId: user.id,
     productId: recs[0].id,
-    email: 'shopper@example.com',
-  }),
-}).then(r => r.json())
+    action: 'RANK_UP',
+  },
+})
 
-// 6. Award points via SDK
-await client.user.createPoints({
-  id: user.id,
+const { data: order } = await client.companion.createOrders({
+  requestBody: {
+    userId: user.id,
+    productId: recs[0].id,
+    shippingAddress: { street: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102' },
+    email: 'shopper@example.com',
+  },
+})
+
+await client.companion.createProfilePoints({
+  userId: user.id,
   requestBody: {
     amount: 25,
     details: { reason: 'order_placed', orderId: order.id },
@@ -374,11 +354,22 @@ await client.userOrderPoints.revert({ id: userId, orderId })
 
 ## Task Pool (On-Chain Bounties)
 
-<Note>
-The Task Pool API routes (`/tasks/*`, `/solver/*`) are not yet included in the published SDK (v0.4.0). Use HTTP requests until the SDK is updated.
-</Note>
+### Create a Task
 
-### Create a Task (HTTP)
+```typescript
+const { data: task } = await client.tasks.createTask({
+  requestBody: {
+    merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
+    amountUSDC: 5.0,
+    acceptanceCriteria: 'Write a 200+ word product review with personal experience, star rating 1-5, and photo',
+    verificationMethod: 'Oracle',
+    durationSeconds: 86400,
+    campaignId: 'campaign_abc',
+  },
+})
+```
+
+### Solver Workflow (HTTP)
 
 ```typescript
 const BASE = 'https://api.podiumcommerce.xyz/api/v1'
@@ -387,42 +378,19 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-const task = await fetch(`${BASE}/tasks`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
-    amount: 5000000, // $5.00 USDC (6 decimals)
-    duration: 86400, // 24 hours
-    campaignId: 'campaign_abc',
-    verificationMethod: 'Oracle',
-    acceptanceCriteria: JSON.stringify({
-      description: 'Write a 200+ word product review',
-      requirements: ['Personal experience', 'Star rating 1-5', 'Photo'],
-    }),
-  }),
-}).then(r => r.json())
-```
-
-### Solver Workflow (HTTP)
-
-```typescript
-// Register as solver
 const solver = await fetch(`${BASE}/solver/register`, {
   method: 'POST',
   headers,
   body: JSON.stringify({ walletAddress: '0xSolverAddress...' }),
 }).then(r => r.json())
 
-// Browse available tasks
 const tasks = await fetch(`${BASE}/solver/tasks`, { headers }).then(r => r.json())
 
-// Claim a task
 await fetch(`${BASE}/solver/tasks/${taskId}/claim`, {
   method: 'POST',
   headers,
 })
 
-// Submit proof
 await fetch(`${BASE}/solver/tasks/${taskId}/submit`, {
   method: 'POST',
   headers,

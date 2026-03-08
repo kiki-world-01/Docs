@@ -82,28 +82,22 @@ const response = await wrapFetchWithPayment(
 Agents pay for physical products on behalf of users:
 
 ```typescript
-const BASE = 'https://api.podiumcommerce.xyz/api/v1'
-const headers = {
-  'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,
-  'Content-Type': 'application/json',
-}
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
-// Create order through Companion API (not yet in SDK)
-const order = await fetch(`${BASE}/companion/orders`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
+const { data: order } = await client.companion.createOrders({
+  requestBody: {
     userId: 'user_xyz',
     productId: 'prod_abc',
-    shippingAddress: { /* ... */ },
+    shippingAddress: { street: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102' },
     email: 'user@example.com',
-  }),
-}).then(r => r.json())
+  },
+})
 
 // Pay via x402
 const payment = await wrapFetchWithPayment(
   fetch,
-  `${BASE}/x402/order/${order.id}/pay`,
+  `https://api.podiumcommerce.xyz/api/v1/x402/order/${order.id}/pay`,
   {},
   { wallet, maxValue: order.amountUsdc }
 )
