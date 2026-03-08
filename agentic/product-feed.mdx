@@ -214,16 +214,26 @@ const session = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/check
 For agents that maintain user profiles:
 
 ```typescript
-// 1. Fetch user's intent profile
-const profile = await podium.companion.getProfile(userId);
+const BASE = 'https://api.podiumcommerce.xyz/api/v1'
+const headers = {
+  'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,
+  'Content-Type': 'application/json',
+}
 
-// 2. Get personalized recommendations
-const recs = await podium.companion.getRecommendations(userId, { count: 10 });
+// 1. Fetch user's intent profile (companion API — not yet in SDK)
+const profile = await fetch(`${BASE}/companion/profile/${userId}`, {
+  headers,
+}).then(r => r.json())
+
+// 2. Get personalized recommendations (companion API)
+const recs = await fetch(`${BASE}/companion/recommendations/${userId}`, {
+  headers,
+}).then(r => r.json())
 
 // 3. Cross-reference with enrichment baselines from the feed
-const feed = await fetch('/api/v1/agentic/products/feed');
+const feed = await client.agentic.listProductsFeed({ page: 1, limit: 20 })
 const enriched = feed.products.map(p => ({
   ...p,
   matchScore: computeMatch(profile, p.attributeBaselines)
-}));
+}))
 ```

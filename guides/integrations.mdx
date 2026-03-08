@@ -316,10 +316,10 @@ Podium uses Shippo for shipping rate calculation and label generation.
 ### Get Shipping Quotes
 
 ```bash
-GET /api/v1/order/{id}/shipping/quote
+POST /api/v1/order/{id}/shipping/quote
 ```
 
-Returns available shipping rates from Shippo based on the order's weight, dimensions, and destination:
+Provide the recipient's shipping address in the request body to receive available shipping rates from Shippo based on the order's weight, dimensions, and destination:
 
 ```json
 {
@@ -347,10 +347,10 @@ Returns available shipping rates from Shippo based on the order's weight, dimens
 ### Generate Shipping Label
 
 ```bash
-POST /api/v1/creator/id/{creatorId}/order/{orderId}/shipping/label
+GET /api/v1/creator/id/{creatorId}/order/{orderId}/shipping/label
 ```
 
-Generates and purchases a shipping label via Shippo. Returns the label URL and tracking number.
+Retrieves the shipping label for an order via Shippo. Returns the label URL and tracking number.
 
 ### Flat Rate Fallback
 

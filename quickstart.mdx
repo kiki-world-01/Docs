@@ -7,7 +7,7 @@ description: Create an account, get an API key, and make your first call in unde
 
 <Steps>
   <Step title="Sign up">
-    Head to the [Podium Developer Portal](https://www.app.podiumcommerce.xyz) and sign in with email, Google, or a crypto wallet (powered by Privy).
+    Head to the [Podium Developer Portal](https://www.podiumcommerce.xyz/onboarding) and sign in with email, Google, or a crypto wallet (powered by Privy).
   </Step>
   <Step title="Create an organization">
     During onboarding you'll create an **Organization** — this is your tenant. All API keys, products, orders, and data are scoped to your organization.
@@ -29,7 +29,7 @@ description: Create an account, get an API key, and make your first call in unde
 
     | Prefix | Environment | API Base URL |
     |--------|------------|--------------|
-    | `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
+    | `podium_test_` | Staging | `https://podium-staging.up.railway.app/api/v1` |
     | `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
   </Step>
 </Steps>
@@ -50,14 +50,14 @@ curl -X GET https://api.podiumcommerce.xyz/api/v1/products \
 ```
 
 ```typescript TypeScript SDK
-import Podium from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
-const podium = new Podium({
+const client = createPodiumClient({
   apiKey: 'podium_live_your_key_here'
-});
+})
 
-const products = await podium.products.list();
-console.log(products);
+const products = await client.product.list({ page: 1 })
+console.log(products)
 ```
 
 ```typescript Fetch
@@ -82,16 +82,16 @@ npm install @podiumcommerce/node-sdk
 ```
 
 ```typescript
-import Podium from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
-const podium = new Podium({
+const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY
-});
+})
 
 // The SDK is organized by namespace
-const product  = await podium.products.get('prod_abc123');
-const creators = await podium.creators.list();
-const user     = await podium.users.get('user_xyz');
+const products = await client.product.list({ page: 1 })
+const creator  = await client.merchant.getBySlug({ slug: 'clean-beauty-co' })
+const user     = await client.user.getUsernameByUsername({ username: 'jane' })
 ```
 
 <Tip>
@@ -125,7 +125,7 @@ const user     = await podium.users.get('user_xyz');
 
 ## 6. Manage Your Keys
 
-From the [Dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/api-keys) you can:
+From the [Dashboard](https://www.podiumcommerce.xyz/dashboard/settings/api-keys) you can:
 
 - **Create** additional API keys (up to your tier's limit)
 - **Rotate** a key — generates a new key while the old one remains valid for 30 minutes

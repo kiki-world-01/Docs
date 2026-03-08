@@ -23,7 +23,7 @@ Failed lookups are also cached (15 seconds) to prevent brute-force probing from 
 
 ## Getting Your API Key
 
-API keys are self-service through the [Podium Developer Portal](https://www.app.podiumcommerce.xyz):
+API keys are self-service through the [Podium Developer Portal](https://www.podiumcommerce.xyz/onboarding):
 
 1. **Sign up** with email, Google, or a crypto wallet
 2. **Create an organization** during onboarding
@@ -38,7 +38,7 @@ Additional keys can be created from **Dashboard > Settings > API Keys**.
 
 ### Key Management
 
-From the [API Keys dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/api-keys), you can:
+From the [API Keys dashboard](https://www.podiumcommerce.xyz/dashboard/settings/api-keys), you can:
 
 | Action | Description |
 |--------|-------------|
@@ -53,7 +53,7 @@ Key changes propagate immediately. Cached keys expire within 15–150 seconds. I
 
 | Key Prefix | Environment | Base URL |
 |-----------|------------|----------|
-| `podium_test_` | Staging | `https://api.test.podiumcommerce.xyz/api/v1` |
+| `podium_test_` | Staging | `https://podium-staging.up.railway.app/api/v1` |
 | `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
 
 The TypeScript SDK auto-detects the environment from the key prefix and routes to the correct base URL.
@@ -97,7 +97,7 @@ The access control middleware checks each endpoint against the organization's ti
 }
 ```
 
-Upgrade your tier from the [Dashboard](https://www.app.podiumcommerce.xyz/dashboard/settings/subscription) to unlock additional API surface.
+Upgrade your tier from the [Dashboard](https://www.podiumcommerce.xyz/dashboard/settings/subscription) to unlock additional API surface.
 
 ## x402 Payment Configuration
 

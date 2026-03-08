@@ -33,12 +33,17 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
 ```
 
 ```typescript SDK
-await podium.points.grant("clxyz1234567890", {
-  amount: 100,
-  creatorId: "clcreator_abc",
-  details: {
-    source: "beauty-companion",
-    action: "survey-completed"
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+await client.user.createPoints({
+  id: "clxyz1234567890",
+  requestBody: {
+    amount: 100,
+    creatorId: "clcreator_abc",
+    details: {
+      source: "beauty-companion",
+      action: "survey-completed"
+    }
   }
 });
 ```
@@ -138,7 +143,7 @@ curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
 ```
 
 ```typescript SDK
-const balance = await podium.points.getBalance("clxyz1234567890");
+const balance = await client.user.getPoints({ id: "clxyz1234567890" });
 ```
 
 </CodeGroup>
@@ -165,7 +170,8 @@ curl "https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points/history?
 ```
 
 ```typescript SDK
-const history = await podium.points.getHistory("clxyz1234567890", {
+const history = await client.user.getPointsHistory({
+  id: "clxyz1234567890",
   page: 1,
   limit: 20,
   creatorId: "clcreator_abc"

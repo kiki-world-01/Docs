@@ -14,18 +14,18 @@ The SDK is published as `@podiumcommerce/node-sdk` on npm with full TypeScript t
 ## Configuration
 
 ```typescript
-import Podium from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
-const podium = new Podium({
+const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY
-});
+})
 ```
 
 The SDK auto-detects the environment from your key prefix:
 
 | Key Prefix | Routes To |
 |-----------|-----------|
-| `podium_test_` | `https://api.test.podiumcommerce.xyz/api/v1` |
+| `podium_test_` | `https://podium-staging.up.railway.app/api/v1` |
 | `podium_live_` | `https://api.podiumcommerce.xyz/api/v1` |
 
 ### Environment Setup
@@ -33,7 +33,7 @@ The SDK auto-detects the environment from your key prefix:
 Add your API key to your `.env` file:
 
 ```bash
-# Get your key from https://www.app.podiumcommerce.xyz
+# Get your key from https://www.podiumcommerce.xyz/onboarding
 PODIUM_API_KEY=podium_test_sk_your_key_here
 ```
 
@@ -46,10 +46,10 @@ PODIUM_API_KEY=podium_test_sk_your_key_here
 Override the auto-detected base URL for local development or custom deployments:
 
 ```typescript
-const podium = new Podium({
+const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY,
-  baseUrl: 'https://your-custom-api.example.com/api/v1'
-});
+  baseUrl: 'http://localhost:3030/api/v1'
+})
 ```
 
 ## Multi-Tenant Context
@@ -59,8 +59,8 @@ Every API call is scoped to the organization that owns your API key. You don't n
 If your organization manages multiple creators, all creator-scoped operations (products, orders, campaigns) are accessible through your single API key:
 
 ```typescript
-const creatorA = await podium.creators.getBySlug('brand-a');
-const creatorB = await podium.creators.getBySlug('brand-b');
+const creatorA = await client.merchant.getBySlug({ slug: 'brand-a' })
+const creatorB = await client.merchant.getBySlug({ slug: 'brand-b' })
 ```
 
 ## SDK Namespaces
@@ -69,31 +69,38 @@ The SDK is organized into namespaces that mirror the API structure:
 
 | Namespace | Covers |
 |-----------|--------|
-| `podium.products` | Product CRUD, listing, variants, publish lifecycle |
-| `podium.creators` | Creator profiles, products, orders, payouts |
-| `podium.users` | User profiles, wallets, following, notifications |
-| `podium.orders` | Order management, checkout, shipping |
-| `podium.campaigns` | Campaign CRUD, participation, analytics |
-| `podium.nfts` | Reward programs, minting, airdrops, redemption |
-| `podium.points` | Points balance, history, grants |
-| `podium.companion` | Intent profiles, interactions, recommendations |
-| `podium.search` | Full-text search, universal search, discovery |
-| `podium.tasks` | Task Pool V2, solver, verification |
-| `podium.admin` | API keys, organizations, enrichment |
+| `client.product` | Product listing, buy-now |
+| `client.merchantProducts` | Product CRUD, variants, publish lifecycle, analytics |
+| `client.merchant` | Creator profiles, stats |
+| `client.merchantOrders` | Creator order management, shipping labels |
+| `client.user` | User creation, profile, points, orders, notifications |
+| `client.userOrder` | Checkout (Stripe, Coinbase, embedded wallet) |
+| `client.userOrders` | Order listing, creation |
+| `client.campaigns` | Campaign CRUD, voting, surveys, analytics |
+| `client.nftRewards` | Reward programs, minting, grants, publishing |
+| `client.userNfTs` | User reward redemption, earned/redeemable queries |
+| `client.agentic` | Agentic product feed, checkout sessions |
+| `client.search` | Product search with filters |
+| `client.universalSearch` | Cross-entity search with LLM-powered answers |
+| `client.x402` | x402 USDC payment processing |
+| `client.apiKeys` | API key rotation and management |
+| `client.organizations` | Organization settings |
 
 ## Basic Usage
 
 ```typescript
-const products = await podium.products.list();
+const products = await client.product.list({ page: 1, limit: 20 })
 
-const creator = await podium.creators.getBySlug('clean-beauty-co');
+const creator = await client.merchant.getBySlug({ slug: 'clean-beauty-co' })
 
-const user = await podium.users.create({
-  email: 'user@example.com',
-  privyId: 'did:privy:abc123'
-});
+const user = await client.user.create({
+  requestBody: {
+    email: 'user@example.com',
+    privyId: 'did:privy:abc123'
+  }
+})
 
-const balance = await podium.points.getBalance(user.id);
+const balance = await client.user.getPoints({ id: user.id })
 ```
 
 ## Pagination
@@ -101,9 +108,9 @@ const balance = await podium.points.getBalance(user.id);
 List endpoints return paginated results. Use `page` and `limit` parameters:
 
 ```typescript
-const page1 = await podium.products.list({ page: 1, limit: 20 });
+const page1 = await client.product.list({ page: 1, limit: 20 })
 
-const page2 = await podium.products.list({ page: 2, limit: 20 });
+const page2 = await client.product.list({ page: 2, limit: 20 })
 ```
 
 ### Pagination Response Shape
@@ -124,19 +131,19 @@ interface PaginatedResponse<T> {
 ### Iterate All Pages
 
 ```typescript
-async function getAllProducts(podium: Podium) {
-  const products = [];
-  let page = 1;
-  let hasMore = true;
+async function getAllProducts() {
+  const products = []
+  let page = 1
+  let hasMore = true
 
   while (hasMore) {
-    const result = await podium.products.list({ page, limit: 100 });
-    products.push(...result.data);
-    hasMore = result.data.length === 100;
-    page++;
+    const result = await client.product.list({ page, limit: 100 })
+    products.push(...result.data)
+    hasMore = result.data.length === 100
+    page++
   }
 
-  return products;
+  return products
 }
 ```
 
@@ -145,18 +152,18 @@ async function getAllProducts(podium: Podium) {
 The SDK throws typed errors with HTTP status codes and structured error bodies:
 
 ```typescript
+import { ApiError } from '@podiumcommerce/node-sdk'
+
 try {
-  const product = await podium.products.get('nonexistent');
+  const products = await client.product.list({ page: 1 })
 } catch (error) {
-  if (error.status === 404) {
-    console.log('Product not found');
-  } else if (error.status === 401) {
-    console.log('Invalid API key');
-  } else if (error.status === 429) {
-    const retryAfter = error.headers?.['retry-after'];
-    console.log(`Rate limited, retry after ${retryAfter}s`);
-  } else if (error.status === 402) {
-    console.log('x402 payment required:', error.body);
+  if (error instanceof ApiError) {
+    console.error(`API Error ${error.status}: ${error.message}`)
+    console.error('Response body:', error.body)
+
+    if (error.status === 401) console.log('Invalid API key')
+    if (error.status === 429) console.log('Rate limited, retry later')
+    if (error.status === 402) console.log('x402 payment required')
   }
 }
 ```
@@ -222,9 +229,9 @@ async function withRetry<T>(
   throw new Error('Unreachable');
 }
 
-const product = await withRetry(() =>
-  podium.products.get('clprod_abc123')
-);
+const products = await withRetry(() =>
+  client.product.list({ page: 1 })
+)
 ```
 
 For `429` responses, respect the `Retry-After` header when available.

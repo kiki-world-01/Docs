@@ -23,7 +23,10 @@ curl https://api.podiumcommerce.xyz/api/v1/creator/clean-beauty-co \
 ```
 
 ```typescript SDK
-const creator = await podium.creators.getBySlug("clean-beauty-co");
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+const creator = await client.merchant.getBySlug({ slug: "clean-beauty-co" });
 ```
 
 </CodeGroup>
@@ -90,14 +93,20 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc \
 ```
 
 ```typescript SDK
-const updated = await podium.creators.update("clcreator_abc", {
-  displayName: "Clean Beauty Co.",
-  description: "Sustainable skincare for mindful beauty lovers",
-  flatShippingRate: 799,
-  socialProfiles: [
-    { platform: "INSTAGRAM", url: "https://instagram.com/cleanbeautyco" },
-    { platform: "TIKTOK", url: "https://tiktok.com/@cleanbeautyco" }
-  ]
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+const updated = await client.merchant.updateByCreatorId({
+  creatorId: "clcreator_abc",
+  requestBody: {
+    displayName: "Clean Beauty Co.",
+    description: "Sustainable skincare for mindful beauty lovers",
+    flatShippingRate: 799,
+    socialProfiles: [
+      { platform: "INSTAGRAM", url: "https://instagram.com/cleanbeautyco" },
+      { platform: "TIKTOK", url: "https://tiktok.com/@cleanbeautyco" },
+    ],
+  },
 });
 ```
 

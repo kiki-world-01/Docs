@@ -39,17 +39,24 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/produc
 ```
 
 ```typescript SDK
-const product = await podium.products.create(creatorId, {
-  name: "Organic Face Serum",
-  slug: "organic-face-serum",
-  description: "Lightweight hydrating serum with hyaluronic acid and vitamin C",
-  price: 2500,
-  maxDiscount: 500,
-  media: [
-    { url: "https://cdn.example.com/serum-front.jpg", type: "IMAGE", order: 0 },
-    { url: "https://cdn.example.com/serum-texture.jpg", type: "IMAGE", order: 1 },
-  ],
-});
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+
+const product = await client.merchantProducts.create({
+  creatorId,
+  requestBody: {
+    name: "Organic Face Serum",
+    slug: "organic-face-serum",
+    description: "Lightweight hydrating serum with hyaluronic acid and vitamin C",
+    price: 2500,
+    maxDiscount: 500,
+    media: [
+      { url: "https://cdn.example.com/serum-front.jpg", type: "IMAGE", order: 0 },
+      { url: "https://cdn.example.com/serum-texture.jpg", type: "IMAGE", order: 1 },
+    ],
+  },
+})
 ```
 
 </CodeGroup>

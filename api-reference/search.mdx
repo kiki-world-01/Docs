@@ -19,11 +19,14 @@ curl "https://api.podiumcommerce.xyz/api/v1/search?query=hyaluronic+serum&type=p
 ```
 
 ```typescript SDK
-const results = await podium.search.query({
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+const results = await client.search.search({
   query: "hyaluronic serum",
   type: "product",
   limit: 20,
-  page: 1
+  page: 1,
 });
 ```
 
@@ -78,11 +81,14 @@ curl "https://api.podiumcommerce.xyz/api/v1/universal-search?query=best+moisturi
 ```
 
 ```typescript SDK
-const results = await podium.search.universal({
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+const results = await client.universalSearch.list({
   query: "best moisturizer for dry skin",
   entityTypes: ["product", "campaign"],
   llmMode: "auto",
-  limit: 10
+  limit: 10,
 });
 ```
 
@@ -177,12 +183,12 @@ curl "https://api.podiumcommerce.xyz/api/v1/discover?suggested=true&page=1&limit
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
-```typescript SDK
-const feed = await podium.search.discover({
-  suggested: true,
-  page: 1,
-  limit: 20
-});
+```typescript HTTP
+const res = await fetch(
+  "https://api.podiumcommerce.xyz/api/v1/discover?suggested=true&page=1&limit=20",
+  { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
+);
+const feed = await res.json();
 ```
 
 </CodeGroup>
@@ -215,10 +221,12 @@ curl "https://api.podiumcommerce.xyz/api/v1/for-you/feed?userId=clxyz1234567890&
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
-```typescript SDK
-const feed = await podium.search.forYou("clxyz1234567890", {
-  page: 1
-});
+```typescript HTTP
+const res = await fetch(
+  "https://api.podiumcommerce.xyz/api/v1/for-you/feed?userId=clxyz1234567890&page=1",
+  { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
+);
+const feed = await res.json();
 ```
 
 </CodeGroup>

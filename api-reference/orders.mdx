@@ -36,11 +36,18 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order \
 ```
 
 ```typescript SDK
-const order = await podium.orders.create(userId, {
-  productId: "clx9prod001",
-  variantIds: ["clx9var001"],
-  quantity: 1,
-});
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+
+const order = await client.userOrders.create({
+  id: userId,
+  requestBody: {
+    productId: "clx9prod001",
+    variantIds: ["clx9var001"],
+    quantity: 1,
+  },
+})
 ```
 
 </CodeGroup>
@@ -134,10 +141,15 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}
 ```
 
 ```typescript SDK
-const checkout = await podium.orders.checkout(userId, orderId, {
-  points: 500,
-});
-// Returns { clientSecret: "pi_..." }
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+
+const checkout = await client.userOrder.checkout({
+  id: userId,
+  orderId,
+  requestBody: { points: 500 },
+})
 ```
 
 </CodeGroup>

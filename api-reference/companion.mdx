@@ -9,6 +9,10 @@ The Companion API provides the building blocks for personal shopping agents. It 
 
 All endpoints are prefixed with `/api/v1/companion`.
 
+<Note>
+SDK support for this endpoint group is coming in a future release. Use HTTP requests in the meantime.
+</Note>
+
 ## Intent Profiles
 
 An intent profile stores what a user wants — their preferences, constraints, and behavioral signals. Agents read and write profiles to personalize recommendations and execute purchases on a user's behalf.
@@ -30,14 +34,22 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
   }'
 ```
 
-```typescript SDK
-const profile = await podium.companion.createProfile(userId, {
-  skinType: "Sensitive",
-  concerns: ["Anti-aging", "Hydration"],
-  priceRange: { min: 75, max: 150 },
-  brands: ["La Mer", "Drunk Elephant"],
-  avoidances: ["fragrance", "parabens"],
+```typescript HTTP
+const res = await fetch(`https://api.podiumcommerce.xyz/api/v1/companion/profile/${userId}`, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    skinType: "Sensitive",
+    concerns: ["Anti-aging", "Hydration"],
+    priceRange: { min: 75, max: 150 },
+    brands: ["La Mer", "Drunk Elephant"],
+    avoidances: ["fragrance", "parabens"],
+  }),
 });
+const profile = await res.json();
 ```
 
 </CodeGroup>
@@ -270,12 +282,19 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/interactions \
   }'
 ```
 
-```typescript SDK
-await podium.companion.recordInteraction({
-  userId: "clx7user789",
-  productId: "clx9prod001",
-  action: "RANK_UP",
-  score: 0.9,
+```typescript HTTP
+await fetch("https://api.podiumcommerce.xyz/api/v1/companion/interactions", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    userId: "clx7user789",
+    productId: "clx9prod001",
+    action: "RANK_UP",
+    score: 0.9,
+  }),
 });
 ```
 
@@ -330,11 +349,12 @@ curl "https://api.podiumcommerce.xyz/api/v1/companion/recommendations/{userId}?c
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-```typescript SDK
-const recs = await podium.companion.getRecommendations(userId, {
-  count: 5,
-  category: "serum",
-});
+```typescript HTTP
+const res = await fetch(
+  `https://api.podiumcommerce.xyz/api/v1/companion/recommendations/${userId}?count=5&category=serum`,
+  { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
+);
+const recs = await res.json();
 ```
 
 </CodeGroup>
@@ -401,19 +421,27 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/orders \
   }'
 ```
 
-```typescript SDK
-const order = await podium.companion.createOrder({
-  userId: "clx7user789",
-  productId: "clx9prod042",
-  shippingAddress: {
-    street: "123 Main St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94102",
-    country: "US",
+```typescript HTTP
+const res = await fetch("https://api.podiumcommerce.xyz/api/v1/companion/orders", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    "Content-Type": "application/json",
   },
-  email: "user@example.com",
+  body: JSON.stringify({
+    userId: "clx7user789",
+    productId: "clx9prod042",
+    shippingAddress: {
+      street: "123 Main St",
+      city: "San Francisco",
+      state: "CA",
+      zip: "94102",
+      country: "US",
+    },
+    email: "user@example.com",
+  }),
 });
+const order = await res.json();
 ```
 
 </CodeGroup>
@@ -547,30 +575,47 @@ Here's the typical lifecycle of a companion agent interaction:
     Create an intent profile with the user's stated preferences. This can come from a quiz, conversation, or imported data.
 
     ```typescript
-    const profile = await podium.companion.createProfile(userId, {
-      concerns: ["Hydration", "Anti-aging"],
-      priceRange: { min: 30, max: 100 },
-      avoidances: ["fragrance"],
+    const res = await fetch(`https://api.podiumcommerce.xyz/api/v1/companion/profile/${userId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        concerns: ["Hydration", "Anti-aging"],
+        priceRange: { min: 30, max: 100 },
+        avoidances: ["fragrance"],
+      }),
     });
+    const profile = await res.json();
     ```
   </Step>
   <Step title="Get Recommendations">
     The engine uses the profile + interaction history to rank products via Claude.
 
     ```typescript
-    const recs = await podium.companion.getRecommendations(userId, {
-      count: 5,
-    });
+    const res = await fetch(
+      `https://api.podiumcommerce.xyz/api/v1/companion/recommendations/${userId}?count=5`,
+      { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
+    );
+    const recs = await res.json();
     ```
   </Step>
   <Step title="Present and Record Feedback">
     Show recommendations to the user. Record their reactions as interactions.
 
     ```typescript
-    await podium.companion.recordInteraction({
-      userId,
-      productId: recs[0].id,
-      action: "RANK_UP",
+    await fetch("https://api.podiumcommerce.xyz/api/v1/companion/interactions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        productId: recs[0].id,
+        action: "RANK_UP",
+      }),
     });
     ```
   </Step>
@@ -578,21 +623,36 @@ Here's the typical lifecycle of a companion agent interaction:
     When the user approves, create a concierge order. Payment can be processed via x402 (USDC) or linked to a Stripe checkout.
 
     ```typescript
-    const order = await podium.companion.createOrder({
-      userId,
-      productId: recs[0].id,
-      shippingAddress: userAddress,
-      email: userEmail,
+    const res = await fetch("https://api.podiumcommerce.xyz/api/v1/companion/orders", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        productId: recs[0].id,
+        shippingAddress: userAddress,
+        email: userEmail,
+      }),
     });
+    const order = await res.json();
     ```
   </Step>
   <Step title="Refine Over Time">
     Each interaction improves future recommendations. The `enrichmentVec` on the profile is updated server-side as the user's pattern emerges. Award points for engagement to drive retention.
 
     ```typescript
-    await podium.companion.awardPoints(userId, {
-      amount: 10,
-      details: { reason: "feedback_given" },
+    await fetch(`https://api.podiumcommerce.xyz/api/v1/companion/profile/${userId}/points`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: 10,
+        details: { reason: "feedback_given" },
+      }),
     });
     ```
   </Step>

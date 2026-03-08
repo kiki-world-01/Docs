@@ -9,6 +9,10 @@ The Task Pool API provides REST endpoints for managing the on-chain Task Pool V2
 
 See [Smart Contracts: Task Pool V2](/contracts/task-pool) for the on-chain architecture.
 
+<Note>
+SDK support for this endpoint group is coming in a future release. Use HTTP requests in the meantime.
+</Note>
+
 ## Create a Task
 
 <CodeGroup>
@@ -27,15 +31,23 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks \
   }'
 ```
 
-```typescript SDK
-const task = await podium.tasks.create({
-  merchantAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
-  amountUSDC: 25.00,
-  acceptanceCriteria: "Submit a 500-word product review with at least 2 photos",
-  verificationMethod: "Oracle",
-  durationSeconds: 86400,
-  campaignId: "clcamp_xyz"
+```typescript HTTP
+const res = await fetch("https://api.podiumcommerce.xyz/api/v1/tasks", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    merchantAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+    amountUSDC: 25.0,
+    acceptanceCriteria: "Submit a 500-word product review with at least 2 photos",
+    verificationMethod: "Oracle",
+    durationSeconds: 86400,
+    campaignId: "clcamp_xyz",
+  }),
 });
+const task = await res.json();
 ```
 
 </CodeGroup>

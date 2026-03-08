@@ -25,10 +25,14 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user \
 ```
 
 ```typescript SDK
-const user = await podium.users.create({
-  email: "jane@example.com",
-  privyId: "did:privy:abc123",
-  walletAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+const user = await client.user.create({
+  requestBody: {
+    email: "jane@example.com",
+    privyId: "did:privy:abc123",
+    walletAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+  }
 });
 ```
 
@@ -89,15 +93,18 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890 \
 ```
 
 ```typescript SDK
-const updated = await podium.users.update("clxyz1234567890", {
-  username: "jane_doe",
-  bio: "Clean beauty enthusiast",
-  avatarUrl: "https://cdn.example.com/avatar.jpg",
-  categoryIds: [1, 3, 7],
-  socialProfiles: [
-    { platform: "INSTAGRAM", url: "https://instagram.com/jane_doe" },
-    { platform: "TIKTOK", url: "https://tiktok.com/@jane_doe" }
-  ]
+const updated = await client.user.update({
+  id: "clxyz1234567890",
+  requestBody: {
+    username: "jane_doe",
+    bio: "Clean beauty enthusiast",
+    avatarUrl: "https://cdn.example.com/avatar.jpg",
+    categoryIds: [1, 3, 7],
+    socialProfiles: [
+      { platform: "INSTAGRAM", url: "https://instagram.com/jane_doe" },
+      { platform: "TIKTOK", url: "https://tiktok.com/@jane_doe" }
+    ]
+  }
 });
 ```
 
@@ -124,10 +131,6 @@ Resolve a Privy DID to a Podium user. This is the primary way to link Privy-auth
 ```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/user/privy/did:privy:abc123/profile \
   -H "Authorization: Bearer $PODIUM_API_KEY"
-```
-
-```typescript SDK
-const user = await podium.users.getByPrivyId("did:privy:abc123");
 ```
 
 </CodeGroup>
@@ -219,14 +222,6 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order \
     "variantIds": ["clvar_size_m", "clvar_color_black"],
     "quantity": 2
   }'
-```
-
-```typescript SDK
-const order = await podium.orders.create("clxyz1234567890", {
-  productId: "clprod_abc123",
-  variantIds: ["clvar_size_m", "clvar_color_black"],
-  quantity: 2
-});
 ```
 
 </CodeGroup>

@@ -29,14 +29,17 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/nft-reward \
 ```
 
 ```typescript SDK
-const reward = await podium.nfts.createRewardProgram({
-  creatorId: "clcreator_abc",
-  name: "Clean Beauty VIP Badge",
-  description: "Exclusive badge for loyal Clean Beauty Co customers",
-  type: "EXCLUSIVE_ACCESS",
-  imageUrl: "https://cdn.example.com/vip-badge.png",
-  points: 500,
-  maxSupply: 100
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+const reward = await client.nftRewards.createNftReward({
+  requestBody: {
+    creatorId: "clcreator_abc",
+    type: "EXCLUSIVE_ACCESS",
+    name: "Clean Beauty VIP Badge",
+    description: "Exclusive badge for loyal Clean Beauty Co customers",
+    imageUrl: "https://cdn.example.com/vip-badge.png",
+    points: 500
+  }
 });
 ```
 
@@ -145,9 +148,12 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz/grant
 ```
 
 ```typescript SDK
-await podium.nfts.grant("clreward_xyz", {
-  userId: "clxyz1234567890",
-  creatorId: "clcreator_abc"
+await client.nftRewards.createNftRewardGrant({
+  id: "clreward_xyz",
+  requestBody: {
+    userId: "clxyz1234567890",
+    creatorId: "clcreator_abc"
+  }
 });
 ```
 
@@ -211,9 +217,10 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/bas
 ```
 
 ```typescript SDK
-await podium.nfts.redeem("clxyz1234567890", {
+await client.userNfTs.redeem({
+  id: "clxyz1234567890",
   network: "base",
-  contractAddress: "0xContractAddr",
+  address: "0xContractAddr",
   tokenId: "42"
 });
 ```

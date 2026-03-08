@@ -31,9 +31,13 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign \
 ```
 
 ```typescript SDK
-const campaign = await podium.campaigns.create({
-  creatorId: "clcreator_abc",
-  type: "MULTIVARIANT"
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+const campaign = await client.campaigns.create({
+  requestBody: {
+    creatorId: "clcreator_abc",
+    type: "MULTIVARIANT"
+  }
 });
 ```
 
@@ -86,25 +90,32 @@ curl -X PUT https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz \
 ```
 
 ```typescript SDK
-const updated = await podium.campaigns.updateDraft("clcamp_xyz", {
-  title: "Which shade is your vibe?",
-  description: "Vote on your favorite lip shade and earn 50 points!",
-  startDate: "2026-04-01T00:00:00.000Z",
-  endDate: "2026-04-30T23:59:59.000Z",
-  maxParticipants: 5000,
-  reward: { points: 50, maxSupply: 10000 },
-  attributes: [
-    {
-      title: "Lip Shade",
-      hasImages: true,
-      options: [
-        { value: "Berry Bliss" },
-        { value: "Nude Glow" },
-        { value: "Crimson Night" },
-        { value: "Coral Dream" }
-      ]
-    }
-  ]
+const updated = await client.campaigns.replace({
+  id: "clcamp_xyz",
+  requestBody: {
+    title: "Which shade is your vibe?",
+    description: "Vote on your favorite lip shade and earn 50 points!",
+    hero: [{ url: "https://cdn.example.com/campaign-hero.jpg", type: "image" }],
+    startDate: "2026-04-01T00:00:00.000Z",
+    endDate: "2026-04-30T23:59:59.000Z",
+    maxParticipants: 5000,
+    showInstructions: true,
+    showLeaderboard: true,
+    rateLimit: 1,
+    reward: { points: 50, maxSupply: 10000 },
+    attributes: [
+      {
+        title: "Lip Shade",
+        hasImages: true,
+        options: [
+          { value: "Berry Bliss" },
+          { value: "Nude Glow" },
+          { value: "Crimson Night" },
+          { value: "Coral Dream" }
+        ]
+      }
+    ]
+  }
 });
 ```
 
@@ -206,12 +217,15 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/vote \
 ```
 
 ```typescript SDK
-await podium.campaigns.vote("clcamp_xyz", {
-  userId: "clxyz1234567890",
-  votes: [
-    { attributeId: 1, optionId: 3 },
-    { attributeId: 2, optionId: [1, 4] }
-  ]
+await client.campaigns.vote({
+  id: "clcamp_xyz",
+  requestBody: {
+    userId: "clxyz1234567890",
+    votes: [
+      { attributeId: 1, optionId: 3 },
+      { attributeId: 2, optionId: [1, 4] }
+    ]
+  }
 });
 ```
 
@@ -245,13 +259,16 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_survey/survey
 ```
 
 ```typescript SDK
-await podium.campaigns.submitSurvey("clcamp_survey", {
-  userId: "clxyz1234567890",
-  responses: [
-    { questionId: 1, answer: "Hydrating serums" },
-    { questionId: 2, answer: ["Sensitive", "Dry"] },
-    { questionId: 3, answer: "I prefer fragrance-free products" }
-  ]
+await client.campaigns.createSurvey({
+  id: "clcamp_survey",
+  requestBody: {
+    userId: "clxyz1234567890",
+    responses: [
+      { questionId: 1, answer: "Hydrating serums" },
+      { questionId: 2, answer: ["Sensitive", "Dry"] },
+      { questionId: 3, answer: "I prefer fragrance-free products" }
+    ]
+  }
 });
 ```
 

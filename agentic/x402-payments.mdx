@@ -82,21 +82,31 @@ const response = await wrapFetchWithPayment(
 Agents pay for physical products on behalf of users:
 
 ```typescript
-// Create order through Companion API
-const order = await podium.companion.createOrder({
-  userId: 'user_xyz',
-  productId: 'prod_abc',
-  shippingAddress: { ... },
-  email: 'user@example.com'
-});
+const BASE = 'https://api.podiumcommerce.xyz/api/v1'
+const headers = {
+  'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,
+  'Content-Type': 'application/json',
+}
+
+// Create order through Companion API (not yet in SDK)
+const order = await fetch(`${BASE}/companion/orders`, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({
+    userId: 'user_xyz',
+    productId: 'prod_abc',
+    shippingAddress: { /* ... */ },
+    email: 'user@example.com',
+  }),
+}).then(r => r.json())
 
 // Pay via x402
 const payment = await wrapFetchWithPayment(
   fetch,
-  `${API_BASE}/api/v1/x402/orders/${order.id}/pay`,
+  `${BASE}/x402/order/${order.id}/pay`,
   {},
   { wallet, maxValue: order.amountUsdc }
-);
+)
 ```
 
 ### 2. Pay-Per-Call API Access
