@@ -16,7 +16,7 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Platform",
+        "tab": "Overview",
         "groups": [
           {
             "group": "Getting Started",
@@ -55,6 +55,30 @@
           {
             "group": "Building on Podium",
             "pages": ["agentic/beauty-companion"]
+          }
+        ]
+      },
+      {
+        "tab": "SDK & Guides",
+        "groups": [
+          {
+            "group": "TypeScript SDK",
+            "pages": ["sdk/setup", "sdk/examples"]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/integrations",
+              "guides/use-cases"
+            ]
+          },
+          {
+            "group": "AI Tools",
+            "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
           }
         ]
       },
@@ -119,30 +143,6 @@
             "pages": [
               "contracts/deployment",
               "contracts/reference"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "SDK & Guides",
-        "groups": [
-          {
-            "group": "TypeScript SDK",
-            "pages": ["sdk/setup", "sdk/examples"]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/integrations",
-              "guides/use-cases"
-            ]
-          },
-          {
-            "group": "AI Tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
             ]
           }
         ]
