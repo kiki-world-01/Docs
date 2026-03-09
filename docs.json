@@ -33,6 +33,45 @@
         ]
       },
       {
+        "tab": "SDK & Guides",
+        "groups": [
+          {
+            "group": "TypeScript SDK",
+            "pages": ["sdk/setup", "sdk/examples"]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/integrations",
+              "guides/use-cases"
+            ]
+          },
+          {
+            "group": "Recipes",
+            "pages": [
+              "recipes/shopping-agent",
+              "recipes/loyalty-program",
+              "recipes/task-bounty-board",
+              "recipes/agent-commerce",
+              "recipes/telegram-mini-app",
+              "recipes/mcp-server",
+              "recipes/loyalty-wallet-app",
+              "recipes/task-marketplace",
+              "recipes/swipe-widget",
+              "recipes/deal-agent"
+            ]
+          },
+          {
+            "group": "AI Tools",
+            "pages": [
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Agentic Intelligence",
         "groups": [
           {
@@ -55,40 +94,6 @@
           {
             "group": "Building on Podium",
             "pages": ["agentic/beauty-companion"]
-          }
-        ]
-      },
-      {
-        "tab": "SDK & Guides",
-        "groups": [
-          {
-            "group": "TypeScript SDK",
-            "pages": ["sdk/setup", "sdk/examples"]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/integrations",
-              "guides/use-cases"
-            ]
-          },
-          {
-            "group": "Recipes",
-            "pages": [
-              "recipes/loyalty-program",
-              "recipes/shopping-agent",
-              "recipes/task-bounty-board",
-              "recipes/agent-commerce",
-              "recipes/telegram-mini-app"
-            ]
-          },
-          {
-            "group": "AI Tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
           }
         ]
       },
