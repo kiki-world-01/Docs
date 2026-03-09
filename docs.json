@@ -10,7 +10,7 @@
   "logo": {
     "light": "/logo/light.png",
     "dark": "/logo/dark.png",
-    "href": "https://podiumcommerce.xyz"
+    "href": "https://podium.build"
   },
   "favicon": "/logo/favicon.png",
   "navigation": {
@@ -70,6 +70,16 @@
             "pages": [
               "guides/integrations",
               "guides/use-cases"
+            ]
+          },
+          {
+            "group": "Recipes",
+            "pages": [
+              "recipes/loyalty-program",
+              "recipes/shopping-agent",
+              "recipes/task-bounty-board",
+              "recipes/agent-commerce",
+              "recipes/telegram-mini-app"
             ]
           },
           {
@@ -152,7 +162,7 @@
       "anchors": [
         {
           "anchor": "API Playground",
-          "href": "https://api.podiumcommerce.xyz/docs",
+          "href": "https://podium-staging.up.railway.app/docs",
           "icon": "play"
         },
         {
@@ -172,13 +182,13 @@
     "links": [
       {
         "label": "API Playground",
-        "href": "https://api.podiumcommerce.xyz/docs"
+        "href": "https://podium-staging.up.railway.app/docs"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Get API Key",
-      "href": "https://podiumcommerce.xyz"
+      "href": "https://www.podiumcommerce.xyz/onboarding"
     }
   },
   "footer": {
@@ -188,7 +198,7 @@
     }
   },
   "api": {
-    "baseUrl": "https://api.podiumcommerce.xyz/api/v1",
+    "baseUrl": "https://podium-staging.up.railway.app/api/v1",
     "auth": {
       "method": "bearer"
     }

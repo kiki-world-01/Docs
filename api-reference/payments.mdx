@@ -38,12 +38,28 @@ sequenceDiagram
 
 ### Creating a PaymentIntent
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "points": 0 }'
 ```
+
+```typescript SDK
+import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+
+const checkout = await client.userOrder.checkout({
+  id: userId,
+  orderId,
+  requestBody: { points: 0 },
+});
+```
+
+</CodeGroup>
 
 **Response:**
 
@@ -111,10 +127,24 @@ Creators receive their share of each sale through Stripe Connect. The platform r
 
 ### Onboarding a Creator
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/stripe/account \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
+
+```typescript SDK
+import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+
+const account = await client.merchantStripe.createAccount({
+  creatorId,
+});
+```
+
+</CodeGroup>
 
 Creates a Stripe Connect account for the creator. Returns an account link URL for the creator to complete onboarding (identity verification, bank details).
 
@@ -161,6 +191,22 @@ sequenceDiagram
     Podium->>Podium: Create X402Payment, order → PAID
     Podium-->>Agent: 200 OK + receipt
 ```
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.podiumcommerce.xyz/api/v1/x402/orders/{orderId}/pay
+```
+
+```typescript SDK
+import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+
+const payment = await client.x402.createOrderPay({ id: orderId });
+```
+
+</CodeGroup>
 
 ### Payment Requirements Response (402)
 

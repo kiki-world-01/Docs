@@ -228,6 +228,39 @@ This balances signal quality (confidence) with signal volume (count), using loga
 | **Stale baselines** | Scheduled cron job | All baselines past their `validUntil` |
 | **Full recompute** | Admin action | Every product with any enrichment signals |
 
+## Consuming Enrichment Data
+
+After the pipeline processes enrichment data, agents query the agentic product feed to access enriched product attributes. The feed includes baselines for each product with attribute type, top values, and confidence scores.
+
+```typescript
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+
+const feed = await client.agentic.listProductsFeed({
+  limit: 20,
+  categories: 'skincare',
+});
+
+for (const product of feed.products) {
+  console.log(product.name, product.intentScore);
+  if (product.attributes?.baselines) {
+    for (const baseline of product.attributes.baselines) {
+      console.log(`  ${baseline.attributeType}: ${baseline.topValues[0]?.value}`);
+    }
+  }
+}
+```
+
+The companion recommendations API leverages enrichment data to filter and rank products:
+
+```typescript
+const recs = await client.companion.listRecommendations({
+  userId: 'user_123',
+  count: 5,
+  category: 'skincare',
+});
+```
+
 ## Async Pipeline Orchestration
 
 The pipeline runs asynchronously via QStash event queues:
@@ -250,6 +283,22 @@ All queue handlers are idempotent — safe to retry on failure. Raw records trac
 | `POST` | `/admin/enrichment/sources` | Register a new enrichment source |
 | `GET` | `/admin/enrichment/sources` | List all configured sources |
 
+Trigger a crawl for a specific source:
+
+```bash
+curl -X POST https://podium-staging.up.railway.app/api/v1/admin/enrichment/run \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "sourceId": "clsource_sephora" }'
+```
+
+Check pipeline status:
+
+```bash
+curl https://podium-staging.up.railway.app/api/v1/admin/enrichment/status \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
 ## Building Your Own Pipeline
 
 The enrichment architecture is designed to be extensible across verticals. To adapt it for your domain:
@@ -261,3 +310,42 @@ The enrichment architecture is designed to be extensible across verticals. To ad
 5. **Set baseline thresholds** — minimum signal count, confidence floor, and TTL for your data freshness requirements
 
 The schema patterns (source → raw record → signal → baseline) and the two-lane provenance model (user-declared vs market-derived) are vertical-agnostic. The taxonomy and data sources are where you customize.
+
+A Prisma schema that follows the enrichment pattern:
+
+```prisma
+model EnrichmentSource {
+  id         String   @id @default(cuid())
+  name       String
+  sourceType SourceType
+  config     Json
+  lastRunAt  DateTime?
+  signals    EnrichmentSignal[]
+}
+
+model EnrichmentSignal {
+  id             String  @id @default(cuid())
+  source         EnrichmentSource @relation(fields: [sourceId], references: [id])
+  sourceId       String
+  productId      String?
+  attributeType  String
+  attributeValue String
+  confidence     Float
+  signalSource   SignalSource @default(MARKET_DERIVED)
+  metadata       Json?
+  
+  @@unique([sourceId, attributeType, attributeValue])
+}
+
+model AttributeBaseline {
+  id            String   @id @default(cuid())
+  productId     String
+  attributeType String
+  topValues     Json
+  signalCount   Int
+  computedAt    DateTime @default(now())
+  validUntil    DateTime
+  
+  @@unique([productId, attributeType])
+}
+```

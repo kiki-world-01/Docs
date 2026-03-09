@@ -15,12 +15,24 @@ Admin endpoints manage platform-level configuration including API keys, organiza
 
 ### Create a Key
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "organizationId": "clorg_abc" }'
 ```
+
+```typescript SDK
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
+const key = await client.apiKeys.create({
+  requestBody: { organizationId: 'clorg_abc' }
+});
+```
+
+</CodeGroup>
 
 ```json
 {
@@ -38,10 +50,18 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys \
 
 ### List Organization Keys
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl "https://api.podiumcommerce.xyz/api/v1/admin/api-keys?organizationId=clorg_abc" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const keys = await client.apiKeys.list({ organizationId: 'clorg_abc' });
+```
+
+</CodeGroup>
 
 ```json
 [
@@ -64,21 +84,40 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
 
 ### Deactivate a Key
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "isActive": false }'
 ```
 
+```typescript SDK
+await client.apiKeys.update({
+  id: 'clkey_xyz',
+  requestBody: { isActive: false }
+});
+```
+
+</CodeGroup>
+
 Setting `isActive: false` immediately blocks all requests using this key.
 
 ### Rotate a Key
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz/rotate \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const rotated = await client.apiKeys.createRotate({ id: 'clkey_xyz' });
+```
+
+</CodeGroup>
 
 ```json
 {
@@ -97,10 +136,18 @@ Key rotation:
 
 ### Delete a Key
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X DELETE https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+await client.apiKeys.delete({ id: 'clkey_xyz' });
+```
+
+</CodeGroup>
 
 Permanently removes the key. This cannot be undone.
 
@@ -108,14 +155,24 @@ Permanently removes the key. This cannot be undone.
 
 ### List Organizations
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/admin/organizations \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
+```typescript SDK
+const orgs = await client.organizations.list();
+```
+
+</CodeGroup>
+
 ### Create an Organization
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/organizations \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
@@ -126,6 +183,18 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/organizations \
   }'
 ```
 
+```typescript SDK
+const org = await client.organizations.create({
+  requestBody: {
+    name: 'Acme Beauty',
+    domain: 'acmebeauty.com',
+    subscriptionTierId: 'tier_growth'
+  }
+});
+```
+
+</CodeGroup>
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Organization display name |
@@ -134,19 +203,35 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/organizations \
 
 ### Get Organization Details
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const org = await client.organizations.get({ id: 'clorg_abc' });
+```
+
+</CodeGroup>
 
 ### Organization Settings
 
 Settings control organization-specific behavior like blockchain preferences, x402 configuration, and reward modes.
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const org = await client.organizations.get({ id: 'clorg_abc' });
+```
+
+</CodeGroup>
 
 ```json
 {
@@ -162,7 +247,9 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/setting
 
 ### Update Settings
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
@@ -173,14 +260,34 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_ab
   }'
 ```
 
+```typescript SDK
+await client.organizations.updateSettings({
+  id: 'clorg_abc',
+  requestBody: {
+    x402Enabled: true,
+    x402PayToAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18'
+  }
+});
+```
+
+</CodeGroup>
+
 ## App Configuration
 
 Global application configuration:
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/admin/app-config \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const config = await client.admin.listAppConfig();
+```
+
+</CodeGroup>
 
 ```bash
 curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/app-config \
@@ -246,10 +353,22 @@ Admin-level campaign management across the organization:
 
 ### List All Campaigns
 
-```bash
+<CodeGroup>
+
+```bash cURL
 curl https://api.podiumcommerce.xyz/api/v1/admin/campaigns \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+```typescript SDK
+const campaigns = await client.admin.listCampaigns({
+  status: 'SUBMITTED',
+  page: 1,
+  limit: 20
+});
+```
+
+</CodeGroup>
 
 ### Approve or Reject a Campaign
 
@@ -339,6 +458,37 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
 | `GET /admin/tasks/pending-review` | Tasks flagged for manual review |
 | `POST /admin/tasks/{taskId}/resolve` | Manual approval/rejection |
 | `POST /admin/tasks/{taskId}/retry-verification` | Retry failed oracle verification |
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.podiumcommerce.xyz/api/v1/admin/tasks/pending-review \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```typescript SDK
+const tasks = await client.admin.getTasksPendingReview();
+```
+
+</CodeGroup>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/tasks/0xabc123.../resolve \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "approved": true }'
+```
+
+```typescript SDK
+await client.admin.resolveTaskManually({
+  taskId: '0xabc123...',
+  requestBody: { approved: true }
+});
+```
+
+</CodeGroup>
 
 See [Task Pool API](/api-reference/task-pool-api) for details.
 

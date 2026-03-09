@@ -71,6 +71,17 @@ Shopify sends webhooks to a single endpoint that dispatches based on the `X-Shop
 
 Shopify webhook verification uses HMAC-SHA256 with the app's shared secret against the `X-Shopify-Hmac-Sha256` header.
 
+#### Shopify HMAC Verification
+
+```typescript
+import crypto from 'crypto';
+
+function verifyShopifyWebhook(rawBody: string, hmacHeader: string, secret: string): boolean {
+  const hash = crypto.createHmac('sha256', secret).update(rawBody).digest('base64');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmacHeader));
+}
+```
+
 ### Privy
 
 Privy sends blockchain transaction confirmations:
@@ -135,6 +146,38 @@ const receiver = new Receiver({
 const isValid = await receiver.verify({
   signature: request.headers["upstash-signature"],
   body: rawBody
+});
+```
+
+#### Complete Webhook Handler Example
+
+```typescript
+import { Hono } from 'hono';
+import { Receiver } from '@upstash/qstash';
+
+const app = new Hono();
+const receiver = new Receiver({
+  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
+  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
+});
+
+app.post('/webhooks/purchase-processed', async (c) => {
+  const signature = c.req.header('upstash-signature');
+  const body = await c.req.text();
+
+  const isValid = await receiver.verify({ signature: signature!, body });
+  if (!isValid) return c.json({ error: 'Invalid signature' }, 401);
+
+  const event = JSON.parse(body);
+
+  const existing = await db.processedEvent.findUnique({
+    where: { eventId: event.id }
+  });
+  if (existing) return c.json({ ok: true });
+
+  await db.processedEvent.create({ data: { eventId: event.id } });
+
+  return c.json({ ok: true });
 });
 ```
 
