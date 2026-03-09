@@ -19,7 +19,7 @@ curl "https://api.podiumcommerce.xyz/api/v1/search?query=hyaluronic+serum&type=p
 ```
 
 ```typescript SDK
-import { createPodiumClient } from "@podiumcommerce/node-sdk";
+import { createPodiumClient } from "@podium-sdk/node-sdk";
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 const results = await client.search.search({
@@ -81,7 +81,7 @@ curl "https://api.podiumcommerce.xyz/api/v1/universal-search?query=best+moisturi
 ```
 
 ```typescript SDK
-import { createPodiumClient } from "@podiumcommerce/node-sdk";
+import { createPodiumClient } from "@podium-sdk/node-sdk";
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 const results = await client.universalSearch.list({

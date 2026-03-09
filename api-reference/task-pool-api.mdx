@@ -28,7 +28,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: task } = await client.tasks.createTask({

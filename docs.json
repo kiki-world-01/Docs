@@ -162,7 +162,7 @@
         },
         {
           "anchor": "npm SDK",
-          "href": "https://www.npmjs.com/package/@podiumcommerce/node-sdk",
+          "href": "https://www.npmjs.com/package/@podium-sdk/node-sdk",
           "icon": "npm"
         }
       ]

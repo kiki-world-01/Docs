@@ -31,7 +31,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: profile } = await client.companion.createProfile({
@@ -277,7 +277,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/interactions \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 await client.companion.createInteractions({
@@ -342,7 +342,7 @@ curl "https://api.podiumcommerce.xyz/api/v1/companion/recommendations/{userId}?c
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: recs } = await client.companion.listRecommendations({
@@ -417,7 +417,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/orders \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: order } = await client.companion.createOrders({
@@ -567,7 +567,7 @@ Here's the typical lifecycle of a companion agent interaction:
     Create an intent profile with the user's stated preferences. This can come from a quiz, conversation, or imported data.
 
     ```typescript
-    import { createPodiumClient } from '@podiumcommerce/node-sdk'
+    import { createPodiumClient } from '@podium-sdk/node-sdk'
     const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
     const { data: profile } = await client.companion.createProfile({

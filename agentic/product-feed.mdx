@@ -214,7 +214,7 @@ const session = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/check
 For agents that maintain user profiles:
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: profile } = await client.companion.listProfile({ userId })

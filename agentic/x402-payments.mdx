@@ -82,7 +82,7 @@ const response = await wrapFetchWithPayment(
 Agents pay for physical products on behalf of users:
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: order } = await client.companion.createOrders({
