@@ -1,0 +1,294 @@
+---
+title: "OpenClaw"
+description: "Integrate Podium as a plugin and skill for OpenClaw, the open-source personal AI assistant"
+icon: "paw-claws"
+---
+
+[OpenClaw](https://github.com/brendon-garner-01/openclawc) is an open-source personal AI assistant that runs on your own devices. It supports multi-channel inboxes (WhatsApp, Telegram, Slack, Discord, and 20+ more), voice, and a visual canvas — making it ideal for building a personal shopping agent that can take commerce actions from any messaging platform.
+
+This guide shows how to integrate Podium as an OpenClaw plugin with full tool access.
+
+## Prerequisites
+
+- OpenClaw installed and running (`openclaw gateway`)
+- Node.js >= 22
+- A [Podium API key](https://www.podiumcommerce.xyz/onboarding)
+- `@podium-sdk/node-sdk` installed
+
+## Option A: Plugin (Recommended)
+
+The plugin approach registers Podium tools natively in OpenClaw's agent runtime.
+
+### 1. Create the Plugin Structure
+
+```bash
+mkdir -p ~/.openclaw/extensions/podium
+cd ~/.openclaw/extensions/podium
+npm init -y
+npm install @podium-sdk/node-sdk
+```
+
+### 2. Plugin Manifest
+
+```json
+// ~/.openclaw/extensions/podium/openclaw.plugin.json
+{
+  "name": "podium",
+  "version": "1.0.0",
+  "description": "Podium commerce, companion, and task tools",
+  "main": "index.js",
+  "config": {
+    "apiKey": {
+      "source": "env",
+      "provider": "default",
+      "id": "PODIUM_API_KEY"
+    }
+  }
+}
+```
+
+### 3. Register Tools
+
+```typescript
+// ~/.openclaw/extensions/podium/index.ts
+import { Type } from '@sinclair/typebox';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+
+export default function (api: any) {
+  const client = createPodiumClient({
+    apiKey: process.env.PODIUM_API_KEY!,
+  });
+
+  api.registerTool({
+    name: 'podium_search',
+    description: 'Search the Podium product catalog',
+    parameters: Type.Object({
+      categories: Type.Optional(Type.String({ description: 'Comma-separated categories' })),
+      limit: Type.Optional(Type.Number({ description: 'Max results (1-50)', default: 10 })),
+    }),
+    async execute(_id: string, params: { categories?: string; limit?: number }) {
+      const feed = await client.agentic.listProductsFeed({
+        categories: params.categories,
+        limit: params.limit ?? 10,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(feed.products, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_get_product',
+    description: 'Get full details for a specific product',
+    parameters: Type.Object({
+      productId: Type.String({ description: 'Product ID' }),
+    }),
+    async execute(_id: string, params: { productId: string }) {
+      const product = await client.product.get({ id: params.productId });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(product, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_profile',
+    description: 'Get a user\'s companion/taste profile',
+    parameters: Type.Object({
+      userId: Type.String({ description: 'Podium user ID' }),
+    }),
+    async execute(_id: string, params: { userId: string }) {
+      const profile = await client.companion.listProfile({ userId: params.userId });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(profile, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_recommendations',
+    description: 'Get personalized product recommendations for a user',
+    parameters: Type.Object({
+      userId: Type.String({ description: 'Podium user ID' }),
+      count: Type.Optional(Type.Number({ default: 5 })),
+      category: Type.Optional(Type.String()),
+    }),
+    async execute(_id: string, params: { userId: string; count?: number; category?: string }) {
+      const recs = await client.companion.listRecommendations({
+        userId: params.userId,
+        count: params.count ?? 5,
+        category: params.category,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(recs, null, 2) }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_points',
+    description: 'Check a user\'s points balance',
+    parameters: Type.Object({
+      userId: Type.String({ description: 'Podium user ID' }),
+    }),
+    async execute(_id: string, params: { userId: string }) {
+      const points = await client.user.listPoints({ id: params.userId });
+      return {
+        content: [{
+          type: 'text',
+          text: `Balance: ${points.balance} | Earned: ${points.totalEarned} | Spent: ${points.totalSpent}`,
+        }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_checkout',
+    description: 'Create a checkout session for a product purchase',
+    parameters: Type.Object({
+      productId: Type.String(),
+      quantity: Type.Optional(Type.Number({ default: 1 })),
+    }),
+    async execute(_id: string, params: { productId: string; quantity?: number }) {
+      const session = await client.agentic.createCheckoutSessions({
+        requestBody: {
+          items: [{ id: params.productId, quantity: params.quantity ?? 1 }],
+        },
+      });
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ sessionId: session.id, total: session.total, status: session.status }, null, 2),
+        }],
+      };
+    },
+  });
+
+  api.registerTool({
+    name: 'podium_tasks',
+    description: 'List available task bounties',
+    parameters: Type.Object({}),
+    async execute() {
+      const tasks = await client.tasks.listTasks();
+      return {
+        content: [{ type: 'text', text: JSON.stringify(tasks, null, 2) }],
+      };
+    },
+  });
+}
+```
+
+### 4. Configure and Allow Tools
+
+Add to your OpenClaw config (`~/.openclaw/config.json`):
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "podium": {
+        "enabled": true
+      }
+    }
+  },
+  "agents": {
+    "list": [
+      {
+        "id": "main",
+        "tools": {
+          "allow": [
+            "podium_search",
+            "podium_get_product",
+            "podium_profile",
+            "podium_recommendations",
+            "podium_points",
+            "podium_checkout",
+            "podium_tasks"
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+### 5. Create a Skill
+
+Create `~/.openclaw/workspace/skills/podium/SKILL.md` to teach the agent when and how to use Podium tools:
+
+```markdown
+---
+name: podium
+description: Podium commerce and shopping tools
+requires:
+  env:
+    - PODIUM_API_KEY
+---
+
+# Podium Commerce
+
+You have access to the Podium commerce platform through the following tools:
+
+## When to use these tools
+
+- When the user asks about products, shopping, or wants to buy something → use `podium_search` and `podium_get_product`
+- When the user asks for personalized recommendations → use `podium_recommendations`
+- When the user wants to check their points or loyalty status → use `podium_points`
+- When the user wants to buy something → use `podium_checkout`
+- When the user asks about available tasks or bounties → use `podium_tasks`
+
+## Workflow patterns
+
+### Shopping flow
+1. `podium_search` to find products
+2. `podium_get_product` for details on interesting items
+3. `podium_recommendations` for personalized suggestions
+4. `podium_checkout` to create a purchase session
+
+### Profile check
+1. `podium_profile` to see preferences
+2. `podium_recommendations` for personalized items
+
+## Important
+- Always confirm with the user before creating a checkout session
+- Present product options clearly with name, price, and key attributes
+- Mention points balance when relevant to encourage engagement
+```
+
+## Option B: MCP via mcporter
+
+If you've already built the Podium MCP server, use mcporter to connect it:
+
+```bash
+mcporter add podium --command "node /path/to/podium-mcp-server/dist/index.js" \
+  --env PODIUM_API_KEY=podium_live_sk_...
+```
+
+Then the agent can call tools via mcporter:
+
+```
+mcporter call podium.search_products categories=skincare limit=5
+```
+
+Install the mcporter skill if not already present:
+
+```bash
+clawhub install mcporter
+```
+
+## Multi-Channel Commerce
+
+The power of OpenClaw + Podium is that the agent can take commerce actions from any connected channel. A user can:
+
+- Ask for product recommendations on **WhatsApp**
+- Check their points balance on **Telegram**
+- Browse task bounties on **Slack**
+- Complete a purchase via **Discord**
+
+All through the same agent, same profile, same Podium account.
+
+## Related
+
+- [Build a Claude MCP Server](/recipes/mcp-server) — the MCP server these tools are based on
+- [Telegram Mini App Recipe](/recipes/telegram-mini-app) — another messaging-based commerce pattern
+- [Companion API](/api-reference/companion) — profile and recommendation endpoints

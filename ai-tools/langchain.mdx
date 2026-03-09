@@ -1,0 +1,271 @@
+---
+title: "LangChain"
+description: "Wrap Podium SDK methods as LangChain tools for building autonomous shopping and commerce agents"
+icon: "link"
+---
+
+LangChain is the most popular framework for building LLM-powered agents. This guide shows how to wrap Podium's SDK methods as LangChain tools and compose them into agents and LangGraph workflows.
+
+## Prerequisites
+
+```bash
+npm install @podium-sdk/node-sdk langchain @langchain/core @langchain/openai zod
+```
+
+## Client Setup
+
+```typescript
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+
+const client = createPodiumClient({
+  apiKey: process.env.PODIUM_API_KEY!,
+});
+```
+
+## Define Tools
+
+Use `DynamicStructuredTool` to wrap each SDK method with a Zod schema:
+
+```typescript
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
+
+const searchProducts = new DynamicStructuredTool({
+  name: 'search_products',
+  description: 'Search the Podium product catalog. Use when the user asks about products, wants to browse, or needs recommendations.',
+  schema: z.object({
+    categories: z.string().optional().describe('Comma-separated category filter'),
+    limit: z.number().min(1).max(50).default(10).describe('Max results'),
+    page: z.number().min(1).default(1).describe('Page number'),
+  }),
+  func: async ({ categories, limit, page }) => {
+    const feed = await client.agentic.listProductsFeed({ categories, limit, page });
+    return JSON.stringify(feed.products.map((p: any) => ({
+      id: p.id, name: p.name, brand: p.brand, price: p.price,
+    })));
+  },
+});
+
+const getProduct = new DynamicStructuredTool({
+  name: 'get_product',
+  description: 'Get full details for a specific product by ID.',
+  schema: z.object({
+    productId: z.string().describe('Product ID'),
+  }),
+  func: async ({ productId }) => {
+    const product = await client.product.get({ id: productId });
+    return JSON.stringify(product);
+  },
+});
+
+const getRecommendations = new DynamicStructuredTool({
+  name: 'get_recommendations',
+  description: 'Get personalized product recommendations for a user based on their taste profile.',
+  schema: z.object({
+    userId: z.string().describe('Podium user ID'),
+    count: z.number().min(1).max(20).default(5),
+    category: z.string().optional(),
+  }),
+  func: async ({ userId, count, category }) => {
+    const recs = await client.companion.listRecommendations({ userId, count, category });
+    return JSON.stringify(recs);
+  },
+});
+
+const getUserProfile = new DynamicStructuredTool({
+  name: 'get_user_profile',
+  description: 'Get a user\'s companion/taste profile with their preferences, skin type, and concerns.',
+  schema: z.object({
+    userId: z.string().describe('Podium user ID'),
+  }),
+  func: async ({ userId }) => {
+    const profile = await client.companion.listProfile({ userId });
+    return JSON.stringify(profile);
+  },
+});
+
+const checkPoints = new DynamicStructuredTool({
+  name: 'check_points',
+  description: 'Check a user\'s loyalty points balance.',
+  schema: z.object({
+    userId: z.string().describe('Podium user ID'),
+  }),
+  func: async ({ userId }) => {
+    const points = await client.user.listPoints({ id: userId });
+    return JSON.stringify(points);
+  },
+});
+
+const createCheckout = new DynamicStructuredTool({
+  name: 'create_checkout',
+  description: 'Create a checkout session to purchase a product. Only call after confirming with the user.',
+  schema: z.object({
+    productId: z.string().describe('Product ID to purchase'),
+    quantity: z.number().min(1).default(1),
+  }),
+  func: async ({ productId, quantity }) => {
+    const session = await client.agentic.createCheckoutSessions({
+      requestBody: {
+        items: [{ id: productId, quantity }],
+      },
+    });
+    return JSON.stringify({ sessionId: session.id, total: session.total, status: session.status });
+  },
+});
+
+const recordInteraction = new DynamicStructuredTool({
+  name: 'record_interaction',
+  description: 'Record a user interaction with a product (like, dislike, skip, or purchase intent).',
+  schema: z.object({
+    userId: z.string(),
+    productId: z.string(),
+    action: z.enum(['RANK_UP', 'RANK_DOWN', 'SKIP', 'PURCHASE_INTENT']),
+  }),
+  func: async ({ userId, productId, action }) => {
+    await client.companion.createInteractions({
+      requestBody: { userId, productId, action },
+    });
+    return `Recorded ${action} for product ${productId}`;
+  },
+});
+```
+
+## Create an Agent
+
+### OpenAI Agent
+
+```typescript
+import { ChatOpenAI } from '@langchain/openai';
+import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+
+const tools = [
+  searchProducts,
+  getProduct,
+  getRecommendations,
+  getUserProfile,
+  checkPoints,
+  createCheckout,
+  recordInteraction,
+];
+
+const llm = new ChatOpenAI({
+  modelName: 'gpt-4o',
+  temperature: 0,
+});
+
+const prompt = ChatPromptTemplate.fromMessages([
+  ['system', `You are a personal shopping assistant powered by Podium. You help users discover products, get personalized recommendations, manage their loyalty points, and make purchases.
+
+Always:
+- Search for products before recommending them
+- Check the user's profile for personalization when available
+- Confirm with the user before creating a checkout session
+- Mention points balance when relevant`],
+  new MessagesPlaceholder('chat_history'),
+  ['human', '{input}'],
+  new MessagesPlaceholder('agent_scratchpad'),
+]);
+
+const agent = await createOpenAIFunctionsAgent({ llm, tools, prompt });
+const executor = new AgentExecutor({ agent, tools, verbose: true });
+
+const result = await executor.invoke({
+  input: 'Find me a good moisturizer for dry skin under $25',
+  chat_history: [],
+});
+
+console.log(result.output);
+```
+
+### Anthropic Agent
+
+Swap the LLM and use the tool-calling agent:
+
+```typescript
+import { ChatAnthropic } from '@langchain/anthropic';
+import { createToolCallingAgent } from 'langchain/agents';
+
+const llm = new ChatAnthropic({
+  modelName: 'claude-sonnet-4-20250514',
+  temperature: 0,
+});
+
+const agent = await createToolCallingAgent({ llm, tools, prompt });
+const executor = new AgentExecutor({ agent, tools });
+```
+
+## LangGraph Workflow
+
+For more structured flows, use LangGraph to build a state machine:
+
+```typescript
+import { StateGraph, Annotation, END } from '@langchain/langgraph';
+
+const ShoppingState = Annotation.Root({
+  userId: Annotation<string>,
+  query: Annotation<string>,
+  products: Annotation<any[]>({ default: () => [] }),
+  selectedProduct: Annotation<any>({ default: () => null }),
+  checkoutSession: Annotation<any>({ default: () => null }),
+});
+
+const graph = new StateGraph(ShoppingState)
+  .addNode('search', async (state) => {
+    const feed = await client.agentic.listProductsFeed({
+      categories: state.query,
+      limit: 10,
+    });
+    return { products: feed.products };
+  })
+  .addNode('personalize', async (state) => {
+    const recs = await client.companion.listRecommendations({
+      userId: state.userId,
+      count: 5,
+    });
+    return { products: recs.recommendations };
+  })
+  .addNode('checkout', async (state) => {
+    if (!state.selectedProduct) return {};
+    const session = await client.agentic.createCheckoutSessions({
+      requestBody: {
+        items: [{ id: state.selectedProduct.id, quantity: 1 }],
+      },
+    });
+    return { checkoutSession: session };
+  })
+  .addEdge('__start__', 'search')
+  .addEdge('search', 'personalize')
+  .addConditionalEdges('personalize', (state) =>
+    state.selectedProduct ? 'checkout' : END
+  )
+  .addEdge('checkout', END)
+  .compile();
+
+const result = await graph.invoke({
+  userId: 'usr_abc123',
+  query: 'skincare',
+});
+```
+
+## All Available Tools
+
+You can create tools for any Podium SDK method. Here's the full namespace map:
+
+| Tool Name | SDK Method | Use Case |
+|-----------|-----------|----------|
+| `search_products` | `client.agentic.listProductsFeed()` | Product discovery |
+| `get_product` | `client.product.get()` | Product details |
+| `get_recommendations` | `client.companion.listRecommendations()` | Personalized suggestions |
+| `get_user_profile` | `client.companion.listProfile()` | Read taste profile |
+| `check_points` | `client.user.listPoints()` | Loyalty balance |
+| `create_checkout` | `client.agentic.createCheckoutSessions()` | Purchase flow |
+| `record_interaction` | `client.companion.createInteractions()` | Feedback signals |
+| `list_tasks` | `client.tasks.listTasks()` | Browse bounties |
+| `award_points` | `client.user.awardPoints()` | Reward actions |
+
+## Related
+
+- [Agent-to-Agent Commerce](/recipes/agent-commerce) — LangChain tools in the A2A context
+- [Vercel AI SDK](/ai-tools/vercel-ai) — similar pattern for Next.js
+- [SDK Examples](/sdk/examples) — more workflow patterns

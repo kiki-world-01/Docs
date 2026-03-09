@@ -1,0 +1,114 @@
+---
+title: "Claude Desktop"
+description: "Set up Claude Desktop with Podium MCP tools for conversational commerce, product discovery, and order management"
+icon: "message-bot"
+---
+
+Claude Desktop is the canonical MCP client. With the Podium MCP server connected, you can search products, manage taste profiles, execute purchases, check loyalty balances, and browse task bounties — all through natural conversation.
+
+## Prerequisites
+
+- [Claude Desktop](https://claude.ai/download) installed
+- A [Podium API key](https://www.podiumcommerce.xyz/onboarding)
+- The Podium MCP server built and compiled (see [Build a Claude MCP Server](/recipes/mcp-server))
+
+## Configuration
+
+Edit your Claude Desktop config file:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "podium": {
+      "command": "node",
+      "args": ["/absolute/path/to/podium-mcp-server/dist/index.js"],
+      "env": {
+        "PODIUM_API_KEY": "podium_live_sk_..."
+      }
+    }
+  }
+}
+```
+
+<Warning>
+Use the **absolute path** to your compiled MCP server. Relative paths won't resolve correctly when Claude Desktop launches the process.
+</Warning>
+
+Restart Claude Desktop after saving. You should see "podium" appear in the MCP tools panel (the hammer icon in the input area).
+
+## Verify the Connection
+
+Ask Claude:
+
+> "What Podium tools do you have access to?"
+
+Claude should list the available tools: `search_products`, `get_product`, `get_profile`, `update_profile`, `get_recommendations`, `check_points`, `create_checkout`, and `list_tasks`.
+
+## Example Conversations
+
+### Product Discovery
+
+> "Find me the top-rated moisturizers under $30"
+
+Claude calls `search_products`, formats the results, and presents options with prices and descriptions.
+
+### Profile Management
+
+> "Update my skin profile — I have dry skin, I'm concerned about fine lines and dark spots, and I prefer fragrance-free products under $40"
+
+Claude calls `update_profile` with the structured preferences, then calls `get_recommendations` to suggest matching products.
+
+### Purchase Flow
+
+> "Buy the CeraVe Moisturizing Cream, ship it to 123 Main St, San Francisco CA 94102"
+
+Claude calls `get_product` to confirm details, then `create_checkout` with the shipping address. Returns the checkout session ID and total.
+
+### Loyalty Check
+
+> "How many points do I have? What's my lifetime earning total?"
+
+Claude calls `check_points` and presents the balance, lifetime earned, and lifetime spent.
+
+### Task Browsing
+
+> "Show me available bounties I could work on"
+
+Claude calls `list_tasks` and formats open tasks with their reward amounts and requirements.
+
+## Adding More Tools
+
+The MCP server from the [recipe](/recipes/mcp-server) ships with 8 tools, but you can extend it with any SDK method. The pattern is always the same:
+
+```typescript
+server.tool(
+  'tool_name',
+  { param: z.string().describe('Description') },
+  async ({ param }) => {
+    const result = await client.namespace.method({ param });
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+```
+
+Rebuild with `npx tsc`, restart Claude Desktop, and the new tool appears automatically.
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Server not appearing | Check that the path in config is absolute and the JS file exists |
+| "Connection refused" | Ensure `npx tsc` compiled without errors |
+| API errors in tool calls | Verify your `PODIUM_API_KEY` is valid and not expired |
+| Tools show but fail | Check that the API key has permissions for the endpoint being called |
+
+## Related
+
+- [Build a Claude MCP Server](/recipes/mcp-server) — the full server implementation
+- [Cursor Setup](/ai-tools/cursor) — same MCP server, different client
+- [SDK Setup](/sdk/setup) — client configuration reference

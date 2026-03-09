@@ -1,96 +1,119 @@
 ---
-title: "Windsurf Setup"
-description: "Configure Windsurf for writing and maintaining Podium documentation"
-icon: "water"
+title: "Windsurf"
+description: "Configure Windsurf with MCP tools and workspace rules for building on Podium"
+icon: "wind"
 ---
 
-Configure Windsurf's Cascade AI assistant to help write and maintain Podium documentation. This guide shows how to set up Windsurf specifically for the Podium docs workflow.
+Set up Windsurf's Cascade AI assistant with Podium MCP tools and workspace rules. This gives Windsurf full context about the Podium SDK and live API access for building commerce integrations.
 
 ## Prerequisites
 
-- Windsurf editor installed
-- Access to your documentation repository
+- [Windsurf](https://codeium.com/windsurf) installed
+- A [Podium API key](https://www.podiumcommerce.xyz/onboarding)
+- The Podium MCP server built (see [Build a Claude MCP Server](/recipes/mcp-server))
 
-## Workspace rules
+## MCP Server Configuration
 
-Create workspace rules that provide Windsurf with context about your documentation project and standards.
+Windsurf supports MCP servers. Add the Podium server in Windsurf's MCP settings:
 
-Create `.windsurf/rules.md` in your project root:
+1. Open Settings (Cmd+,)
+2. Search for "MCP" or navigate to the MCP configuration panel
+3. Add a new server:
 
-````markdown
-# Podium documentation writing rule
-
-## Project context
-
-- This is the documentation site for the Podium commerce and agentic intelligence platform
-- Built on Mintlify — MDX files with YAML frontmatter  
-- Navigation is configured in `docs.json`
-- We follow technical writing best practices
-
-## Writing standards
-
-- Use second person ("you") for instructions
-- Write in active voice and present tense
-- Start procedures with prerequisites
-- Include expected outcomes for major steps
-- Use descriptive, keyword-rich headings
-- Keep sentences concise but informative
-
-## Required page structure
-
-Every page must start with frontmatter:
-
-```yaml
----
-title: "Clear, specific title"
-description: "Concise description for SEO and navigation"
----
+```json
+{
+  "mcpServers": {
+    "podium": {
+      "command": "node",
+      "args": ["path/to/podium-mcp-server/dist/index.js"],
+      "env": {
+        "PODIUM_API_KEY": "podium_live_sk_..."
+      }
+    }
+  }
+}
 ```
 
-## Mintlify components
+After saving, Windsurf's Cascade agent can call Podium tools directly during conversations.
 
-### Callouts
+### Available Tools
 
-- `<Note>` for helpful supplementary information
-- `<Warning>` for important cautions and breaking changes
-- `<Tip>` for best practices and expert advice  
-- `<Info>` for neutral contextual information
-- `<Check>` for success confirmations
+| Tool | What It Does |
+|------|-------------|
+| `search_products` | Search the product catalog with filters |
+| `get_product` | Fetch full product details by ID |
+| `get_profile` | Read a user's companion/taste profile |
+| `update_profile` | Update preferences, brands, concerns |
+| `get_recommendations` | Get personalized product recommendations |
+| `check_points` | Check a user's points balance |
+| `create_checkout` | Create a checkout session with shipping |
+| `list_tasks` | Browse available task bounties |
 
-### Code examples
+## Workspace Rules
 
-- When appropriate, include complete, runnable examples
-- Use `<CodeGroup>` for multiple language examples
-- Specify language tags on all code blocks
-- Include realistic data, not placeholders
-- Use `<RequestExample>` and `<ResponseExample>` for API docs
+Create `.windsurf/rules.md` in your project root to give Cascade persistent context about Podium:
 
-### Procedures
+````markdown
+# Podium Development Context
 
-- Use `<Steps>` component for sequential instructions
-- Include verification steps with `<Check>` components when relevant
-- Break complex procedures into smaller steps
+## SDK
 
-### Content organization
+- Package: `@podium-sdk/node-sdk`
+- Client: `import { createPodiumClient } from '@podium-sdk/node-sdk'`
+- Auth: `createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })`
+- Base URL (staging): `https://podium-staging.up.railway.app/api/v1`
 
-- Use `<Tabs>` for platform-specific content
-- Use `<Accordion>` for progressive disclosure
-- Use `<Card>` and `<CardGroup>` for highlighting content
-- Wrap images in `<Frame>` components with descriptive alt text
+## SDK Namespaces
 
-## API documentation requirements
+| Namespace | Purpose |
+|-----------|---------|
+| `client.product.*` | Product CRUD, variants, media |
+| `client.agentic.*` | Product feed, checkout sessions |
+| `client.companion.*` | Profiles, recommendations, interactions |
+| `client.user.*` | User management, points, rewards |
+| `client.userOrder.*` | Order lifecycle, checkout, discounts |
+| `client.tasks.*` | Task pools, bounties, verification |
+| `client.x402.*` | USDC payment flows |
+| `client.campaign.*` | Campaigns, voting, surveys |
+| `client.admin.*` | API keys, org management |
 
-- Document all parameters with `<ParamField>` 
-- Show response structure with `<ResponseField>`
-- Include both success and error examples
-- Use `<Expandable>` for nested object properties
-- Always include authentication examples
+## API Conventions
 
-## Quality standards
+- All endpoints require `Authorization: Bearer <api_key>` header
+- API keys are org-scoped: `podium_test_*` (staging), `podium_live_*` (production)
+- Responses follow `{ data, error, pagination }` envelope
+- Pagination: `?page=1&limit=20`
+- IDs are UUIDs
+- POST/PUT payloads go in `requestBody` parameter in SDK calls
 
-- Test all code examples before publishing
-- Use relative paths for internal links
-- Include alt text for all images
-- Ensure proper heading hierarchy (start with h2)
-- Check existing patterns for consistency
+## Architecture
+
+- Multi-tenant PostgreSQL with RLS
+- QStash for async job processing
+- x402 protocol for machine-native USDC payments on Base
+- Enrichment pipeline for product intelligence
+- Companion profiles for personalized recommendations
 ````
+
+## Example Workflow
+
+With MCP connected and rules in place, prompt Cascade:
+
+> "Create an API route that takes a user ID and category, fetches personalized recommendations from Podium, and returns them as a JSON array with id, name, price, and imageUrl"
+
+Cascade will:
+1. Use the SDK patterns from rules to write correct imports
+2. Call `client.companion.listRecommendations()` with the right parameters
+3. Shape the response to the requested format
+
+## Tips
+
+- **Use Cascade Flows** for multi-step tasks that combine code generation with tool calls
+- **Reference the rules** — Cascade reads `.windsurf/rules.md` automatically for every conversation
+- **Extend the MCP server** if you need more tools — the pattern from the [MCP recipe](/recipes/mcp-server) is consistent
+
+## Related
+
+- [Cursor Setup](/ai-tools/cursor) — same MCP server, different IDE
+- [Claude Desktop](/ai-tools/claude-desktop) — canonical MCP setup
+- [SDK Setup](/sdk/setup) — complete SDK reference

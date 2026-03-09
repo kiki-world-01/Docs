@@ -1,0 +1,127 @@
+---
+title: "Codex"
+description: "Configure OpenAI's Codex CLI to build Podium integrations from the terminal"
+icon: "robot"
+---
+
+Codex is OpenAI's open-source terminal coding agent. It reads your codebase, writes code, runs commands, and can use tools — making it a great fit for scaffolding Podium integrations from the command line.
+
+## Prerequisites
+
+- Codex CLI installed:
+
+```bash
+npm install -g @openai/codex
+```
+
+- A ChatGPT Plus, Pro, Team, or Enterprise plan (authenticates via your OpenAI account)
+- A [Podium API key](https://www.podiumcommerce.xyz/onboarding)
+
+## Instructions File
+
+Create a `codex.md` (or `AGENTS.md`) at the root of your project to give Codex persistent context about Podium:
+
+````markdown
+# Podium Integration Context
+
+## SDK
+
+- Package: `@podium-sdk/node-sdk`
+- Install: `npm install @podium-sdk/node-sdk`
+
+```typescript
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+
+const client = createPodiumClient({
+  apiKey: process.env.PODIUM_API_KEY,
+});
+```
+
+## Key SDK Namespaces
+
+- `client.product` — Product CRUD, variants, media
+- `client.agentic` — Product feed, checkout sessions
+- `client.companion` — Profiles, recommendations, interactions
+- `client.user` — User management, points, rewards
+- `client.userOrder` — Order lifecycle, checkout, discounts
+- `client.tasks` — Task pools, bounties, verification
+- `client.x402` — USDC payment flows
+- `client.campaign` — Campaigns, voting, surveys
+
+## API
+
+- Base URL (staging): `https://podium-staging.up.railway.app/api/v1`
+- Auth: `Authorization: Bearer <podium_api_key>`
+- API keys are org-scoped: `podium_test_*` (staging) or `podium_live_*` (production)
+
+## Patterns
+
+- Always use SDK methods over raw fetch when available
+- Pagination: `{ page: number, limit: number }`
+- POST/PUT payloads go in `requestBody`
+- Error shape: `{ error: string, statusCode: number }`
+
+## Architecture
+
+- Multi-tenant PostgreSQL with row-level security
+- x402 for machine-native USDC payments on Base
+- Companion profiles for user taste/intent data
+- Enrichment pipeline for AI product attributes
+- QStash for async job processing
+````
+
+## Usage
+
+Start Codex in your project directory:
+
+```bash
+codex
+```
+
+Then prompt it to build a Podium integration:
+
+> "Install the Podium SDK and create an API route that fetches personalized product recommendations for a user and returns them as JSON"
+
+Codex will:
+1. Run `npm install @podium-sdk/node-sdk`
+2. Create the file with correct imports from the instructions context
+3. Write a function using `client.companion.listRecommendations()`
+
+### Multi-Agent Mode
+
+For complex tasks, use Codex's experimental multi-agent mode:
+
+```bash
+codex --multi-agent "Build a complete product catalog page with search, filtering by category, and a detail view. Use the Podium SDK for all data fetching."
+```
+
+This parallelizes the work across multiple agents — one for the search component, one for the filter logic, one for the detail view — all following the SDK patterns from your instructions file.
+
+## Environment Setup
+
+Make sure your Podium API key is available as an environment variable:
+
+```bash
+export PODIUM_API_KEY="podium_live_sk_..."
+```
+
+Or add it to your `.env` file:
+
+```bash
+PODIUM_API_KEY=podium_live_sk_...
+```
+
+## Example Tasks
+
+| Prompt | What Codex Does |
+|--------|----------------|
+| "Add a product search endpoint" | Creates route using `client.agentic.listProductsFeed()` |
+| "Build a checkout flow" | Scaffolds session creation + payment using `client.agentic.createCheckoutSessions()` |
+| "Add points to a user after purchase" | Writes post-checkout hook using `client.user.awardPoints()` |
+| "Create a task bounty board component" | Builds UI + data fetching with `client.tasks.listTasks()` |
+
+## Related
+
+- [Claude Code](/ai-tools/claude-code) — Anthropic's terminal agent (similar workflow)
+- [SDK Setup](/sdk/setup) — complete SDK reference
+- [SDK Examples](/sdk/examples) — real-world code patterns

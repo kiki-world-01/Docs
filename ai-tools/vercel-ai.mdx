@@ -1,0 +1,259 @@
+---
+title: "Vercel AI SDK"
+description: "Define Podium tools with Zod schemas for streaming AI apps built with Next.js and the Vercel AI SDK"
+icon: "triangle"
+---
+
+The Vercel AI SDK is the standard for building streaming AI applications in Next.js. This guide shows how to define Podium tools using `tool()` with Zod schemas and wire them into a chat API route with `streamText`.
+
+## Prerequisites
+
+```bash
+npm install @podium-sdk/node-sdk ai @ai-sdk/openai zod
+```
+
+## Client Setup
+
+```typescript
+// lib/podium.ts
+import { createPodiumClient } from '@podium-sdk/node-sdk';
+
+export const podium = createPodiumClient({
+  apiKey: process.env.PODIUM_API_KEY!,
+});
+```
+
+## Define Tools
+
+```typescript
+// lib/podium-tools.ts
+import { tool } from 'ai';
+import { z } from 'zod';
+import { podium } from './podium';
+
+export const podiumTools = {
+  searchProducts: tool({
+    description: 'Search the Podium product catalog by category, with optional filters',
+    parameters: z.object({
+      categories: z.string().optional().describe('Comma-separated category filter'),
+      limit: z.number().min(1).max(50).default(10),
+    }),
+    execute: async ({ categories, limit }) => {
+      const feed = await podium.agentic.listProductsFeed({ categories, limit });
+      return feed.products.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        price: p.price,
+        imageUrl: p.images?.[0]?.url,
+      }));
+    },
+  }),
+
+  getProduct: tool({
+    description: 'Get full details for a specific product',
+    parameters: z.object({
+      productId: z.string().describe('Product ID'),
+    }),
+    execute: async ({ productId }) => {
+      return await podium.product.get({ id: productId });
+    },
+  }),
+
+  getRecommendations: tool({
+    description: 'Get personalized product recommendations based on the user\'s taste profile',
+    parameters: z.object({
+      userId: z.string().describe('Podium user ID'),
+      count: z.number().min(1).max(20).default(5),
+      category: z.string().optional(),
+    }),
+    execute: async ({ userId, count, category }) => {
+      return await podium.companion.listRecommendations({ userId, count, category });
+    },
+  }),
+
+  getUserProfile: tool({
+    description: 'Read a user\'s companion/taste profile',
+    parameters: z.object({
+      userId: z.string().describe('Podium user ID'),
+    }),
+    execute: async ({ userId }) => {
+      return await podium.companion.listProfile({ userId });
+    },
+  }),
+
+  checkPoints: tool({
+    description: 'Check a user\'s loyalty points balance and history',
+    parameters: z.object({
+      userId: z.string().describe('Podium user ID'),
+    }),
+    execute: async ({ userId }) => {
+      return await podium.user.listPoints({ id: userId });
+    },
+  }),
+
+  createCheckout: tool({
+    description: 'Create a checkout session to purchase products. Only call after the user confirms.',
+    parameters: z.object({
+      productId: z.string(),
+      quantity: z.number().min(1).default(1),
+    }),
+    execute: async ({ productId, quantity }) => {
+      const session = await podium.agentic.createCheckoutSessions({
+        requestBody: {
+          items: [{ id: productId, quantity }],
+        },
+      });
+      return { sessionId: session.id, total: session.total, status: session.status };
+    },
+  }),
+
+  recordInteraction: tool({
+    description: 'Record that a user liked, disliked, or skipped a product',
+    parameters: z.object({
+      userId: z.string(),
+      productId: z.string(),
+      action: z.enum(['RANK_UP', 'RANK_DOWN', 'SKIP', 'PURCHASE_INTENT']),
+    }),
+    execute: async ({ userId, productId, action }) => {
+      await podium.companion.createInteractions({
+        requestBody: { userId, productId, action },
+      });
+      return { recorded: true, action, productId };
+    },
+  }),
+};
+```
+
+## Chat API Route
+
+```typescript
+// app/api/chat/route.ts
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { podiumTools } from '@/lib/podium-tools';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-4o'),
+    system: `You are a personal shopping assistant powered by Podium. Help users discover products, get personalized recommendations, check loyalty points, and make purchases.
+
+Always:
+- Search before recommending products
+- Use the user's profile for personalization when a userId is available
+- Confirm with the user before creating checkout sessions
+- Mention points balance when relevant`,
+    messages,
+    tools: podiumTools,
+    maxSteps: 5,
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+### With Anthropic
+
+```typescript
+import { anthropic } from '@ai-sdk/anthropic';
+
+const result = streamText({
+  model: anthropic('claude-sonnet-4-20250514'),
+  system: '...',
+  messages,
+  tools: podiumTools,
+  maxSteps: 5,
+});
+```
+
+## Frontend Component
+
+```tsx
+// app/page.tsx
+'use client';
+
+import { useChat } from 'ai/react';
+
+export default function ShoppingAssistant() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+
+  return (
+    <div className="mx-auto max-w-2xl p-4">
+      <h1 className="mb-6 text-2xl font-bold">Shopping Assistant</h1>
+
+      <div className="space-y-4">
+        {messages.map((m) => (
+          <div key={m.id} className={`rounded-lg p-4 ${
+            m.role === 'user' ? 'bg-blue-50 ml-12' : 'bg-gray-50 mr-12'
+          }`}>
+            <p className="text-sm font-medium text-gray-500">
+              {m.role === 'user' ? 'You' : 'Assistant'}
+            </p>
+            <p className="mt-1">{m.content}</p>
+
+            {m.toolInvocations?.map((tool, i) => (
+              <div key={i} className="mt-2 rounded bg-white p-2 text-xs text-gray-600">
+                Called <strong>{tool.toolName}</strong>
+                {tool.state === 'result' && (
+                  <pre className="mt-1 overflow-auto">
+                    {JSON.stringify(tool.result, null, 2)}
+                  </pre>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 flex gap-2">
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Ask about products, recommendations, or your points..."
+          className="flex-1 rounded-lg border px-4 py-2"
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Server Actions (Alternative)
+
+For non-chat use cases, use `generateText` in a server action:
+
+```typescript
+// app/actions.ts
+'use server';
+
+import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { podiumTools } from '@/lib/podium-tools';
+
+export async function getProductSuggestions(query: string, userId: string) {
+  const { text, toolResults } = await generateText({
+    model: openai('gpt-4o'),
+    system: 'You are a product recommendation engine. Return structured suggestions.',
+    prompt: `User ${userId} is looking for: ${query}`,
+    tools: podiumTools,
+    maxSteps: 3,
+  });
+
+  return { text, toolResults };
+}
+```
+
+## Related
+
+- [LangChain](/ai-tools/langchain) — similar pattern using LangChain's tool API
+- [SDK Setup](/sdk/setup) — complete SDK reference
+- [Build a Claude MCP Server](/recipes/mcp-server) — if you need MCP instead of direct tool definitions

@@ -36,6 +36,20 @@
         "tab": "SDK & Guides",
         "groups": [
           {
+            "group": "Agent Tooling",
+            "pages": [
+              "ai-tools/overview",
+              "ai-tools/cursor",
+              "ai-tools/claude-desktop",
+              "ai-tools/claude-code",
+              "ai-tools/codex",
+              "ai-tools/openclaw",
+              "ai-tools/langchain",
+              "ai-tools/vercel-ai",
+              "ai-tools/windsurf"
+            ]
+          },
+          {
             "group": "TypeScript SDK",
             "pages": ["sdk/setup", "sdk/examples"]
           },
@@ -59,14 +73,6 @@
               "recipes/task-marketplace",
               "recipes/swipe-widget",
               "recipes/deal-agent"
-            ]
-          },
-          {
-            "group": "AI Tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
             ]
           }
         ]
@@ -171,11 +177,6 @@
           "icon": "play"
         },
         {
-          "anchor": "GitHub",
-          "href": "https://github.com/kiki-world-01",
-          "icon": "github"
-        },
-        {
           "anchor": "npm SDK",
           "href": "https://www.npmjs.com/package/@podium-sdk/node-sdk",
           "icon": "npm"
@@ -198,7 +199,6 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/kiki-world-01",
       "x": "https://x.com/podaboratory"
     }
   },
