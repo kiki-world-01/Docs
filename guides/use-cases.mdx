@@ -18,7 +18,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
 | **Agentic Endpoints** | `/agentic/*` | Agent-native product feed + checkout (no auth required) |
 | **Search** | `/search/*`, `/universal-search/*` | Product + creator + campaign discovery |
 | **Commerce** | `/order/*`, `/product/*` | Full transaction pipeline with Stripe + x402 |
-| **Enrichment Pipeline** | QStash queues | Async product intelligence from 3 source types |
+| **Enrichment Pipeline** | Async processing | Product intelligence from multiple source types |
 | **x402 Rails** | `/x402/*` | Pay-per-call USDC API access |
 
 ---
@@ -35,11 +35,11 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Deal Mode — Price Watch + Auto-Buy">
-    Standing intents that run in the background. The agent monitors prices via scheduled QStash jobs, finds alternatives across the catalog, and executes when a threshold is hit — with one-tap consumer approval or fully autonomous via standing approval.
+    Standing intents that run in the background. The agent monitors prices via scheduled background jobs, finds alternatives across the catalog, and executes when a threshold is hit — with one-tap consumer approval or fully autonomous via standing approval.
 
     **User flow:** Set price ceiling for a saved product → agent polls periodically → price drops → notification (or auto-buy if approved) → USDC checkout → confirmation.
 
-    **Primitives:** Saved items (`/saved-item`), for-you feed, QStash scheduled jobs, x402 auto-checkout, Privy wallet
+    **Primitives:** Saved items (`/saved-item`), for-you feed, scheduled jobs, x402 auto-checkout, Privy wallet
   </Accordion>
 
   <Accordion title="Taste Mode — Preference Learning">
@@ -47,7 +47,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
 
     **User flow:** User swipes on products → taste graph built from explicit signals → `/for-you/feed` personalized to declared preferences → enrichment baselines refine attribute matching over time.
 
-    **Primitives:** Campaign engine (swipe type), for-you feed, companion profile, enrichment baselines, QStash enrichment-extract queue
+    **Primitives:** Campaign engine (swipe type), for-you feed, companion profile, enrichment baselines, enrichment processing
   </Accordion>
 
   <Accordion title="Restocking Agent">
@@ -55,7 +55,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
 
     **User flow:** Purchase tracked → agent calculates reorder timing → sends prompt (or auto-orders) → x402 checkout → shipping.
 
-    **Primitives:** Order history, product inventory (`/product/{id}`), QStash scheduling, x402 checkout, Shopify sync for live inventory data
+    **Primitives:** Order history, product inventory (`/product/{id}`), background scheduling, x402 checkout, Shopify sync for live inventory data
   </Accordion>
 
   <Accordion title="Taste Profile Builder">
@@ -73,9 +73,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Price Watch + Auto-Buy">
-    User sets a price ceiling for a specific product. The agent polls the catalog periodically (via QStash), and triggers a one-tap purchase notification when the price drops below the threshold.
+    User sets a price ceiling for a specific product. The agent polls the catalog periodically (via background job), and triggers a one-tap purchase notification when the price drops below the threshold.
 
-    **Primitives:** Saved items, product catalog, QStash, agentic checkout sessions, Privy wallet
+    **Primitives:** Saved items, product catalog, background scheduling, agentic checkout sessions, Privy wallet
   </Accordion>
 </AccordionGroup>
 
@@ -101,7 +101,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Tiered Loyalty Program">
     Engagement unlocks agent capabilities. More swipes → richer profile → better execution → standing intents → autonomous buying. Each tier upgrade expands what the agent can do on the user's behalf.
 
-    **Primitives:** Points ledger tiers, companion profile, campaign completions, QStash-triggered tier upgrades, NftReward (EVENT_PASS for tier badges)
+    **Primitives:** Points ledger tiers, companion profile, campaign completions, async event-triggered tier upgrades, NftReward (EVENT_PASS for tier badges)
   </Accordion>
 
   <Accordion title="Event Pass Wallet">
@@ -119,7 +119,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Referral Engine">
     Friend buys from your wishlist or taste profile link → both earn points. Implemented as a TaskPool task with on-chain settlement, so the referral reward is transparent and verifiable.
 
-    **Primitives:** Saved items (public share link), TaskPool (referral task type), campaign-vote QStash event, points earn
+    **Primitives:** Saved items (public share link), TaskPool (referral task type), campaign-vote async event, points earn
   </Accordion>
 
   <Accordion title="Subscription Box Voting">
@@ -163,9 +163,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Product Review Incentive">
     Verified purchasers receive a task to leave a product review. Oracle or AIEval verifies review quality (length, relevance, originality). USDC released on successful verification.
 
-    **User flow:** Purchase verified → review task created via `purchase-processed` QStash hook → submit review URL → verification → USDC settlement.
+    **User flow:** Purchase verified → review task created via `purchase-processed` async event hook → submit review URL → verification → USDC settlement.
 
-    **Primitives:** Order history (purchase verification), TaskPool (AIEval), `purchase-processed` QStash hook
+    **Primitives:** Order history (purchase verification), TaskPool (AIEval), `purchase-processed` async event hook
   </Accordion>
 
   <Accordion title="Solver Reputation Passport">
@@ -227,7 +227,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Return Experience Tracker">
     Users log returns and bad experiences via campaign mechanics. Signals feed a trust graph. Brands are notified via webhook and can post resolution tasks.
 
-    **Primitives:** Campaign (structured feedback), QStash (`purchase-processed` hook), TaskPool (brand resolution), webhook delivery
+    **Primitives:** Campaign (structured feedback), async event (`purchase-processed` hook), TaskPool (brand resolution), webhook delivery
   </Accordion>
 </AccordionGroup>
 
@@ -249,15 +249,15 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Task Earner App">
-    Mobile gig app: browse tasks, claim, submit proof (photo/link/text), track USDC earnings. Push notifications on settlement via QStash → FCM/APNs.
+    Mobile gig app: browse tasks, claim, submit proof (photo/link/text), track USDC earnings. Push notifications on settlement via async event → FCM/APNs.
 
-    **Primitives:** TaskPool V2, SolverRegistry, RewardPool, Privy wallet, QStash → push notifications
+    **Primitives:** TaskPool V2, SolverRegistry, RewardPool, Privy wallet, async event → push notifications
   </Accordion>
 
   <Accordion title="Brand Discovery App">
     Swipe-native discovery. Each swipe is a campaign intent signal. Users earn points for swiping and can follow merchants for future updates.
 
-    **Primitives:** Campaign (swipe), discover feeds, for-you feed, merchant follow (QStash event), points earn
+    **Primitives:** Campaign (swipe), discover feeds, for-you feed, merchant follow (async event), points earn
   </Accordion>
 
   <Accordion title="Gift Concierge">
@@ -285,9 +285,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Task Feed Bot">
-    `/tasks` lists open bounties with amounts and deadlines. `/claim [id]` claims a task. `/submit [id] [proof]` submits proof. Settlement notifications delivered via QStash → Telegram webhook.
+    `/tasks` lists open bounties with amounts and deadlines. `/claim [id]` claims a task. `/submit [id] [proof]` submits proof. Settlement notifications delivered via async event → Telegram webhook.
 
-    **Primitives:** TaskPool public endpoints, grammY conversations plugin, QStash push
+    **Primitives:** TaskPool public endpoints, grammY conversations plugin, event push
   </Accordion>
 
   <Accordion title="Task Browser Mini App">
@@ -297,21 +297,21 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="Campaign Voting Mini App">
-    Brand shares a Mini App link in a group or channel. Fans swipe or vote on product variants. Results feed the brand's intent dashboard in real-time via QStash scoring events.
+    Brand shares a Mini App link in a group or channel. Fans swipe or vote on product variants. Results feed the brand's intent dashboard in real-time via scoring events.
 
-    **Primitives:** Campaign (swipe/vote), Telegram Mini App, intent signals, QStash scoring
+    **Primitives:** Campaign (swipe/vote), Telegram Mini App, intent signals, event scoring
   </Accordion>
 
   <Accordion title="Reward Claimer">
     After campaign completion, users receive a Telegram notification with a "Claim Reward" button. Opens a Mini App for claiming USDC or on-chain rewards.
 
-    **Primitives:** Campaign reward transactions, QStash + Telegram webhook, Privy wallet, RewardPool
+    **Primitives:** Campaign reward transactions, async event + Telegram webhook, Privy wallet, RewardPool
   </Accordion>
 
   <Accordion title="Flash Drop Notifier">
     Users subscribe to brand channels. On flash sale launch, the bot pushes a Mini App link with a buy button. First N purchasers get the sale price.
 
-    **Primitives:** Campaign (event type), `campaign-published` QStash event → Telegram push, x402 checkout
+    **Primitives:** Campaign (event type), `campaign-published` async event → Telegram push, x402 checkout
   </Accordion>
 
   <Accordion title="Community Task Board (Group Mode)">
@@ -341,7 +341,7 @@ Every experience below is assembled from the same live infrastructure. No new pr
   <Accordion title="Cashback Companion">
     Auto-credits points when a purchase completes on a Podium merchant. Extension detects the checkout confirmation page and triggers a points earn event.
 
-    **Primitives:** `purchase-processed` QStash event, points earn, points ledger
+    **Primitives:** `purchase-processed` async event, points earn, points ledger
   </Accordion>
 
   <Accordion title="Task Sidebar">
@@ -395,9 +395,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
   </Accordion>
 
   <Accordion title="n8n / Make / Zapier Node">
-    No-code automation node: trigger → Podium action. Create tasks, award points, fire campaigns, check orders. QStash webhook events provide the trigger layer.
+    No-code automation node: trigger → Podium action. Create tasks, award points, fire campaigns, check orders. Webhook events provide the trigger layer.
 
-    **Primitives:** REST API, API key auth, QStash webhook events, campaign lifecycle events
+    **Primitives:** REST API, API key auth, webhook events, campaign lifecycle events
   </Accordion>
 
   <Accordion title="LangChain Tool Suite">

@@ -1,52 +1,65 @@
 ---
 title: Enrichment Pipeline
-description: Multi-source product intelligence — crawl, extract, resolve, normalize, and baseline computation for agent-ready product data
+description: Multi-source product intelligence — ingest, extract, resolve, normalize, and baseline computation for agent-ready product data
 ---
 
 ## What It Does
 
 The Enrichment Pipeline transforms raw external market data into structured, scored, provenanced product attributes. It solves the cold-start problem: even before users vote or interact, agents have meaningful product intelligence to work with.
 
-The pipeline ingests from three source types, extracts attributes via LLM and rule-based methods, resolves entities against your product catalog, normalizes everything into a canonical schema, and aggregates signals into queryable baselines.
+The pipeline ingests from multiple data source types, extracts attributes via AI-powered methods, resolves entities against your product catalog, normalizes everything into a canonical schema, and aggregates signals into queryable baselines at three different levels.
 
 ```mermaid
 graph LR
     subgraph sources ["Data Sources"]
-        OBF["Structured APIs<br/>(Open Beauty Facts)"]
-        FC["Web Scraping<br/>(Firecrawl)"]
-        RD["Community<br/>(Reddit)"]
+        API["Structured APIs"]
+        Web["Web Intelligence"]
+        Community["Community Signals"]
+        Discovery["Product Discovery"]
     end
 
     subgraph process ["Processing"]
-        Raw["RawEnrichmentRecord<br/>(immutable audit log)"]
-        Extract["Attribute Extraction<br/>(Rule-based + Claude LLM)"]
-        Resolve["Entity Resolution<br/>(pg_trgm + pgvector)"]
+        Raw["Raw Records<br/>(immutable audit log)"]
+        Extract["AI-Powered Extraction"]
+        Resolve["Entity Resolution<br/>(fuzzy + semantic)"]
         Normalize["Normalization<br/>(canonical types + values)"]
     end
 
     subgraph output ["Output"]
-        Signals["EnrichmentSignal<br/>(typed, scored, provenanced)"]
-        Baselines["AttributeBaseline<br/>(aggregated top values per product)"]
+        Signals["EnrichmentSignals<br/>(typed, scored, provenanced)"]
+        Baselines["Multi-Level Baselines<br/>(product / category / market)"]
         Feed["Agentic Product Feed"]
     end
 
     sources --> Raw --> Extract --> Resolve --> Normalize --> Signals --> Baselines --> Feed
 ```
 
+## Why It Matters
+
+Agents need more than product titles and prices to make informed recommendations. The enrichment pipeline provides:
+
+- **Rich product attributes** — texture, effectiveness, sentiment, ingredient analysis, certifications, and more — extracted from real-world data
+- **Provenance on every signal** — agents and users always know *where* a data point came from and how confident it is
+- **Cold-start intelligence** — new platforms have useful product data from day one, without waiting for user interactions
+- **Multi-level baselines** — understand a product's attributes in context: how it compares to its category and the broader market
+- **Continuous discovery** — Podium automatically discovers and enriches new products from multiple sources, keeping your catalog fresh
+
+As users interact (vote in campaigns, rank products, purchase), `USER_DECLARED` signals naturally dominate the intent score. Market-derived enrichment data gracefully steps back to a supplementary validation role.
+
 ## Schema Overview
 
-The pipeline uses five data models. These form a reusable blueprint — you can adapt this schema for any product vertical.
+The pipeline uses five core data models. These form a reusable blueprint — you can adapt this schema for any product vertical.
 
 ### EnrichmentSource
 
-Defines where data is crawled from. Each source has a type and a JSON configuration:
+Defines where data comes from. Each source has a type and a JSON configuration:
 
 | Field | Type | Purpose |
 |-------|------|---------|
 | `name` | string | Human-readable source name |
-| `sourceType` | enum | `STRUCTURED_API`, `FIRECRAWL_PAGE`, or `REDDIT` |
-| `config` | JSON | Source-specific config: URLs, categories, subreddits, queries |
-| `lastRunAt` | datetime | Last crawl timestamp |
+| `sourceType` | enum | `STRUCTURED_API`, `WEB_PAGE`, `COMMUNITY`, `DISCOVERY` |
+| `config` | JSON | Source-specific configuration |
+| `lastRunAt` | datetime | Last ingestion timestamp |
 | `lastRunStatus` | string | `SUCCESS` or `FAILED` with error details |
 
 ### RawEnrichmentRecord
@@ -57,7 +70,7 @@ Immutable audit log of every piece of ingested data. Raw records are never modif
 |-------|------|---------|
 | `sourceId` | FK | Which source produced this record |
 | `externalId` | string | Barcode, URL, or post ID for deduplication |
-| `rawData` | JSON | Exact API/scrape response as received |
+| `rawData` | JSON | Exact response as received |
 | `processed` | boolean | Whether signals have been extracted |
 
 ### EnrichmentSignal
@@ -74,17 +87,18 @@ The core output — individual attribute-value pairs extracted from raw records,
 | `attributeValue` | string | Normalized value |
 | `confidence` | float | 0–1 confidence score |
 | `signalSource` | enum | `MARKET_DERIVED` for enrichment data |
-| `metadata` | JSON | Evidence: text snippets, URLs, ratings, subreddit context |
+| `metadata` | JSON | Evidence: text snippets, URLs, ratings, context |
 
 A unique constraint on `[sourceId, externalName, attributeType, attributeValue]` ensures idempotent re-processing.
 
 ### AttributeBaseline
 
-Aggregated top values per product per attribute type. This is what the agentic product feed queries.
+Aggregated top values per product (or category, or market) per attribute type. This is what the agentic product feed queries.
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `productId` | FK | Product this baseline describes |
+| `productId` | FK (nullable) | Product this baseline describes (null for category/market baselines) |
+| `scope` | enum | `PRODUCT`, `CATEGORY`, or `MARKET` |
 | `attributeType` | string | Attribute type (e.g., `texture`, `sentiment`) |
 | `topValues` | JSON | Array of `{ value, score, signalCount }` |
 | `signalCount` | int | Total signals contributing to this baseline |
@@ -99,10 +113,36 @@ Vector embeddings for semantic product matching during entity resolution.
 | Field | Type | Purpose |
 |-------|------|---------|
 | `productId` | FK | Product this embedding represents |
-| `embedding` | vector(1536) | OpenAI text-embedding-3-small output |
-| `model` | string | Embedding model identifier |
+| `embedding` | vector(1536) | AI-generated embedding for similarity matching |
 
-Requires the `pgvector` PostgreSQL extension.
+## Multi-Level Baselines
+
+Baselines are computed at three scopes, giving agents and developers graduated context for every product attribute:
+
+| Scope | What It Tells You | Example |
+|-------|-------------------|---------|
+| **Product** | This specific product's attributes | "CeraVe Moisturizing Cream has texture: creamy (0.92), sentiment: positive (0.88)" |
+| **Category** | Norms for this product category | "Moisturizers typically have texture: lightweight (0.75), key_ingredient: hyaluronic acid (0.68)" |
+| **Market** | Broad market trends | "Across all skincare, sentiment: positive (0.71), certification: cruelty-free (0.54)" |
+
+This lets agents make contextual comparisons: "This serum's effectiveness score is 0.91, which is significantly above the category average of 0.67."
+
+### Scoring Formula
+
+```
+score = average_confidence × log1p(signal_count)
+```
+
+This balances signal quality (confidence) with signal volume (count), using logarithmic scaling to prevent high-volume sources from dominating.
+
+### Recomputation Modes
+
+| Mode | Trigger | Scope |
+|------|---------|-------|
+| **Single product** | New enrichment data ingested | One product's baselines |
+| **Category** | Scheduled recompute | All products in a category |
+| **Stale baselines** | Scheduled cron job | All baselines past their `validUntil` |
+| **Full recompute** | Admin action | Every product with any enrichment signals |
 
 ## Attribute Taxonomy
 
@@ -110,7 +150,7 @@ The pipeline extracts 13 attribute types. This taxonomy is extensible — add ne
 
 | Attribute Type | Example Values | Typical Sources |
 |---------------|---------------|-----------------|
-| `category` | face, serums, lip products | APIs, scraping |
+| `category` | face, serums, lip products | APIs, web data |
 | `effectiveness` | highly effective, moderate results | Reviews, community |
 | `texture` | lightweight, creamy, gel | Reviews, descriptions |
 | `sentiment` | positive, negative, mixed | Reviews, community |
@@ -128,42 +168,52 @@ The pipeline extracts 13 attribute types. This taxonomy is extensible — add ne
 
 ### Structured APIs
 
-Structured product databases like Open Beauty Facts provide high-quality, deterministic data. Extraction is rule-based (no LLM cost):
+Structured product databases provide high-quality, deterministic data. Extraction is rule-based (no AI cost):
 
 - Certifications from label tags (organic, cruelty-free, vegan) — confidence 0.95
 - Categories from category tags — confidence 0.9
-- Key ingredients from ingredient text via regex matching — confidence 0.9
+- Key ingredients from ingredient text via pattern matching — confidence 0.9
 - Scent profile from fragrance-free/unscented patterns — confidence 0.85
 
-### Web Scraping (Firecrawl)
+### Web Intelligence
 
-Firecrawl scrapes product pages from retailer sites, extracting structured data via configurable JSON schemas. The pipeline processes:
+Podium ingests product data from the web, extracting structured attributes via configurable schemas. The pipeline processes:
 
-- Product descriptions → LLM attribute extraction
-- Individual reviews → LLM attribute extraction with per-review confidence
-- Open Graph images → stored as `og_image` signals
+- Product descriptions → AI-powered attribute extraction
+- Individual reviews → AI extraction with per-review confidence
+- Product images → stored as image signals for catalog display
 
-### Community Sources (Reddit)
+### Community Sources
 
-Reddit provides unfiltered consumer sentiment. The pipeline:
+Community forums and discussion platforms provide unfiltered consumer sentiment:
 
-- Searches configurable subreddits with product-name queries
-- Fetches posts and qualifying comments (minimum 30 chars, score >= 2)
-- Extracts attributes from combined post title + selftext and individual comments
-- Built-in rate limiting (1.1s delay between API calls)
+- Searches configured communities with product-name queries
+- Fetches qualifying posts and comments
+- Extracts attributes from real user discussions
+- Provides a sentiment layer that complements structured data
+
+### Product Discovery
+
+Podium continuously discovers new products relevant to your vertical from multiple sources. Discovered products are automatically:
+
+1. Matched against your existing catalog via entity resolution
+2. Added as new `ProductCatalogItem` records if they're novel
+3. Enriched with the full attribute extraction pipeline
+
+This means your companion's product catalog grows organically without manual curation.
 
 ## Attribute Extraction
 
 ### Rule-Based Path
 
-For structured API sources with well-defined fields, extraction uses deterministic pattern matching. No LLM calls, zero cost, high consistency.
+For structured sources with well-defined fields, extraction uses deterministic pattern matching. Zero AI cost, high consistency.
 
-### LLM-Based Path
+### AI-Powered Path
 
-For unstructured text (reviews, posts, descriptions), extraction uses Claude with a structured prompt:
+For unstructured text (reviews, posts, descriptions), extraction uses AI with a structured prompt:
 
-- System prompt defines 12 target attribute types with expected value formats
-- Input: product name + text content (truncated to 2000 chars) + text type
+- Target: 12 attribute types with expected value formats
+- Input: product name + text content + text type
 - Output: JSON array of `{ attributeType, attributeValue, confidence, evidence }`
 - Hard confidence floor: signals below 0.6 are discarded
 - Batch processing available for multiple texts per raw record
@@ -172,61 +222,29 @@ For unstructured text (reviews, posts, descriptions), extraction uses Claude wit
 
 External product names ("CeraVe Moisturizing Cream 16oz") must be matched to products in your catalog. The resolver uses a two-tier strategy:
 
-### Tier 1: Fuzzy Text Match (pg_trgm)
+### Tier 1: Fuzzy Text Match
 
-- Uses PostgreSQL's `pg_trgm` extension and `similarity()` function
-- Compares lowercased external name against all product names
+- Compares external names against all product names using trigram similarity
 - Similarity > 0.75 → immediate match
 - Similarity 0.4–0.75 → candidate for Tier 2
-- Cost: zero external API calls, single SQL query
+- Cost: zero external API calls
 
-### Tier 2: Semantic Embedding Match (pgvector)
+### Tier 2: Semantic Embedding Match
 
 - Triggered only when Tier 1 doesn't find a strong match
-- Embeds the external name using OpenAI `text-embedding-3-small`
-- Cosine similarity search against pre-computed `ProductEmbedding` vectors
+- Cosine similarity search against pre-computed product embeddings
 - Threshold: 0.82 cosine similarity for acceptance
-- Requires `pgvector` extension and pre-computed product embeddings
 
 When resolution fails, the `EnrichmentSignal` is stored with `productId: null`. Unresolved signals aren't lost — they can be retroactively linked when entity resolution improves or when the matching product is added to the catalog.
 
 ## Normalization
 
-All extracted attributes pass through a two-phase normalization:
+All extracted attributes pass through a multi-phase normalization:
 
-1. **Type canonicalization**: Maps variant names to canonical types (e.g., `fragrance` → `scent`, `skin_type` → `skin_type_suitability`, `shade` → `color`, `efficacy` → `effectiveness`)
+1. **Type canonicalization**: Maps variant names to canonical types (e.g., `fragrance` → `scent`, `skin_type` → `skin_type_suitability`, `shade` → `color`)
 2. **Value canonicalization**: Maps common aliases to standard values (e.g., `light weight` → `lightweight`, `cruelty free` → `cruelty-free`)
 3. **Confidence clamping**: Forces all values to [0, 1]
 4. **Deduplication**: Removes exact `type:value` duplicates within a batch
-
-## Baseline Computation
-
-Baselines aggregate enrichment signals into the per-product summaries that the agentic product feed queries.
-
-### Scoring Formula
-
-```
-score = average_confidence × log1p(signal_count)
-```
-
-This balances signal quality (confidence) with signal volume (count), using logarithmic scaling to prevent high-volume sources from dominating.
-
-### Computation Process
-
-1. Fetch all `EnrichmentSignal` records for the product with confidence >= 0.6
-2. Group signals by `attributeType`
-3. Skip attribute types with fewer than 5 signals (configurable threshold)
-4. For each qualifying group, compute value scores using the formula above
-5. Keep top 10 values per attribute type
-6. Upsert `AttributeBaseline` with a configurable TTL (default 48 hours)
-
-### Recomputation Modes
-
-| Mode | Trigger | Scope |
-|------|---------|-------|
-| **Single product** | New enrichment data ingested | One product's baselines |
-| **Stale baselines** | Scheduled cron job | All baselines past their `validUntil` |
-| **Full recompute** | Admin action | Every product with any enrichment signals |
 
 ## Consuming Enrichment Data
 
@@ -245,7 +263,7 @@ for (const product of feed.products) {
   console.log(product.name, product.intentScore);
   if (product.attributes?.baselines) {
     for (const baseline of product.attributes.baselines) {
-      console.log(`  ${baseline.attributeType}: ${baseline.topValues[0]?.value}`);
+      console.log(`  ${baseline.attributeType}: ${baseline.topValues[0]?.value} (${baseline.scope})`);
     }
   }
 }
@@ -263,30 +281,33 @@ const recs = await client.companion.listRecommendations({
 
 ## Async Pipeline Orchestration
 
-The pipeline runs asynchronously via QStash event queues:
+The pipeline runs asynchronously via Podium's event system:
 
 | Queue | Trigger | Action |
 |-------|---------|--------|
 | `enrichment-crawl` | Admin endpoint or scheduled job | Runs data source ingestion, stores raw records |
-| `enrichment-extract` | Published after crawl completes | LLM extraction from raw records, creates signals |
+| `enrichment-extract` | Published after ingestion completes | AI extraction from raw records, creates signals |
 | `enrichment-baseline` | Admin endpoint or scheduled cron | Recomputes baselines from accumulated signals |
 
-All queue handlers are idempotent — safe to retry on failure. Raw records track a `processed` flag to prevent duplicate extraction.
+All handlers are idempotent — safe to retry on failure. Raw records track a `processed` flag to prevent duplicate extraction.
 
 ## Admin Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/admin/enrichment/run` | Trigger a crawl for a specific source |
+| `POST` | `/admin/enrichment/run` | Trigger ingestion for a specific source |
 | `POST` | `/admin/enrichment/baseline/recompute` | Trigger baseline computation |
 | `GET` | `/admin/enrichment/status` | Dashboard: all sources with last run status and counts |
 | `POST` | `/admin/enrichment/sources` | Register a new enrichment source |
 | `GET` | `/admin/enrichment/sources` | List all configured sources |
+| `POST` | `/admin/enrichment/crawl-domain` | Ingest products from a domain |
+| `POST` | `/admin/enrichment/map-domain` | Discover product URLs on a domain |
+| `POST` | `/admin/enrichment/discover` | Trigger product discovery |
 
-Trigger a crawl for a specific source:
+Trigger ingestion for a specific source:
 
 ```bash
-curl -X POST https://podium-staging.up.railway.app/api/v1/admin/enrichment/run \
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "sourceId": "clsource_sephora" }'
@@ -295,7 +316,7 @@ curl -X POST https://podium-staging.up.railway.app/api/v1/admin/enrichment/run \
 Check pipeline status:
 
 ```bash
-curl https://podium-staging.up.railway.app/api/v1/admin/enrichment/status \
+curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -304,48 +325,45 @@ curl https://podium-staging.up.railway.app/api/v1/admin/enrichment/status \
 The enrichment architecture is designed to be extensible across verticals. To adapt it for your domain:
 
 1. **Define your attribute taxonomy** — what product attributes matter in your vertical?
-2. **Register data sources** — structured APIs for your domain, review sites, community forums
-3. **Configure extraction** — rule-based for structured sources, LLM for unstructured text
+2. **Register data sources** — structured APIs for your domain, review platforms, community forums
+3. **Configure extraction** — rule-based for structured sources, AI-powered for unstructured text
 4. **Generate product embeddings** — pre-compute embeddings for your catalog to enable entity resolution
 5. **Set baseline thresholds** — minimum signal count, confidence floor, and TTL for your data freshness requirements
 
 The schema patterns (source → raw record → signal → baseline) and the two-lane provenance model (user-declared vs market-derived) are vertical-agnostic. The taxonomy and data sources are where you customize.
 
-A Prisma schema that follows the enrichment pattern:
+A database schema that follows the enrichment pattern:
 
-```prisma
-model EnrichmentSource {
-  id         String   @id @default(cuid())
-  name       String
-  sourceType SourceType
-  config     Json
-  lastRunAt  DateTime?
-  signals    EnrichmentSignal[]
-}
+```sql
+CREATE TABLE enrichment_source (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  source_type TEXT NOT NULL,  -- STRUCTURED_API, WEB_PAGE, COMMUNITY, DISCOVERY
+  config     JSONB,
+  last_run_at TIMESTAMPTZ
+);
 
-model EnrichmentSignal {
-  id             String  @id @default(cuid())
-  source         EnrichmentSource @relation(fields: [sourceId], references: [id])
-  sourceId       String
-  productId      String?
-  attributeType  String
-  attributeValue String
-  confidence     Float
-  signalSource   SignalSource @default(MARKET_DERIVED)
-  metadata       Json?
-  
-  @@unique([sourceId, attributeType, attributeValue])
-}
+CREATE TABLE enrichment_signal (
+  id              TEXT PRIMARY KEY,
+  source_id       TEXT REFERENCES enrichment_source(id),
+  product_id      TEXT,  -- nullable for unresolved signals
+  attribute_type  TEXT NOT NULL,
+  attribute_value TEXT NOT NULL,
+  confidence      REAL NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+  signal_source   TEXT DEFAULT 'MARKET_DERIVED',
+  metadata        JSONB,
+  UNIQUE (source_id, attribute_type, attribute_value)
+);
 
-model AttributeBaseline {
-  id            String   @id @default(cuid())
-  productId     String
-  attributeType String
-  topValues     Json
-  signalCount   Int
-  computedAt    DateTime @default(now())
-  validUntil    DateTime
-  
-  @@unique([productId, attributeType])
-}
+CREATE TABLE attribute_baseline (
+  id             TEXT PRIMARY KEY,
+  product_id     TEXT,  -- nullable for category/market baselines
+  scope          TEXT NOT NULL,  -- PRODUCT, CATEGORY, MARKET
+  attribute_type TEXT NOT NULL,
+  top_values     JSONB NOT NULL,
+  signal_count   INTEGER NOT NULL,
+  computed_at    TIMESTAMPTZ DEFAULT NOW(),
+  valid_until    TIMESTAMPTZ NOT NULL,
+  UNIQUE (product_id, scope, attribute_type)
+);
 ```

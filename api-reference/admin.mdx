@@ -131,7 +131,7 @@ const rotated = await client.apiKeys.createRotate({ id: 'clkey_xyz' });
 Key rotation:
 1. Generates a new key value for the same key ID
 2. Invalidates the old key value
-3. Publishes an `api-key-changed` QStash event to flush Redis caches across all API instances
+3. Publishes an `api-key-changed` event to flush caches across all API instances
 4. Returns the new full key (one-time display)
 
 ### Delete a Key
@@ -385,7 +385,7 @@ Valid transitions: `SUBMITTED` → `APPROVED` or `SUBMITTED` → `DRAFT` (reject
 
 Admin endpoints for managing the [enrichment pipeline](/agentic/enrichment-pipeline).
 
-### Trigger a Crawl
+### Trigger Source Ingestion
 
 ```bash
 curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
@@ -394,7 +394,66 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
   -d '{ "sourceId": "clsource_sephora" }'
 ```
 
-Dispatches an `enrichment-crawl` QStash event for the specified source. The crawl fetches data via Firecrawl and queues extraction.
+Dispatches an `enrichment-crawl` event for the specified source. The system fetches and processes data, then queues it for AI-powered extraction.
+
+### Ingest Products from a Domain
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/crawl-domain \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domain": "sephora.com",
+    "limit": 50,
+    "crawlMode": false
+  }'
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `domain` | string | Domain to discover product pages from |
+| `limit` | number | Max pages to process (optional) |
+| `crawlMode` | boolean | `true` for deep crawl, `false` (default) for map-and-scrape |
+
+### Discover Product URLs on a Domain
+
+Dry-run endpoint to preview which product URLs Podium would find on a domain, without ingesting anything:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/map-domain \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "domain": "sephora.com", "search": "moisturizer", "limit": 20 }'
+```
+
+### Trigger Product Discovery
+
+Discover and ingest products from shopping search results. Provide specific queries, filter by category, or omit both to run the full discovery catalog:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/serp-search \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "skincare",
+    "maxPages": 3
+  }'
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `queries` | string[] | Specific search queries (optional) |
+| `category` | string | Filter by product category (optional) |
+| `maxPages` | number | Max result pages per query (optional) |
+
+### Discovery Catalog Stats
+
+View the discovery query catalog — how many queries are available per category:
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/serp-catalog \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
 
 ### Recompute Baselines
 
@@ -405,7 +464,21 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/rec
   -d '{ "productId": "clprod_abc123" }'
 ```
 
-Omit `productId` to recompute baselines for all products.
+Omit `productId` to recompute all stale baselines. For immediate (synchronous) recomputation:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/recompute-now \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Baseline Statistics
+
+View detailed statistics across all three baseline levels (product, category, market):
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/stats \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
 
 ### Pipeline Status
 
@@ -416,13 +489,36 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
 
 ```json
 {
-  "sources": 12,
-  "totalRecords": 45000,
-  "pendingExtractions": 120,
-  "pendingBaselines": 45,
-  "lastCrawlAt": "2026-03-07T06:00:00.000Z",
-  "lastBaselineAt": "2026-03-07T08:00:00.000Z"
+  "sources": [
+    { "id": "...", "name": "Sephora Pages", "sourceType": "WEB_PAGE", "lastRunAt": "...", "lastRunStatus": "SUCCESS" }
+  ],
+  "signalCount": 45230,
+  "rawRecordCount": 12400,
+  "baselines": {
+    "product": 3200,
+    "category": 45,
+    "market": 13,
+    "total": 3258
+  }
 }
+```
+
+### Catalog Sync
+
+Sync enrichment data into the companion product catalog. Creates `ProductCatalogItem` records from enrichment raw records:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/catalog-sync \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+### Reprocess Unprocessed Records
+
+Re-queue all unprocessed raw records for AI-powered attribute extraction:
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/reprocess \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Manage Enrichment Sources
@@ -435,11 +531,10 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Sephora Product Pages",
-    "sourceType": "WEB_CRAWL",
+    "sourceType": "WEB_PAGE",
     "config": {
-      "url": "https://www.sephora.com/shop/*",
-      "schedule": "daily",
-      "selectors": { "name": "h1", "price": ".price-sales" }
+      "domain": "sephora.com",
+      "categories": ["skincare", "makeup"]
     }
   }'
 ```
@@ -450,6 +545,24 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
 curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
+
+### Enrichment Endpoint Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/admin/enrichment/run` | Trigger ingestion for a specific source |
+| `POST` | `/admin/enrichment/crawl-domain` | Ingest products from a domain |
+| `POST` | `/admin/enrichment/map-domain` | Discover product URLs on a domain (dry run) |
+| `POST` | `/admin/enrichment/serp-search` | Trigger product discovery |
+| `GET` | `/admin/enrichment/serp-catalog` | View discovery query catalog stats |
+| `POST` | `/admin/enrichment/baseline/recompute` | Queue baseline recomputation |
+| `POST` | `/admin/enrichment/baseline/recompute-now` | Synchronous baseline recomputation |
+| `GET` | `/admin/enrichment/baseline/stats` | Detailed baseline statistics |
+| `POST` | `/admin/enrichment/catalog-sync` | Sync enrichment data to companion catalog |
+| `POST` | `/admin/enrichment/reprocess` | Re-queue unprocessed records for extraction |
+| `GET` | `/admin/enrichment/status` | Pipeline dashboard |
+| `POST` | `/admin/enrichment/sources` | Create a new enrichment source |
+| `GET` | `/admin/enrichment/sources` | List all enrichment sources |
 
 ## Task Administration
 

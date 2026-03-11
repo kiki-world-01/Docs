@@ -75,35 +75,80 @@ const response = await wrapFetchWithPayment(
 );
 ```
 
-## Two Use Cases
+## Three Use Cases
 
-### 1. Commerce Payments
+### 1. Companion Order Payments
 
-Agents pay for physical products on behalf of users:
+The most common flow: agents create a [companion order](/api-reference/companion#orders) and pay for it via x402. The concierge model means the user pays Podium in USDC, and Podium handles purchasing from the retailer and shipping.
+
+```mermaid
+sequenceDiagram
+    participant A as Agent / App
+    participant P as Podium API
+    participant F as x402 Facilitator
+    participant B as Base L2
+
+    A->>P: POST /companion/orders (create order)
+    P-->>A: CompanionOrder { status: PENDING_PAYMENT, amountUsdc: "68.00" }
+
+    A->>P: POST /x402/orders/{orderId}/pay
+    P-->>A: 402 + paymentRequirements
+
+    Note over A: Wallet signs USDC payment
+
+    A->>P: POST /x402/orders/{orderId}/pay + X-PAYMENT
+    P->>F: Verify payment proof
+    F->>B: Settle USDC transfer
+    F-->>P: Payment verified
+    P->>P: Update order → PAID
+    P-->>A: 200 OK { status: PAID }
+
+    Note over P: Platform fulfills order (buys from retailer, ships to user)
+    P->>P: PAID → FULFILLING → SHIPPED → DELIVERED
+```
 
 ```typescript
 import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { wrapFetchWithPayment } from '@x402/fetch'
+
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 
 const { data: order } = await client.companion.createOrders({
   requestBody: {
     userId: 'user_xyz',
     productId: 'prod_abc',
-    shippingAddress: { street: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102' },
+    shippingAddress: { street: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', country: 'US' },
     email: 'user@example.com',
   },
 })
 
-// Pay via x402
 const payment = await wrapFetchWithPayment(
   fetch,
-  `https://api.podiumcommerce.xyz/api/v1/x402/order/${order.id}/pay`,
+  `https://api.podiumcommerce.xyz/api/v1/x402/orders/${order.id}/pay`,
   {},
   { wallet, maxValue: order.amountUsdc }
 )
+
+// Order is now PAID — Podium handles fulfillment
+console.log(`Order ${order.id} paid with USDC`)
 ```
 
-### 2. Pay-Per-Call API Access
+The [Conversational Agent](/agentic/conversational-agent) automates this entire flow during chat — the agent's `create_order` tool creates the companion order and the `initiate_order` tool guides the user through providing shipping details.
+
+### 2. Standard Commerce Payments
+
+For orders in Podium's core commerce system (not companion orders), x402 works the same way:
+
+```typescript
+const payment = await wrapFetchWithPayment(
+  fetch,
+  `https://api.podiumcommerce.xyz/api/v1/x402/order/${coreOrderId}/pay`,
+  {},
+  { wallet, maxValue: orderAmountUsdc }
+)
+```
+
+### 3. Pay-Per-Call API Access
 
 Podium's x402 middleware can gate any endpoint behind a crypto paywall. Agents pay per-request in USDC to access premium data or services:
 

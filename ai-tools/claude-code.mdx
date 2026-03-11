@@ -55,7 +55,7 @@ const client = createPodiumClient({
 ## Architecture Notes
 
 - Multi-tenant PostgreSQL with row-level security
-- QStash for async jobs (webhook delivery, enrichment)
+- Async event system for background jobs (webhook delivery, enrichment)
 - x402 protocol for machine-native USDC payments on Base
 - Enrichment pipeline adds AI-extracted attributes to products
 - Companion profiles store user taste/intent data

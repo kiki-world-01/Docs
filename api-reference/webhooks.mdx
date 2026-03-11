@@ -1,11 +1,11 @@
 ---
 title: Webhooks
-description: Inbound webhooks from Stripe, Shopify, and Privy, plus 25 QStash async event handlers and 8 cron jobs
+description: Inbound webhooks from Stripe, Shopify, and Privy, plus 25 async event handlers and 8 cron jobs
 ---
 
 ## Overview
 
-Podium processes inbound webhooks from external services and uses [QStash](https://upstash.com/docs/qstash) for reliable async event processing. All webhook endpoints are public (no API key required) but authenticated via service-specific signature verification.
+Podium processes inbound webhooks from external services and uses a reliable async event system for internal event processing. All webhook endpoints are public (no API key required) but authenticated via service-specific signature verification.
 
 ## External Webhooks
 
@@ -129,57 +129,9 @@ POST /webhooks/task-verify/{taskId}
 | `timestamp` | number | Yes | Unix timestamp of resolution |
 | `resolutionMetadata` | object | No | Additional verification context |
 
-## QStash Event System
+## Async Event System
 
-QStash provides at-least-once delivery with automatic retries and dead-letter queues. All QStash handlers verify the `Upstash-Signature` header.
-
-### QStash Signature Verification
-
-```typescript
-import { Receiver } from "@upstash/qstash";
-
-const receiver = new Receiver({
-  currentSigningKey: QSTASH_CURRENT_SIGNING_KEY,
-  nextSigningKey: QSTASH_NEXT_SIGNING_KEY
-});
-
-const isValid = await receiver.verify({
-  signature: request.headers["upstash-signature"],
-  body: rawBody
-});
-```
-
-#### Complete Webhook Handler Example
-
-```typescript
-import { Hono } from 'hono';
-import { Receiver } from '@upstash/qstash';
-
-const app = new Hono();
-const receiver = new Receiver({
-  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
-
-app.post('/webhooks/purchase-processed', async (c) => {
-  const signature = c.req.header('upstash-signature');
-  const body = await c.req.text();
-
-  const isValid = await receiver.verify({ signature: signature!, body });
-  if (!isValid) return c.json({ error: 'Invalid signature' }, 401);
-
-  const event = JSON.parse(body);
-
-  const existing = await db.processedEvent.findUnique({
-    where: { eventId: event.id }
-  });
-  if (existing) return c.json({ ok: true });
-
-  await db.processedEvent.create({ data: { eventId: event.id } });
-
-  return c.json({ ok: true });
-});
-```
+Podium's async event system provides at-least-once delivery with automatic retries and dead-letter queues. All event handlers verify a cryptographic signature before processing.
 
 ### Event Types (25 Queues)
 
@@ -188,7 +140,7 @@ app.post('/webhooks/purchase-processed', async (c) => {
 | Event | Trigger | Side Effects |
 |-------|---------|-------------|
 | `purchase-processed` | Order payment confirmed | Award purchase points, update inventory, notify creator |
-| `order-confirmation` | Order created | Send confirmation email to buyer via SendGrid |
+| `order-confirmation` | Order created | Send confirmation email to buyer |
 | `creator-order-confirmation` | Order for a creator | Notify creator of new order via email/push |
 | `shopify-order-push` | Shopify-linked order | Push order data to connected Shopify store |
 
@@ -229,7 +181,7 @@ app.post('/webhooks/purchase-processed', async (c) => {
 
 | Event | Trigger | Side Effects |
 |-------|---------|-------------|
-| `api-key-changed` | API key created/rotated/revoked | Flush Redis caches across all instances |
+| `api-key-changed` | API key created/rotated/revoked | Flush caches across all instances |
 | `stripe-onboarding-reminder` | Creator hasn't completed Stripe setup | Send reminder email |
 | `presale-purchase-processed` | Token presale purchase | Process presale reward, update presale state |
 
@@ -245,32 +197,32 @@ app.post('/webhooks/purchase-processed', async (c) => {
 
 | Event | Trigger | Side Effects |
 |-------|---------|-------------|
-| `enrichment-crawl` | Crawl triggered | Fetch data from enrichment source via Firecrawl |
-| `enrichment-extract` | Raw data ingested | Extract attributes via rule engine or LLM |
+| `enrichment-crawl` | Ingestion triggered | Fetch and process data from enrichment source |
+| `enrichment-extract` | Raw data ingested | Extract attributes via AI-powered extraction |
 | `enrichment-baseline` | Extraction complete | Recompute attribute baselines |
 
 ### Retry & Idempotency
 
-QStash provides automatic retries with exponential backoff:
+The event system provides automatic retries with exponential backoff:
 
 - **Max retries**: 3 (configurable per queue)
 - **Backoff**: Exponential with jitter
 - **Dead letter**: Failed events after max retries are logged for manual review
 
 <Warning>
-  QStash delivers at-least-once. Your handlers should be idempotent — processing the same event twice must produce the same result. Use database unique constraints and conditional updates to guard against duplicate processing.
+  The event system delivers at-least-once. Your handlers should be idempotent — processing the same event twice must produce the same result. Use database unique constraints and conditional updates to guard against duplicate processing.
 </Warning>
 
 ### Idempotency Patterns
 
 ```typescript
 // Use unique constraints to prevent duplicate processing
-const existing = await prisma.creatorPayout.findUnique({
+const existing = await db.creatorPayout.findUnique({
   where: { orderId: event.orderId }
 });
 if (existing) return; // already processed
 
-await prisma.creatorPayout.create({
+await db.creatorPayout.create({
   data: { orderId: event.orderId, /* ... */ }
 });
 ```
@@ -288,7 +240,7 @@ await prisma.creatorPayout.create({
 | `stripe-onboarding-reminder` | Daily | Remind incomplete Stripe setups | Emails creators who started but didn't finish Connect onboarding |
 | `token-presale-monitor` | Every 15 min | Monitor presale status changes | Checks presale deadlines and token distribution status |
 
-All cron jobs are triggered by QStash scheduled messages to their respective `/webhooks/qstash/cron/` endpoints.
+All cron jobs are triggered by scheduled messages to their respective webhook endpoints.
 
 ## Webhook Security Summary
 
@@ -296,7 +248,7 @@ All cron jobs are triggered by QStash scheduled messages to their respective `/w
 |--------|-------------------|--------|
 | Stripe | HMAC-SHA256 with webhook secret | `Stripe-Signature` |
 | Shopify | HMAC-SHA256 with app secret | `X-Shopify-Hmac-Sha256` |
-| QStash | Upstash signing keys | `Upstash-Signature` |
+| Event System | Signing keys | Signature header |
 | Privy | Privy webhook secret | Standard signature header |
 | Task Oracle | Custom signature | `resolverSignature` in body |
 
@@ -312,5 +264,5 @@ All cron jobs are triggered by QStash scheduled messages to their respective `/w
 | `POST` | `/webhooks/shopify` | Shopify product/order events |
 | `POST` | `/webhooks/privy` | Blockchain transaction events |
 | `POST` | `/webhooks/task-verify/{taskId}` | Oracle verification callback |
-| `POST` | `/webhooks/qstash/queues/{event}` | QStash event handler (25 queues) |
-| `POST` | `/webhooks/qstash/cron/{job}` | QStash cron handler (8 jobs) |
+| `POST` | `/webhooks/events/{event}` | Async event handler (25 queues) |
+| `POST` | `/webhooks/cron/{job}` | Cron handler (8 jobs) |

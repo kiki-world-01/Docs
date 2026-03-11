@@ -5,6 +5,10 @@ description: Generalized personal agent infrastructure — intent profiles, prod
 
 The Companion API provides the building blocks for personal shopping agents. It is **vertical-agnostic** — the [Beauty Companion](/agentic/beauty-companion) uses it for skincare, but the same endpoints power agents for any product domain.
 
+<Info>
+  Looking for the conversational AI agent? See [Conversational Agent](/agentic/conversational-agent) for the chat and streaming endpoints that combine these primitives into a full AI shopping companion with tool-use, memory, and proactive nudges.
+</Info>
+
 ## Base Path
 
 All endpoints are prefixed with `/api/v1/companion`.
@@ -330,7 +334,7 @@ curl https://api.podiumcommerce.xyz/api/v1/companion/interactions/{userId} \
 
 ## Recommendations
 
-The recommendation engine uses Claude to rank products based on a user's intent profile and interaction history. It returns products the user hasn't interacted with, scored by relevance to their declared preferences and behavioral signals.
+The recommendation engine uses AI-powered ranking to score products based on a user's intent profile and interaction history. It returns products the user hasn't interacted with, scored by relevance to their declared preferences and behavioral signals.
 
 ### Get Recommendations
 
@@ -392,7 +396,9 @@ Recommendations exclude products the user has already interacted with (any actio
 
 ## Orders
 
-Companion orders use a **concierge fulfillment model** — the platform handles purchasing from the retailer and shipping to the user. This enables agents to execute purchases from any catalog source, not just products that exist in Podium's core commerce system.
+Companion orders use a **concierge fulfillment model** — the user pays Podium (via [x402 USDC](/agentic/x402-payments) or Stripe), and the platform handles purchasing from the retailer and shipping to the user. This enables agents to execute purchases from any catalog source, not just products that exist in Podium's core commerce system.
+
+The conversational agent's `create_order` tool uses these endpoints automatically during chat — see [Conversational Agent](/agentic/conversational-agent) for the full flow.
 
 ### Create a Concierge Order
 
@@ -506,7 +512,7 @@ graph LR
 
 | Status | Description |
 |--------|-------------|
-| `PENDING_PAYMENT` | Order created, awaiting payment (x402 or Stripe) |
+| `PENDING_PAYMENT` | Order created, awaiting payment via [x402 USDC](/agentic/x402-payments) or Stripe |
 | `PAID` | Payment confirmed |
 | `FULFILLING` | Platform purchasing from retailer |
 | `SHIPPED` | Shipped to user |
@@ -581,7 +587,7 @@ Here's the typical lifecycle of a companion agent interaction:
     ```
   </Step>
   <Step title="Get Recommendations">
-    The engine uses the profile + interaction history to rank products via Claude.
+    The engine uses the profile + interaction history to rank products with AI-powered relevance scoring.
 
     ```typescript
     const { data: recs } = await client.companion.listRecommendations({

@@ -35,7 +35,7 @@ Podium syncs products and orders with Shopify stores via OAuth and webhooks.
     POST /api/v1/shopify/sync/manual
     ```
 
-    This dispatches a `shopify-products-sync` QStash event that fetches all products from the Shopify store.
+    This dispatches a `shopify-products-sync` event that fetches all products from the Shopify store in the background.
   </Step>
 </Steps>
 
@@ -49,7 +49,7 @@ Podium syncs products and orders with Shopify stores via OAuth and webhooks.
 | Media/Images | `ShopifyMedia` → `ProductMedia` | Shopify → Podium |
 | Orders | `ShopifyOrder` | Podium → Shopify |
 
-Product data flows from Shopify into Podium. Order data flows from Podium back to Shopify via the `shopify-order-push` QStash event.
+Product data flows from Shopify into Podium. Order data flows from Podium back to Shopify via the `shopify-order-push` event.
 
 ### Webhook Events
 
@@ -83,7 +83,7 @@ if (digest !== request.headers['x-shopify-hmac-sha256']) {
 | Products not syncing | Verify the Shopify app has `read_products` scope. Trigger manual sync via `/shopify/sync/manual` |
 | Duplicate products | Check if the Shopify product already has a linked `ShopifyProduct` record |
 | Orders not pushing to Shopify | Verify the store connection is active and the app has `write_orders` scope |
-| Webhook failures | Check the QStash dead letter queue for failed `shopify-products-sync` events |
+| Webhook failures | Check event logs for failed `shopify-products-sync` events |
 
 ## Stripe Connect
 
@@ -378,5 +378,3 @@ PATCH /api/v1/creator/id/{creatorId}
 | [Privy](https://docs.privy.io/) | Embedded wallets, server wallets, auth |
 | [Stream Chat](https://getstream.io/chat/docs/) | Real-time messaging SDK |
 | [Shippo](https://docs.goshippo.com/) | Shipping rates, labels, tracking |
-| [QStash](https://upstash.com/docs/qstash) | Async messaging, retries, scheduling |
-| [Firecrawl](https://docs.firecrawl.dev/) | Web crawling for enrichment |

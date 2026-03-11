@@ -289,7 +289,7 @@ Search uses PostgreSQL's built-in full-text search with `tsvector` columns on `S
 
 Products published via the `product-published` event are automatically indexed. Campaign and creator records are indexed on creation and update.
 
-The universal search layer adds optional LLM synthesis using Anthropic Claude to generate conversational answers grounded in the search results.
+The universal search layer adds optional AI synthesis to generate conversational answers grounded in the search results.
 
 ## Endpoint Summary
 
@@ -297,7 +297,7 @@ The universal search layer adds optional LLM synthesis using Anthropic Claude to
 |--------|------|-------------|
 | `GET` | `/search` | Full-text search (by entity type) |
 | `GET` | `/autocomplete` | Legacy autocomplete |
-| `GET` | `/universal-search` | Unified search with optional LLM |
+| `GET` | `/universal-search` | Unified search with optional AI synthesis |
 | `GET` | `/universal-search/suggestions` | Search suggestions |
 | `GET` | `/discover` | Curated discovery feed |
 | `GET` | `/discover/campaigns` | Discoverable campaigns |

@@ -1,6 +1,6 @@
 ---
 title: "Building a Personal Agent: Beauty Companion"
-description: A complete reference implementation — building a personal shopping agent on Podium with Telegram, Claude, and Privy wallets
+description: A complete reference implementation — building a personal shopping agent on Podium with Telegram, AI recommendations, and Privy wallets
 ---
 
 ## What We're Building
@@ -26,7 +26,7 @@ graph TB
     subgraph bot ["Bot Server (Bun + grammY + Hono)"]
         Commands["Command Handlers<br/>(/start, /profile, /discover)"]
         Quiz["Onboarding Quiz"]
-        Agent["Beauty Agent (Claude)"]
+        Agent["Beauty Agent (AI)"]
         SQLite["SQLite<br/>(TG → Podium user mapping)"]
     end
 
@@ -106,15 +106,15 @@ The mini app opens as a Telegram Web App (TWA). The discovery feed:
 
 ### 3. AI Recommendation (Bot-side)
 
-The bot includes a local Claude-powered recommendation agent:
+The bot includes a local AI-powered recommendation agent:
 
 1. Fetches three things in parallel from Podium: user profile, product catalog, interaction history
 2. Filters out already-seen products
 3. Constructs a prompt with the full user context (skin type, concerns, avoidances, recent interactions)
-4. Claude returns a ranked list of product IDs sorted by relevance
-5. Fallback: if Claude fails, returns products in catalog order
+4. The AI returns a ranked list of product IDs sorted by relevance
+5. Fallback: if the AI fails, returns products in catalog order
 
-This demonstrates a hybrid approach — Podium provides the AI-ranked `recommendations` endpoint server-side, and the companion can optionally layer its own Claude-based ranking on top.
+This demonstrates a hybrid approach — Podium provides the AI-ranked `recommendations` endpoint server-side, and the companion can optionally layer its own AI-based ranking on top.
 
 ### 4. Checkout (Mini App)
 
@@ -205,7 +205,7 @@ To build a companion for a different product domain:
 | Mini app | React 18 + Vite 6 | Single-page application |
 | Mini app styling | Tailwind CSS v4 | Utility-first CSS |
 | Telegram integration | @twa-dev/sdk | Mini app ↔ Telegram bridge |
-| AI | Anthropic Claude | Product recommendation ranking |
+| AI | LLM (configurable) | Product recommendation ranking |
 | Wallets | Privy | Server + embedded wallet infrastructure |
 | Payments | x402 (@x402/fetch) | USDC on Base |
 | State | React Query (TanStack) | Server state management |

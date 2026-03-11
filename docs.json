@@ -87,6 +87,7 @@
           {
             "group": "Intelligence Layer",
             "pages": [
+              "agentic/conversational-agent",
               "agentic/enrichment-pipeline",
               "agentic/product-feed"
             ]

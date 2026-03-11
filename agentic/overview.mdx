@@ -20,8 +20,8 @@ Podium provides all three.
 ```mermaid
 graph TB
     subgraph intelligence ["Intelligence Layer"]
-        Sources["Data Sources<br/>(APIs, Web Scraping, Community)"]
-        Extract["LLM + Rule Extraction"]
+        Sources["Data Sources<br/>(APIs, Web, Community)"]
+        Extract["AI-Powered Extraction"]
         Resolve["Entity Resolution<br/>(pg_trgm + pgvector)"]
         Signals["EnrichmentSignals<br/>(typed, scored, provenanced)"]
         Baselines["AttributeBaselines<br/>(aggregated top values)"]
@@ -59,7 +59,7 @@ Every signal in Podium carries an explicit `SignalSource`:
 | Source | Origin | Weight in Feed |
 |--------|--------|---------------|
 | `USER_DECLARED` | Campaign votes, quiz answers, explicit preferences | **70%** |
-| `MARKET_DERIVED` | Enrichment pipeline — scraped reviews, structured APIs, community data | **30%** |
+| `MARKET_DERIVED` | Enrichment pipeline — product reviews, structured APIs, community data | **30%** |
 | `BASELINE_INFERRED` | Computed aggregates from enrichment signals | Used in attribute baselines |
 
 This is a deliberate architectural choice. Enrichment data is **not synthetic intent** — it's structured market intelligence that makes the platform useful during cold-start while first-party user data grows organically.
@@ -84,7 +84,7 @@ The agent — and the user — always know what's driving a recommendation.
 
 <CardGroup cols={2}>
   <Card title="Enrichment Pipeline" icon="flask" href="/agentic/enrichment-pipeline">
-    Multi-source product intelligence: crawl, extract, resolve, normalize, baseline. The data engine behind informed agent decisions.
+    Multi-source product intelligence: ingest, extract, resolve, normalize, baseline. The data engine behind informed agent decisions.
   </Card>
   <Card title="Agentic Product Feed" icon="rss" href="/agentic/product-feed">
     The endpoint agents call to discover products — scored, provenanced, and filterable. No auth required.
@@ -93,7 +93,7 @@ The agent — and the user — always know what's driving a recommendation.
     Machine-native USDC payments over HTTP 402. Agents pay for products (or API access) with a single fetch call.
   </Card>
   <Card title="Beauty Companion" icon="wand-magic-sparkles" href="/agentic/beauty-companion">
-    A complete reference implementation: a personal shopping agent built on these primitives with Telegram, Claude, and Privy wallets.
+    A complete reference implementation: a personal shopping agent built on these primitives with Telegram, AI recommendations, and Privy wallets.
   </Card>
 </CardGroup>
 

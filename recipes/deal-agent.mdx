@@ -10,7 +10,7 @@ Build the ultimate personal shopping agent — an autonomous system that watches
 ```mermaid
 graph TB
     subgraph agent ["Proactive Deal Agent"]
-        Cron["Scheduled Loop<br/>(QStash / cron)"]
+        Cron["Scheduled Loop<br/>(cron / scheduler)"]
         PriceCheck["Price Monitor"]
         RestockCheck["Restock Predictor"]
         AutoBuy["Auto-Buy Engine"]
@@ -284,7 +284,7 @@ async function notifyUser(
 
 ## Step 6: The Main Loop
 
-Wire everything together in a scheduled job. This runs on QStash, a cron service, or any scheduler.
+Wire everything together in a scheduled job. This runs on a cron service, task scheduler, or any recurring trigger.
 
 ```typescript
 async function runDealAgent(userId: string) {
@@ -339,7 +339,9 @@ async function runDealAgent(userId: string) {
 }
 ```
 
-### QStash Scheduled Trigger
+### Scheduled Trigger
+
+Create a webhook endpoint that your scheduler calls on a recurring basis:
 
 ```typescript
 import { Hono } from 'hono';
@@ -353,17 +355,10 @@ app.post('/agent/deal-check', async (c) => {
 });
 ```
 
-Schedule it via QStash:
+Configure your scheduler (cron, cloud scheduler, or any task runner) to hit this endpoint every 4 hours:
 
-```bash
-curl -X POST "https://qstash.upstash.io/v2/schedules" \
-  -H "Authorization: Bearer $QSTASH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destination": "https://your-app.com/agent/deal-check",
-    "body": "{\"userId\": \"usr_abc123\"}",
-    "cron": "0 */4 * * *"
-  }'
+```
+0 */4 * * *  POST https://your-app.com/agent/deal-check  {"userId": "usr_abc123"}
 ```
 
 ## Safety Guardrails

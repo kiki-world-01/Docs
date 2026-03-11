@@ -17,7 +17,7 @@ API keys are scoped to a single organization. When the platform receives a reque
 2. Validates the key prefix matches the expected environment (`podium_test_` or `podium_live_`)
 3. SHA-256 hashes the key and looks it up in the database
 4. Returns the associated organization context (ID, settings, subscription tier)
-5. Caches the result in Redis with a jittered TTL (60–150 seconds)
+5. Caches the result with a jittered TTL (60–150 seconds)
 
 Failed lookups are also cached (15 seconds) to prevent brute-force probing from hitting the database.
 
@@ -47,7 +47,7 @@ From the [API Keys dashboard](https://www.podiumcommerce.xyz/dashboard/settings/
 | **Enable/Disable** | Toggle a key without deleting it |
 | **Delete** | Permanently revoke a key |
 
-Key changes propagate immediately. Cached keys expire within 15–150 seconds. Immediate invalidation is triggered via a QStash `api-key-changed` event that purges the Redis cache.
+Key changes propagate immediately. Cached keys expire within 15–150 seconds. Immediate invalidation is triggered via an `api-key-changed` event that purges the cache.
 
 ### Environments
 
@@ -73,7 +73,7 @@ Growth and Pro tiers support overage billing for requests beyond the monthly quo
 
 ### Rate Limiting
 
-Rate limits are enforced per-organization using a Redis sliding window. When exceeded, the API returns:
+Rate limits are enforced per-organization using a sliding window. When exceeded, the API returns:
 
 ```json
 {
@@ -115,7 +115,7 @@ Some endpoints are accessible without authentication for specific use cases:
 | Path Pattern | Purpose |
 |-------------|---------|
 | `/agentic/*` | Agentic Commerce Protocol — AI agents discover products and create checkout sessions |
-| `/webhooks/*` | Inbound webhooks from Stripe, Shopify, Privy, and QStash |
+| `/webhooks/*` | Inbound webhooks from Stripe, Shopify, Privy, and internal events |
 | `/solver/*` | Solver discovery for the Task Pool system |
 | `/shippo/callback` | Shippo OAuth callback |
 | `/shopify/callback` | Shopify OAuth callback |

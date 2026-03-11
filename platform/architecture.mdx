@@ -5,7 +5,7 @@ description: How Podium's multi-tenant platform is structured — runtime, data 
 
 ## System Overview
 
-Podium is a multi-tenant API platform built on Bun and the Elysia web framework, backed by PostgreSQL with Row-Level Security, Redis for caching and rate limiting, and QStash for reliable async event processing. Smart contracts on Base handle on-chain settlement.
+Podium is a multi-tenant API platform built on Bun and the Elysia web framework, backed by PostgreSQL with Row-Level Security, a high-performance caching layer, and a reliable async event system. Smart contracts on Base handle on-chain settlement.
 
 ```mermaid
 graph TB
@@ -19,13 +19,13 @@ graph TB
     subgraph api ["API Layer (Bun + Elysia)"]
         MW["Middleware Chain"]
         Routes["~273 REST Endpoints"]
-        Events["27 QStash Event Handlers"]
+        Events["27 Async Event Handlers"]
         Crons["8 Cron Jobs"]
     end
 
     subgraph data ["Data Layer"]
         PG["PostgreSQL + RLS"]
-        Redis["Redis"]
+        Cache["Cache"]
         Pinata["Pinata (IPFS)"]
     end
 
@@ -39,13 +39,12 @@ graph TB
         Stripe["Stripe"]
         Shopify["Shopify"]
         Privy["Privy"]
-        QStash["QStash"]
         Alchemy["Alchemy"]
     end
 
     clients --> MW --> Routes
     Routes --> PG
-    Routes --> Redis
+    Routes --> Cache
     Routes --> chain
     Events --> PG
     Crons --> PG
@@ -60,23 +59,14 @@ Every tenant-scoped table in PostgreSQL includes an `organizationId` column that
 organizationId VARCHAR(191) DEFAULT current_setting('app.org_id', TRUE)
 ```
 
-Before every database query, the Prisma client middleware calls `SET set_config('app.org_id', ...)` to set the session context. PostgreSQL RLS policies then filter every `SELECT`, `INSERT`, `UPDATE`, and `DELETE` to only rows belonging to that organization.
+Before every database query, the ORM middleware calls `SET set_config('app.org_id', ...)` to set the session context. PostgreSQL RLS policies then filter every `SELECT`, `INSERT`, `UPDATE`, and `DELETE` to only rows belonging to that organization.
 
 This means:
 
 - **No cross-tenant data leaks** — the database enforces isolation at the row level, not the application level
 - **Transparent to application code** — services don't need to add `WHERE organizationId = ?` to every query
-- **Two escape hatches exist**: `runBypassingRls()` for cross-tenant operations (e.g., platform analytics) and `getAdminPrismaClient()` for direct admin access
 
-The organization context flows through the entire request lifecycle via `AsyncLocalStorage`:
-
-```typescript
-runWithOrgId(orgContext.id, async () => {
-  // All Prisma queries inside this closure are automatically scoped
-  const products = await prisma.product.findMany();
-  // Returns only this org's products
-});
-```
+The organization context flows through the entire request lifecycle via `AsyncLocalStorage`, so all database queries inside a request handler are automatically scoped to the authenticated organization.
 
 ## Request Lifecycle
 
@@ -87,7 +77,7 @@ Every request passes through a carefully ordered middleware chain before reachin
     Captures raw request body for Stripe webhook signature verification. Must run before any body parsing.
   </Step>
   <Step title="Org Resolver">
-    Extracts the `Authorization: Bearer <api-key>` header, SHA-256 hashes the key, and looks up the organization. Results are cached in Redis with a jittered TTL (60–150s) to prevent thundering herd.
+    Extracts the `Authorization: Bearer <api-key>` header, SHA-256 hashes the key, and looks up the organization. Results are cached with a jittered TTL (60–150s) to prevent thundering herd.
   </Step>
   <Step title="App Config Resolver">
     Loads the organization's app-specific configuration (blockchain network, reward mode, feature flags).
@@ -96,7 +86,7 @@ Every request passes through a carefully ordered middleware chain before reachin
     Allows unauthenticated access for designated public paths: `/webhooks/*`, `/agentic/*`, `/solver/*`, and OAuth callbacks.
   </Step>
   <Step title="Rate Limiter">
-    Redis-backed rate limiting with per-organization limits determined by subscription tier. Tracks requests per second with sliding window.
+    Per-organization rate limiting determined by subscription tier. Tracks requests per second with sliding window.
   </Step>
   <Step title="Access Control">
     Checks the organization's subscription tier against endpoint allowlists/blocklists. Higher tiers unlock additional API surface.
@@ -119,28 +109,23 @@ Every request passes through a carefully ordered middleware chain before reachin
 | **Runtime** | Bun | JavaScript/TypeScript execution, package management, test runner |
 | **Framework** | Elysia | Type-safe HTTP framework with built-in validation and OpenAPI generation |
 | **Database** | PostgreSQL 15 | Primary data store with Row-Level Security |
-| **ORM** | Prisma | Schema management, type-safe queries, migrations |
-| **Cache** | Redis | Rate limiting, org context caching, session data |
-| **Jobs** | QStash (Upstash) | Reliable async event processing with automatic retries |
 | **Validation** | Zod | Runtime schema validation on every endpoint |
 | **Payments** | Stripe | Card payments, Connect payouts, webhook processing |
 | **Crypto** | x402 + viem + ethers | USDC payments on Base, smart contract interactions |
 | **Wallets** | Privy | Embedded wallet creation, server wallet operations |
-| **NFT Storage** | Pinata | IPFS for NFT metadata and media |
-| **Email** | SendGrid + Loops | Transactional and marketing email |
+| **Storage** | Pinata | IPFS for reward metadata and media |
 | **Search** | PostgreSQL tsvector | Full-text search with custom ranking |
-| **Embeddings** | OpenAI | text-embedding-3-small for product similarity |
-| **AI** | Anthropic Claude | LLM attribute extraction in the enrichment pipeline |
+| **AI** | Proprietary | Product intelligence, attribute extraction, recommendations |
 
 ## Async Event System
 
-Podium uses QStash as a reliable event bus for operations that should not block the API response. Events are published as HTTP callbacks to queue-specific handlers:
+Podium uses a reliable event bus for operations that should not block the API response. Events are published as HTTP callbacks to queue-specific handlers with at-least-once delivery and automatic retries.
 
 **27 event types** including: `purchase-processed`, `campaign-published`, `nft-received`, `follow`, `points-received`, `shopify-products-sync`, `task-verification-requested`, `enrichment-crawl`, `enrichment-extract`, and more.
 
 **8 cron jobs** run on schedule: airdrop monitor, campaign monitor, contract monitor, enrichment baseline recompute, mint queue processor, payouts sweep, Stripe onboarding reminder, and token presale monitor.
 
-All events are authenticated via QStash signature verification and are idempotent — safe to retry on failure.
+All events are authenticated via signature verification and are idempotent — safe to retry on failure.
 
 ## Project Structure
 
@@ -151,13 +136,13 @@ src/
 │   ├── index.ts              # Server bootstrap, middleware chain
 │   ├── api/v1/               # Route handlers (thin, delegate to services)
 │   ├── services/             # Business logic (36 service files)
-│   ├── model/                # Prisma data access (40+ model files)
+│   ├── model/                # Data access (40+ model files)
 │   ├── middleware/            # Auth, rate limiting, x402, access control
-│   ├── lib/                  # Internal libraries (Redis, Privy, events)
-│   │   └── event/            # 27+ QStash event classes
+│   ├── lib/                  # Internal libraries (events, wallets)
+│   │   └── event/            # 27+ async event classes
 │   ├── enrichment/           # Product intelligence pipeline
-│   │   ├── sources/          # OBF, Firecrawl, Reddit clients
-│   │   ├── extractors/       # Attribute extraction, entity resolution
+│   │   ├── sources/          # Data source connectors
+│   │   ├── extractors/       # AI attribute extraction, entity resolution
 │   │   └── pipeline/         # Ingest, normalize, baseline compute
 │   ├── contracts/abis/       # Smart contract ABIs
 │   ├── utils/                # Config, logging, blockchain helpers
@@ -165,5 +150,4 @@ src/
 sdk/                          # Generated TypeScript SDK
 prisma/schema.prisma          # Database schema (80+ models)
 scripts/                      # Build tools, OpenAPI generation
-docker/                       # Local PostgreSQL + Redis
 ```

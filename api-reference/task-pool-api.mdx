@@ -90,7 +90,7 @@ sequenceDiagram
     TP->>IR: registerIntent(taskId, merchant, recipient, amount)
     TP-->>P: taskId
     P->>P: Create Task record in database
-    P->>P: Emit task-created QStash event
+    P->>P: Emit task-created event
     P-->>A: Task response
 ```
 
@@ -309,11 +309,11 @@ curl https://api.podiumcommerce.xyz/api/v1/solver/0xSolverAddr...
 |--------|-------------|
 | `Consensus` | Multiple authorized parties must agree the task is complete |
 | `Oracle` | A single authorized oracle evaluates the submission. The Podium API acts as the oracle, receiving callbacks at `/webhooks/task-verify/{taskId}` |
-| `AIEval` | AI evaluation against the `acceptanceCriteria`. Uses Anthropic/OpenAI to score the submission |
+| `AIEval` | AI evaluation against the `acceptanceCriteria`. Podium's AI scores the submission automatically |
 
 The verification flow:
 1. Solver submits → `VerificationEngine.requestVerification()` on-chain
-2. `task-verification-requested` QStash event fires
+2. `task-verification-requested` event fires
 3. Oracle/AI evaluates the submission
 4. `VerificationEngine.resolveVerification(taskId, approved)` settles on-chain
 5. If approved: `TaskPool.settleTask()` → `RewardPool.queuePayout()` → solver claims USDC
