@@ -271,7 +271,7 @@ async function payWithX402(orderId: string) {
 
       // Retry with X-PAYMENT header (handled by SDK in future)
       const response = await fetch(
-        `https://podium-staging.up.railway.app/api/v1/x402/order/${orderId}/pay`,
+        `https://api.podiumcommerce.xyz/api/v1/x402/order/${orderId}/pay`,
         {
           method: 'POST',
           headers: {
