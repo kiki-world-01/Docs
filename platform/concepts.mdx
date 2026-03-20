@@ -141,6 +141,93 @@ The intent layer bridges off-chain commerce with on-chain settlement:
 | `MerchantTreasury` | Per-organization USDC treasury with on-chain balance tracking |
 | `SolverPerformance` | Solver fulfillment metrics and reputation data |
 
+## Agent Memory
+
+Structured memory that evolves through conversation. As a user interacts with a companion agent, the platform extracts and maintains a rich understanding of their attributes, goals, concerns, avoidances, products tried, and category-aware price ranges. See [Memory & Intelligence](/agentic/memory-intelligence) for the full schema, domain taxonomy, and scoring details.
+
+| Dimension | Example |
+|-----------|---------|
+| Attributes | Skin type, hair texture, body type |
+| Goals | "Looking for anti-aging routine", "Building a capsule wardrobe" |
+| Concerns | Sensitivity to fragrance, budget constraints |
+| Avoidances | Specific ingredients, brands, or categories |
+| Products tried | Items the user has purchased or reviewed |
+| Price ranges | Per-category budget preferences (e.g., "$20–40 for serums, up to $100 for treatments") |
+
+Memory extraction runs for all users regardless of [subscription tier](/platform/subscriptions). For subscribers, the accumulated memory is loaded into the agent's system prompt on every conversation turn, enabling deeply personalized responses.
+
+<Note>
+  Memory is additive — it grows richer with every interaction. Users who upgrade from free to paid immediately benefit from all intelligence accumulated during their free usage.
+</Note>
+
+## Companion Subscription
+
+Subscription state for companion agent monetization. Each subscription tracks the user's billing tier, payment provider IDs, trial configuration, and current billing period.
+
+| Field | Purpose |
+|-------|---------|
+| `tier` | Current subscription tier: `FREE`, `TRIALING`, `ACTIVE`, `PAST_DUE`, `CANCELED` |
+| `externalCustomerId` | Stripe customer ID |
+| `externalSubscriptionId` | Stripe subscription ID |
+| `trialEndsAt` | Trial expiry timestamp (configurable, default 14 days) |
+| `currentPeriodEnd` | End of current billing period |
+
+Tier transitions are managed automatically via Stripe webhooks. See [Subscriptions](/platform/subscriptions) for the full billing lifecycle and API endpoints.
+
+## Companion Usage
+
+Monthly usage tracking per user, used for free-tier gating.
+
+| Field | Purpose |
+|-------|---------|
+| `messageCount` | Messages sent in the current billing period |
+| `recCount` | Recommendation requests in the current billing period |
+| `periodStart` | Start of the current tracking period |
+
+Usage counters reset at the start of each billing period. The [subscription status endpoint](/platform/subscriptions#subscription-status) returns both current counts and configured limits.
+
+## Creator Persona
+
+A creator persona represents a creator-curated shopping identity — used by apps like [Clone Agents (Familiar)](/agentic/beauty-companion#clone-agents-familiar) to let users shop through the lens of a creator's taste.
+
+| Field | Purpose |
+|-------|---------|
+| `handle` | Unique identifier (e.g., `janedoe`) |
+| `displayName` | Creator's public name |
+| `platform` | Affiliate platform: ShopMy, LTK, Amazon Influencer |
+| `avatarUrl` | Creator profile image |
+| `seedProfile` | Taste data (brands, price ranges, concerns) used to seed user profiles |
+| `resolvedProductIds` | Product catalog IDs resolved from the creator's affiliate links |
+| `status` | `ACTIVE`, `PENDING`, or `INACTIVE` |
+
+Developers can query active creator personas and their resolved product catalogs via the [Creator Products](/api-reference/companion#creator-products) endpoint. User profiles can be bootstrapped from a creator's taste data via [Profile Seeding](/api-reference/companion#profile-seeding-from-creator).
+
+## Agent Conversation & Agent Message
+
+Durable chat history for companion agents. Conversations are scoped per user and per surface (web, Telegram, etc.), with messages stored as an ordered sequence.
+
+**AgentConversation:**
+
+| Field | Purpose |
+|-------|---------|
+| `id` | Conversation identifier |
+| `userId` | The user this conversation belongs to |
+| `surface` | Where the conversation is happening (`web`, `telegram`, etc.) |
+| `createdAt` | When the conversation started |
+| `lastMessageAt` | Timestamp of the most recent message |
+
+**AgentMessage:**
+
+| Field | Purpose |
+|-------|---------|
+| `id` | Message identifier (used as pagination cursor) |
+| `role` | `user` or `assistant` |
+| `content` | Message text |
+| `products` | Product cards shown with this message (assistant messages only) |
+| `timestamp` | When the message was sent |
+
+Chat history is retrieved via the [Chat History](/api-reference/companion#chat-history) endpoint with cursor-based pagination.
+
 ## Task Pool (V2)
 
 The Task Pool system enables on-chain bounty distribution:

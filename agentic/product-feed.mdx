@@ -123,6 +123,10 @@ marketScore = min(signalCount / 500, 1.0)
 
 Scales linearly from 0 to 1 as enrichment signals accumulate, capped at 500 signals.
 
+### Memory-Aware Scoring
+
+When a user has an [AgentMemory](/agentic/memory-intelligence#agentmemory), the scoring system incorporates their structured profile into signal weights. Goals, concerns, avoidances, and category-specific price ranges all influence which products score highest. Domain-specific weights are applied based on the product's vertical — beauty products are weighted differently than wellness supplements. See [Memory & Intelligence — Signal Scoring](/agentic/memory-intelligence#signal-scoring-with-polarity) for details.
+
 ### Cold-Start Behavior
 
 When a product is new and has zero votes, the intent score is driven entirely by market-derived signals. As users interact with the product (via campaigns, companion interactions, or direct purchases), the user-declared lane naturally takes over:
@@ -153,6 +157,43 @@ The `attributeBaselines` array provides the top enrichment attribute for each ty
 | `score` | float | Computed score: `avg(confidence) × log1p(count)` |
 
 Agents can use baselines to match products against user preferences. For example, a user with `skinType: "oily"` and `concerns: ["acne"]` can be matched against products with `skin_type_suitability: "oily"` and `key_ingredient: "salicylic acid"` baselines.
+
+## Reason Tags
+
+Products in the companion recommendations include a `reasonTag` field — a concise, human-readable explanation of why this product was recommended for a specific user.
+
+```json
+{
+  "id": "prod_abc123",
+  "title": "Organic Face Serum",
+  "intentScore": 0.42,
+  "reasonTag": "For oily skin · Hydration"
+}
+```
+
+Reason tags are generated during recommendation re-ranking by combining signals from the user's memory profile — skin type, concerns, budget, brand preferences, and avoidances. Tags can be simple (`"Hydration"`) or compound (`"For oily skin · Under your $50 budget"`).
+
+See [Memory & Intelligence — Reason Tags](/agentic/memory-intelligence#reason-tags) for the full list of tag types and how they're computed.
+
+## ML Scoring Layer
+
+Beyond the two-lane intent score, Podium applies machine learning signals to improve product ranking over time.
+
+### Popularity Scoring
+
+Product popularity is computed from weighted user interactions — purchases carry the most weight, followed by purchase intent, affiliate clicks, and rank-ups. Negative interactions (skips, rank-downs) reduce the score. The raw sum is normalized by the square root of total interactions to prevent high-volume but low-quality signals from dominating.
+
+### Temporal Decay
+
+Interaction signals decay with a 30-day half-life. Recent signals carry more weight than older ones, keeping recommendations responsive to shifting user interests and seasonal trends.
+
+### Feature Cache
+
+For each product, the system maintains a pre-computed feature set (quality score, brand tier, popularity, price percentile, enrichment depth) that is cached for fast retrieval during scoring. This avoids recomputation on every request while keeping scores fresh through periodic recalculation.
+
+### Impression Tracking
+
+Every product shown to a user is logged with its display position. This creates a feedback loop: the system can distinguish between products that were seen and ignored vs products that were never shown, enabling accurate conversion-rate estimation and position-bias correction.
 
 ## Checkout Sessions
 

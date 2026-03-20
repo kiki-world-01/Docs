@@ -20,6 +20,9 @@ Every experience below is assembled from the same live infrastructure. No new pr
 | **Commerce** | `/order/*`, `/product/*` | Full transaction pipeline with Stripe + x402 |
 | **Enrichment Pipeline** | Async processing | Product intelligence from multiple source types |
 | **x402 Rails** | `/x402/*` | Pay-per-call USDC API access |
+| **Creator Personas** | `/admin/creator-personas/*`, `/companion/creator/*` | Creator discovery, curated feeds, profile seeding |
+| **Subscriptions** | `/companion/subscription/*` | Stripe billing, usage gating, memory-as-premium |
+| **Memory Intelligence** | `/companion/agent/chat` (SSE) | Structured memory extraction, domain taxonomy, reason tags |
 
 ---
 
@@ -360,6 +363,32 @@ Every experience below is assembled from the same live infrastructure. No new pr
     Overlay on product pages showing trust signals: verified community reports, return rates, satisfaction scores. Premium data gated behind x402 pay-per-call.
 
     **Primitives:** Intents analytics, campaign (trust report type), x402-gated trust data feed
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Creator & Subscription Agents
+
+<AccordionGroup>
+  <Accordion title="Creator-Curated Shopping Agent">
+    Users pick a creator and browse their curated product selection. The agent uses CreatorPersona discovery to list active creators, fetches creator-scoped product feeds, seeds the user's preference profile from the creator's taste graph, and handles affiliate URL generation for attribution.
+
+    **User flow:** Browse creators → select a creator persona → agent loads their curated products via `/companion/creator/:handle/products` → user browses and gets recommendations scoped to that creator's taste → profile seeded via `/companion/profile/:userId/seed-from-creator` → purchase with affiliate tracking.
+
+    **Primitives:** CreatorPersona discovery (`/admin/creator-personas/active`), creator-scoped product feed, profile seeding, affiliate URL handling, companion recommendations
+
+    **Reference:** [Familiar (clone-agents)](/agentic/beauty-companion) — a live implementation of creator-curated commerce
+  </Accordion>
+
+  <Accordion title="Subscription-Gated AI Agent">
+    Monetize your companion agent with a freemium model. Free-tier users get limited messages per day and basic product recommendations. Subscribers unlock unlimited conversations, memory-powered personalization, and priority enrichment. Built on CompanionSubscription with Stripe billing integration.
+
+    **User flow:** User interacts with agent → hits free-tier message limit → agent prompts upgrade via `/companion/subscription/checkout` → Stripe Checkout → subscription activated → unlimited access with full memory intelligence.
+
+    **Primitives:** CompanionSubscription, Stripe Checkout and Customer Portal (`/companion/subscription/checkout`, `/companion/subscription/portal`), subscription status checks (`/companion/subscription/status/:userId`), memory gating (free users get basic recs, subscribers get memory-scored personalization)
+
+    **Reference:** [Sage (beauty-companion)](/platform/subscriptions) — freemium gating with memory-as-premium
   </Accordion>
 </AccordionGroup>
 

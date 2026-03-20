@@ -162,7 +162,21 @@ The pipeline extracts 13 attribute types. This taxonomy is extensible — add ne
 | `certification` | organic, cruelty-free, vegan | APIs, labels |
 | `packaging` | pump bottle, tube, jar | Reviews, descriptions |
 | `color` | sheer, full coverage, tinted | Reviews, descriptions |
+| `brand_tier` | 1 (prestige), 2 (enthusiast), 3 (mainstream), 4 (mass market) | Computed from brand positioning |
 | `price_tier` | budget, mid-range, luxury | Computed from price |
+
+## Domain Taxonomy
+
+Products are organized into a two-level `domain:subcategory` system. This taxonomy drives domain-specific scoring weights, expert personas, and brand tier calibration across the platform.
+
+| Domain | Subcategories |
+|--------|--------------|
+| **beauty** | moisturizer, serum, cleanser, sunscreen, toner, mask, exfoliant, eye cream, lip, makeup, hair care, body care, tools, fragrance |
+| **wellness** | supplements, probiotics, protein, greens, vitamins, minerals, adaptogens, nootropics, collagen, sleep, longevity, fitness |
+| **fashion** | clothing, shoes, accessories, bags, jewelry, watches |
+| **home** | decor, kitchen, bedding, bath, storage, lighting, furniture |
+
+Each product is tagged with a domain and subcategory at ingestion time. The domain determines which scoring weights, [expert personas](/agentic/memory-intelligence#domain-specific-expert-personas), and brand tier thresholds are applied during recommendation ranking.
 
 ## Data Sources
 
@@ -174,6 +188,14 @@ Structured product databases provide high-quality, deterministic data. Extractio
 - Categories from category tags — confidence 0.9
 - Key ingredients from ingredient text via pattern matching — confidence 0.9
 - Scent profile from fragrance-free/unscented patterns — confidence 0.85
+
+**URL Resolution.** The enrichment pipeline resolves product URLs through multiple strategies:
+
+1. **Structured product APIs** — retailer URL resolution via direct API lookups
+2. **Web search** — discovering retailer URLs for products without direct API coverage
+3. **Affiliate platform resolution** — resolving intermediate redirect URLs (e.g., affiliate tracking links) to real retailer pages
+
+This ensures every product in the catalog has a valid, purchasable URL regardless of how it was originally discovered.
 
 ### Web Intelligence
 
@@ -201,6 +223,29 @@ Podium continuously discovers new products relevant to your vertical from multip
 3. Enriched with the full attribute extraction pipeline
 
 This means your companion's product catalog grows organically without manual curation.
+
+### Creator Storefronts
+
+Source type: `CREATOR_STOREFRONT`. Podium discovers creators from affiliate platforms, ingests their curated product collections, and enriches the catalog with their selections. Each discovered creator becomes a `CreatorPersona` with:
+
+- Resolved product IDs linked to your catalog
+- Creator metadata (handle, display name, platform, avatar)
+- Product count and resolution status
+
+Creator storefronts are a high-signal data source — a creator's curation reflects expert taste and audience trust, which feeds into recommendation quality.
+
+### Wellness Vertical
+
+The pipeline covers wellness products (supplements, probiotics, adaptogens, etc.) with a specialized category taxonomy and domain-specific enrichment. Wellness brand tiers are calibrated differently from beauty:
+
+| Tier | Examples | Positioning |
+|------|----------|-------------|
+| 1 (prestige) | Thorne, Pure Encapsulations | Clinical-grade, practitioner-recommended |
+| 2 (enthusiast) | Seed, AG1 | Science-forward, premium DTC |
+| 3 (mainstream) | Nature Made | Widely available, trusted |
+| 4 (mass market) | Kirkland | Value-focused, bulk |
+
+Wellness enrichment emphasizes formulation data — bioavailability, clinical evidence, third-party testing, and ingredient sourcing — rather than the texture and finish attributes that dominate beauty.
 
 ## Attribute Extraction
 

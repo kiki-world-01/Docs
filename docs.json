@@ -27,7 +27,8 @@
             "pages": [
               "platform/architecture",
               "platform/authentication",
-              "platform/concepts"
+              "platform/concepts",
+              "platform/subscriptions"
             ]
           }
         ]
@@ -88,6 +89,7 @@
             "group": "Intelligence Layer",
             "pages": [
               "agentic/conversational-agent",
+              "agentic/memory-intelligence",
               "agentic/enrichment-pipeline",
               "agentic/product-feed"
             ]
