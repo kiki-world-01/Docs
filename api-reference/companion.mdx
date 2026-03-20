@@ -546,6 +546,161 @@ graph LR
 
 ---
 
+## Chat History
+
+Retrieve durable conversation history for a user. Messages include role, content, timestamps, and any product cards that were shown during the conversation.
+
+### Get Chat History
+
+```bash
+curl "https://api.podiumcommerce.xyz/api/v1/companion/agent/chat/history/{userId}?limit=50" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | 50 | Number of messages to return |
+| `before` | string | — | Message ID cursor for pagination (returns messages older than this ID) |
+
+**Response:**
+
+```json
+[
+  {
+    "id": "msg_clxyz001",
+    "role": "user",
+    "content": "What's a good moisturizer for sensitive skin under $50?",
+    "timestamp": "2026-03-07T14:30:00Z"
+  },
+  {
+    "id": "msg_clxyz002",
+    "role": "assistant",
+    "content": "Based on your profile, I'd recommend the CeraVe Moisturizing Cream...",
+    "timestamp": "2026-03-07T14:30:02Z",
+    "products": [
+      {
+        "id": "clx9prod001",
+        "name": "CeraVe Moisturizing Cream",
+        "brand": "CeraVe",
+        "price": 18.99,
+        "imageUrl": "https://cdn.example.com/cerave-cream.jpg"
+      }
+    ]
+  }
+]
+```
+
+### Message Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique message identifier (use as `before` cursor for pagination) |
+| `role` | string | `user` or `assistant` |
+| `content` | string | Message text |
+| `timestamp` | string | ISO 8601 timestamp |
+| `products` | object[]? | Product cards shown with this message (assistant messages only) |
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/agent/chat/history/{userId}` | Paginated chat history |
+
+<Note>
+  Pagination is cursor-based. Pass the `id` of the oldest message in your current page as the `before` parameter to fetch the next page. An empty array indicates no more history.
+</Note>
+
+---
+
+## Creator Products
+
+Retrieve the resolved product catalog for a creator persona. Creator personas are profiles that curate products based on a creator's taste, platform affiliation, and audience — used by apps like [Clone Agents (Familiar)](/agentic/beauty-companion#clone-agents-familiar).
+
+### Get Creator Products
+
+```bash
+curl https://api.podiumcommerce.xyz/api/v1/companion/creator/{handle}/products \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "items": [
+    {
+      "id": "clx9prod042",
+      "name": "Drunk Elephant Protini Polypeptide Cream",
+      "brand": "Drunk Elephant",
+      "category": "moisturizer",
+      "price": 68.00,
+      "imageUrl": "https://cdn.example.com/de-protini.jpg",
+      "productUrl": "https://drunkelephant.com/protini",
+      "inStock": true
+    }
+  ],
+  "creatorHandle": "janedoe",
+  "displayName": "Jane Doe"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | object[] | Array of resolved product catalog items |
+| `creatorHandle` | string | The creator's unique handle |
+| `displayName` | string | The creator's display name |
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/companion/creator/{handle}/products` | Get a creator's curated product catalog |
+
+---
+
+## Profile Seeding from Creator
+
+Merge a creator's taste profile — preferred brands, price ranges, product concerns — into a user's intent profile. This lets users bootstrap their preferences from a creator they trust, without going through a full onboarding quiz.
+
+### Seed Profile from Creator
+
+```bash
+curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId}/seed-from-creator \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "creatorHandle": "janedoe"
+  }'
+```
+
+**Behavior:**
+
+- Merges the creator's brand preferences, price range, and concern tags into the user's intent profile
+- Does **not** overwrite user-set fields if the user has completed an onboarding quiz (i.e., `quizCompletedAt` is set)
+- Safe to call multiple times — subsequent calls merge additively
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/profile/{userId}/seed-from-creator` | Seed user profile from creator taste data |
+
+---
+
+## Subscription Endpoints
+
+The subscription system handles billing, usage tracking, and tier management for companion agents. For full documentation — including tiers, usage gating, memory gating, and integration examples — see [Subscriptions](/platform/subscriptions).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/subscription/checkout` | Create a Stripe checkout session |
+| `POST` | `/companion/subscription/portal` | Open Stripe customer portal |
+| `GET` | `/companion/subscription/{userId}/status` | Get subscription status and usage |
+
+---
+
 ## User Linking
 
 Connect external platform users (e.g., Telegram) to Podium users. The companion looks up users by a synthetic email pattern.

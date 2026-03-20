@@ -98,8 +98,13 @@ Both endpoints share the same request body.
 | `text` | `{ type: "text", content: "..." }` | Each text delta as the agent writes |
 | `tool_start` | `{ type: "tool_start", tool: "search_products" }` | When the agent begins a tool call |
 | `tool_result` | `{ type: "tool_result", tool: "search_products", products: [...] }` | When a tool returns results |
-| `done` | `{ type: "done", message: "...", products: [...], ... }` | Final event with complete response |
+| `done` | `{ type: "done", message: "...", products: [...], quickReplies?: [...] }` | Final event with complete response |
+| `memory_queued` | `{ type: "memory_queued" }` | When the system queues a memory extraction job |
+| `confirmation_required` | `{ type: "confirmation_required", productId, productName, productBrand, amount, currency, imageUrl?, spendSummary }` | When a purchase needs user confirmation |
+| `spend_limit_exceeded` | `{ type: "spend_limit_exceeded", reason, spendSummary, resetInfo? }` | When a purchase exceeds spend limits |
 | `error` | `{ type: "error", error: "..." }` | On failure |
+
+Where `spendSummary` is: `{ dailySpent: number, dailyLimit: number, txMax: number }`
 
 ### SSE Client Example
 
@@ -145,7 +150,21 @@ async function chatWithAgent(userId: string, message: string) {
               console.log(`\n[Found ${event.products.length} products]`);
             }
             break;
+          case "memory_queued":
+            console.log("[Memory extraction queued]");
+            break;
+          case "confirmation_required":
+            console.log(`\nConfirm purchase: ${event.productName} (${event.productBrand}) — $${event.amount} ${event.currency}`);
+            console.log(`Daily spend: $${event.spendSummary.dailySpent}/$${event.spendSummary.dailyLimit}`);
+            break;
+          case "spend_limit_exceeded":
+            console.log(`\nSpend limit exceeded: ${event.reason}`);
+            if (event.resetInfo) console.log(`Resets: ${event.resetInfo}`);
+            break;
           case "done":
+            if (event.quickReplies?.length) {
+              console.log("\nSuggested replies:", event.quickReplies);
+            }
             console.log("\n--- Complete ---");
             return event;
           case "error":
@@ -228,9 +247,19 @@ Every conversation turn (user message + agent response) is stored in persistent 
 3. **Conversation summary** — a compressed summary of older conversations
 4. **Agent state** — any in-progress workflows (e.g., pending orders)
 
+History is persisted across sessions — not just held in memory. When a user returns hours or days later, the agent has full context from previous conversations.
+
 ### Automatic Summarization
 
-When conversation history exceeds a threshold, Podium automatically:
+Summary extraction happens automatically at conversation milestones:
+
+| Trigger | Condition | Purpose |
+|---------|-----------|---------|
+| **Early capture** | Turns 3–5, no existing memory | Capture initial preferences quickly |
+| **Regular cadence** | Every 10 user turns | Keep memory current as conversation evolves |
+| **Session gap** | >2 hours since last message | Summarize before context goes cold |
+
+When summarization triggers, Podium:
 
 1. Generates a summary of older messages
 2. Trims the history to keep only recent turns
@@ -240,7 +269,9 @@ This keeps the agent's context window efficient while preserving long-term knowl
 
 ### Agent Summary → Intent Profile
 
-Summaries are also stored on the user's intent profile (`agentSummary` field), making conversation insights available to other parts of the platform — recommendations, the agentic product feed, and downstream analytics.
+Summaries are stored on the user's intent profile (`agentSummary` field), making conversation insights available to other parts of the platform — recommendations, the agentic product feed, and downstream analytics.
+
+Memory is also stored as a structured [AgentMemory](/agentic/memory-intelligence#agentmemory) object on the user's profile. This structured memory — preferences, goals, concerns, avoidances, products tried, and category-aware price ranges — feeds directly into recommendation scoring, reason tag generation, and proactive nudges. See [Memory & Intelligence](/agentic/memory-intelligence) for the full schema and scoring details.
 
 ## Personas
 
@@ -294,6 +325,130 @@ Beyond reactive conversations, Podium's agent can proactively re-engage users th
 5. **History integration** — nudge messages are appended to the conversation history so the agent has full context if the user replies
 
 Nudges are logged and rate-limited to prevent over-messaging. Each nudge includes the `nudgeType` for analytics.
+
+## Quick-Reply Chips
+
+The agent can suggest contextual quick-reply options to keep the conversation flowing. Chips are returned in the `done` event:
+
+```json
+{
+  "type": "done",
+  "message": "I found some great hydrating serums for you!",
+  "products": [...],
+  "quickReplies": ["Yes, show me serums", "What about moisturizers?", "Skip for now"]
+}
+```
+
+Quick replies are contextually generated based on:
+
+| Factor | Behavior |
+|--------|----------|
+| **Warm vs cold start** | New users get onboarding-oriented chips ("Take the skin quiz", "Tell me your budget"). Returning users get product-oriented chips. |
+| **Session saturation** | Max 3 chip sets per session to avoid overwhelming the user |
+| **Conversation state** | Chips adapt to context — quiz mode offers answer options, browsing mode offers category pivots, checkout mode offers confirmation/cancel |
+
+Quick replies are suggestions, not constraints — the user can always type a freeform message instead.
+
+## Durable Chat History
+
+Conversations are persisted to durable storage. You can retrieve a user's full chat history for display in your UI or for analytics:
+
+```
+GET /api/v1/companion/agent/chat/history/:userId?limit=50&before=cursor_id
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "msg_abc123",
+    "role": "user",
+    "content": "I need a hydrating serum under $50",
+    "timestamp": "2026-03-18T14:30:00Z"
+  },
+  {
+    "id": "msg_abc124",
+    "role": "assistant",
+    "content": "I found some great options for you!",
+    "timestamp": "2026-03-18T14:30:02Z",
+    "products": [...]
+  }
+]
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Max messages to return (1–100) |
+| `before` | string | — | Cursor-based pagination — pass a message `id` to fetch older messages |
+
+History is ordered newest-first. Page backward through the conversation by passing the last message's `id` as the `before` parameter.
+
+## Purchase Mode & Spend Controls
+
+The agent classifies each product by purchase mode, determining how the transaction is executed:
+
+| Mode | Behavior | Example |
+|------|----------|---------|
+| `x402_platform` | Full agent checkout via [x402 payments](/agentic/x402-payments) | Products from Podium-integrated merchants |
+| `affiliate` | Opens retailer link for the user | Sephora, Ulta, Nordstrom, etc. |
+| `external` | Opens direct retailer link | Brand DTC sites |
+
+### Spend Controls
+
+For `x402_platform` purchases, the agent enforces spend limits to protect users:
+
+| Limit | Value | Description |
+|-------|-------|-------------|
+| Per-transaction max | $200 | No single purchase can exceed this amount |
+| Daily spend cap | $100 | Rolling 24-hour limit across all agent-initiated purchases |
+
+**Purchase flow:**
+
+1. User expresses purchase intent
+2. Agent resolves the product's purchase mode
+3. For `x402_platform` — agent checks spend limits and emits `confirmation_required` with product details and current spend summary
+4. User confirms → agent executes the purchase
+5. If limits would be exceeded → agent emits `spend_limit_exceeded` with the reason and reset timing
+
+```json
+{
+  "type": "confirmation_required",
+  "productId": "prod_abc123",
+  "productName": "Hyaluronic Acid Serum",
+  "productBrand": "The Ordinary",
+  "amount": 12.99,
+  "currency": "USD",
+  "imageUrl": "https://cdn.example.com/ha-serum.jpg",
+  "spendSummary": {
+    "dailySpent": 45.00,
+    "dailyLimit": 100.00,
+    "txMax": 200.00
+  }
+}
+```
+
+## First-Return Greeting
+
+For returning subscribers, the agent can generate a personalized greeting that references their history, preferences, and recent activity. This creates a warm re-engagement experience instead of a generic "How can I help you?"
+
+Send a greeting request:
+
+```json
+{
+  "userId": "clxyz1234567890",
+  "message": "__greeting__",
+  "config": {
+    "greeting": true
+  }
+}
+```
+
+The agent uses the user's [AgentMemory](/agentic/memory-intelligence#agentmemory) to generate the greeting — referencing products they've tried, concerns they've mentioned, and goals they're working toward. The response arrives through the standard streaming or synchronous endpoint.
+
+<Tip>
+Use first-return greetings when your app detects a returning user. The `__greeting__` message is a special trigger — it's not displayed to the user, it just signals the agent to generate a personalized welcome.
+</Tip>
 
 ## Example: Full Integration
 
@@ -372,3 +527,4 @@ if (orderResult.orderInitiated) {
 |--------|------|-------------|
 | `POST` | `/companion/agent/chat` | Synchronous AI chat with tools |
 | `POST` | `/companion/agent/chat/stream` | Streaming AI chat via SSE |
+| `GET` | `/companion/agent/chat/history/:userId` | Retrieve durable chat history (paginated) |

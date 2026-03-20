@@ -1,212 +1,198 @@
 ---
-title: "Building a Personal Agent: Beauty Companion"
-description: A complete reference implementation — building a personal shopping agent on Podium with Telegram, AI recommendations, and Privy wallets
+title: "Building on Podium: Reference Apps"
+description: Two production apps built on the same platform — a conversational skincare agent and a creator-based shopping agent, demonstrating the breadth of experiences Podium supports
 ---
 
-## What We're Building
+## Overview
 
-The Beauty Companion is a **personal shopping agent** delivered as a Telegram bot with an accompanying mini app. It demonstrates how to compose Podium's generalized Companion API into a complete consumer experience for a specific vertical (skincare and beauty).
+Podium's Companion API, subscription system, and intelligence layer are designed to support radically different agent experiences on the same infrastructure. These two production apps demonstrate the range — from conversation-first with deep memory to browse-first with creator taste profiles.
 
-The same architecture works for any product domain — fashion, food, supplements, electronics. The Podium primitives are vertical-agnostic; only the profile fields and product catalog change.
+| | Beauty Companion (Sage) | Clone Agents (Familiar) |
+|---|---|---|
+| **Core experience** | Personal skincare agent | Creator-based shopping agent |
+| **Entry point** | Conversational quiz onboarding | Pick a creator, browse their picks |
+| **Monetization** | Subscription (Stripe billing) | Affiliate links (ShopMy, LTK, Amazon) |
+| **Intelligence** | Deep memory + personalization | Creator taste profile seeding |
+| **Surfaces** | Web + Telegram | Web + Telegram |
 
-<Info>
-  The Beauty Companion source code will be published as an open-source reference app soon. Stay tuned!
-</Info>
+---
 
-## Architecture
+## Beauty Companion (Sage)
+
+A personal skincare agent: quiz onboarding → conversational discovery → personalized recommendations → checkout → subscription monetization.
+
+### User Journey
+
+<Steps>
+  <Step title="Onboarding quiz">
+    New users complete a 4-step conversational quiz that builds their intent profile. Questions are experiential rather than clinical — "How does your skin feel by early afternoon?" instead of "What is your skin type?"
+
+    Each answer patches the user's [intent profile](/api-reference/companion#intent-profiles) and awards points.
+  </Step>
+  <Step title="Conversational discovery">
+    The [Conversational Agent](/agentic/conversational-agent) uses the profile to deliver personalized recommendations with streaming SSE responses. Users see quick-reply chips for common follow-ups and reason tags explaining why each product was suggested.
+  </Step>
+  <Step title="Purchase">
+    Two purchase modes depending on the product source:
+    - **Platform products** — x402 USDC checkout via [concierge orders](/api-reference/companion#orders)
+    - **Affiliate products** — redirect to retailer with affiliate tracking
+
+    Spend confirmation cards show the product, price, and daily spending limit before the user commits.
+  </Step>
+  <Step title="Subscription monetization">
+    Free users get 25 messages/month and basic recommendations. Sage+ subscribers get unlimited messages and memory-aware personalization — the agent loads accumulated intelligence into every conversation turn.
+
+    See [Subscriptions](/platform/subscriptions) for the full billing integration.
+  </Step>
+  <Step title="Ongoing engagement">
+    Returning subscribers receive personalized greetings that reference their last conversation. Chat history is durable with full pagination support.
+  </Step>
+</Steps>
+
+### Platform Features Used
+
+| Feature | How Sage Uses It |
+|---------|-----------------|
+| [Intent Profiles](/api-reference/companion#intent-profiles) | Stores skin type, concerns, price range, brand preferences, avoidances |
+| [Conversational Agent](/agentic/conversational-agent) | Streaming SSE chat with tool-use, quick-reply chips, reason tags |
+| [Recommendations](/api-reference/companion#recommendations) | AI-ranked products based on profile + interaction history |
+| [x402 Payments](/agentic/x402-payments) | USDC checkout for platform products |
+| [Subscriptions](/platform/subscriptions) | Sage+ billing with Stripe, memory gating, usage tracking |
+| [Chat History](/api-reference/companion#chat-history) | Durable conversation history with cursor-based pagination |
+| Wallet Integration | Privy embedded wallets, USDC on Base, Apple Pay / Google Pay funding |
+| Points Gamification | Points awarded at every touchpoint — quiz steps, interactions, purchases |
+
+### Architecture
 
 ```mermaid
 graph TB
-    subgraph telegram ["Telegram"]
-        User["User"]
-        BotUI["Bot Chat Interface"]
-        MiniApp["Mini App (TWA)"]
+    subgraph surfaces ["User Surfaces"]
+        Bot["Telegram Bot"]
+        Web["Web Mini App"]
     end
 
-    subgraph bot ["Bot Server (Bun + grammY + Hono)"]
-        Commands["Command Handlers<br/>(/start, /profile, /discover)"]
-        Quiz["Onboarding Quiz"]
-        Agent["Beauty Agent (AI)"]
-        SQLite["SQLite<br/>(TG → Podium user mapping)"]
+    subgraph podium ["Podium Platform"]
+        Agent["Conversational Agent"]
+        Profiles["Intent Profiles"]
+        Recs["Recommendations"]
+        Subs["Subscriptions"]
+        Orders["Concierge Orders"]
+        Memory["Agent Memory"]
     end
 
-    subgraph miniapp ["Mini App (React + Vite)"]
-        Discovery["Product Discovery Feed"]
-        Checkout["Checkout Flow"]
-        Wallet["Wallet Management"]
-        Profile["Profile & History"]
+    subgraph payments ["Payments"]
+        x402["x402 (USDC)"]
+        Stripe["Stripe (Subscriptions)"]
     end
 
-    subgraph podium ["Podium API"]
-        CompanionAPI["Companion API<br/>(profiles, products, interactions, recs)"]
-        x402API["x402 Payment"]
-        UserAPI["User Management"]
-    end
-
-    subgraph wallets ["Privy"]
-        ServerWallet["Server Wallets<br/>(bot-side, automated)"]
-        EmbeddedWallet["Embedded Wallets<br/>(mini app, user-controlled)"]
-    end
-
-    User --> BotUI --> Commands
-    User --> MiniApp --> Discovery
-    Commands --> Quiz --> CompanionAPI
-    Agent --> CompanionAPI
-    Discovery --> CompanionAPI
-    Checkout --> x402API
-    Wallet --> EmbeddedWallet
-    Commands --> ServerWallet
-    bot --> SQLite
+    surfaces --> Agent
+    Agent --> Profiles
+    Agent --> Recs
+    Agent --> Memory
+    surfaces --> Subs --> Stripe
+    surfaces --> Orders --> x402
 ```
 
-### Key Design Choice: Thin Client
+### Key Design: Thin Client
 
-The companion stores almost nothing locally — just a Telegram-to-Podium user mapping in SQLite. All user data, product data, interactions, orders, and points live in Podium. This makes the companion a **thin agentic client** that orchestrates Podium's API into a coherent experience.
+Sage stores almost nothing locally — just a Telegram-to-Podium user mapping. All user data, product data, interactions, orders, and subscription state live in Podium. This makes the companion a **thin agentic client** that orchestrates the platform API into a coherent experience.
 
-## Podium Primitives Used
+---
 
-| Primitive | Endpoint | How the Companion Uses It |
-|-----------|----------|--------------------------|
-| User Management | `POST /user` | Creates org-scoped users with Privy DIDs |
-| Intent Profiles | `GET/POST/PATCH /companion/profile/{userId}` | Stores skin type, concerns, price range, brand preferences |
-| Points | `POST /companion/profile/{userId}/points` | Awards points with metadata (source, action, step) |
-| Product Catalog | `GET /companion/products` | Filterable listing with category, brand, price range |
-| Interactions | `POST /companion/interactions` | Records RANK_UP, RANK_DOWN, SKIP, PURCHASED, PURCHASE_INTENT |
-| Recommendations | `GET /companion/recommendations/{userId}` | AI-ranked products based on profile + interaction history |
-| Orders | `POST /companion/orders` | Creates concierge orders with shipping details |
-| x402 Payment | `POST /x402/orders/{orderId}/pay` | USDC payment via HTTP 402 protocol |
-| User Linking | `GET /companion/user/by-telegram/{telegramId}` | Maps external identity to Podium user |
+## Clone Agents (Familiar)
 
-## The User Journey
+A creator-based shopping agent: pick a creator → browse their curated products → buy what they'd buy. The agent surfaces products through the lens of a creator's taste rather than the user's own profile.
 
-### 1. Onboarding (Bot)
-
-The `/start` command triggers a 4-step conversational quiz that builds the user's intent profile:
-
-| Step | Profile Field | UX | Points |
-|------|-------------|-----|--------|
-| 1 | `skinType` | Single-select buttons (Dry, Oily, Combination, Sensitive, Normal) | 10 |
-| 2 | `concerns` | Multi-select with toggle, max 3 (Anti-aging, Hydration, Brightening, Acne, SPF, Redness) | 15 |
-| 3 | `priceRange` | Single-select ranges (Under $25, $25–75, $75–150, $150+) | 10 |
-| 4 | `brands` | Multi-select (Tatcha, The Ordinary, La Mer, Drunk Elephant, CeraVe) | 10 |
-
-Each answer immediately patches the Podium intent profile via `PATCH /companion/profile/{userId}` and awards points. Total onboarding: 45 points.
-
-### 2. Discovery (Mini App)
-
-The mini app opens as a Telegram Web App (TWA). The discovery feed:
-
-1. Authenticates via Privy (Telegram login method)
-2. Links the Privy user to the Podium user via `/companion/user/by-telegram/{telegramId}`
-3. Fetches recommendations from `GET /companion/recommendations/{userId}`
-4. Displays products as swipeable cards with three actions:
-   - **Love** → records `RANK_UP` interaction
-   - **Skip** → records `SKIP` interaction
-   - **Buy** → navigates to checkout
-
-### 3. AI Recommendation (Bot-side)
-
-The bot includes a local AI-powered recommendation agent:
-
-1. Fetches three things in parallel from Podium: user profile, product catalog, interaction history
-2. Filters out already-seen products
-3. Constructs a prompt with the full user context (skin type, concerns, avoidances, recent interactions)
-4. The AI returns a ranked list of product IDs sorted by relevance
-5. Fallback: if the AI fails, returns products in catalog order
-
-This demonstrates a hybrid approach — Podium provides the AI-ranked `recommendations` endpoint server-side, and the companion can optionally layer its own AI-based ranking on top.
-
-### 4. Checkout (Mini App)
-
-A 4-step wizard:
+### User Journey
 
 <Steps>
-  <Step title="Product details">
-    View product info and current USDC wallet balance
+  <Step title="Creator discovery">
+    Users browse active creator personas via the [CreatorPersona discovery](/api-reference/companion#creator-products) endpoint. Each persona has a display name, avatar, platform affiliation, and curated product catalog.
   </Step>
-  <Step title="Shipping address">
-    Collect email and full shipping address
+  <Step title="Browse creator picks">
+    Selecting a creator loads their resolved product catalog. Products are displayed as swipeable cards with Love, Skip, and Buy actions — each recorded as an [interaction](/api-reference/companion#interactions).
   </Step>
-  <Step title="Review and confirm">
-    Order summary with balance check. Option to fund wallet if insufficient.
+  <Step title="Profile seeding">
+    When a user selects a creator, the creator's taste profile (preferred brands, price ranges, product concerns) is [merged into the user's intent profile](/api-reference/companion#profile-seeding-from-creator). User-set fields from a completed onboarding quiz are never overwritten.
   </Step>
-  <Step title="Payment">
-    Creates a `CompanionOrder` via `POST /companion/orders`, then attempts x402 payment. On success: records `PURCHASED` interaction + 25 points. On failure: records `PURCHASE_INTENT` interaction + 10 points with a link to manual checkout.
+  <Step title="Purchase via affiliate">
+    Buy actions redirect to the product's affiliate URL (ShopMy, Amazon Associates, or LTK). The platform handles URL resolution and tracking.
+  </Step>
+  <Step title="Guest mode">
+    Unauthenticated users can browse up to 5 products before hitting an auth gate. All interactions during guest mode are replayed to the user's profile on sign-in — no engagement is lost.
   </Step>
 </Steps>
 
-### 5. Points Gamification
+### Platform Features Used
 
-Points are awarded at every touchpoint, creating engagement loops:
+| Feature | How Familiar Uses It |
+|---------|---------------------|
+| [CreatorPersona Discovery](/api-reference/companion#creator-products) | Browse active creators with resolved product catalogs |
+| [Profile Seeding](/api-reference/companion#profile-seeding-from-creator) | Merge creator taste data into user profiles |
+| [Interactions](/api-reference/companion#interactions) | Love / Skip / Buy tracking with profile page stats |
+| [Intent Profiles](/api-reference/companion#intent-profiles) | User preferences seeded from creator data |
+| Affiliate URLs | ShopMy, Amazon Associates, LTK link resolution |
+| Guest Mode | 5-swipe preview with interaction replay on auth |
 
-| Action | Points | Condition |
-|--------|--------|-----------|
-| Quiz step | 10–15 each | Per step completion |
-| First product rank | 5 | First-ever interaction |
-| Milestone interaction | 10 | Every 5th interaction |
-| Purchase | 25 | Completed x402 payment |
-| Purchase intent | 10 | Payment failed but intent recorded |
+### Architecture
 
-## Wallet Strategy
+```mermaid
+graph TB
+    subgraph surfaces ["User Surfaces"]
+        Bot["Telegram Bot"]
+        Web["Web Mini App"]
+    end
 
-The companion uses a **dual wallet approach** via Privy:
+    subgraph podium ["Podium Platform"]
+        Creators["CreatorPersona API"]
+        Products["Creator Product Feeds"]
+        Profiles["Intent Profiles + Seeding"]
+        Interactions["Interaction Tracking"]
+    end
 
-### Bot-Side: Server Wallets
+    subgraph monetization ["Monetization"]
+        Affiliate["Affiliate Links<br/>(ShopMy, LTK, Amazon)"]
+    end
 
-For automated purchases where the user doesn't need to sign anything:
-
-```typescript
-const wallet = await privy.wallets().create({ chain_type: 'ethereum' });
-// Wallet ID + address cached in SQLite
-// Used for automated x402 payments
+    surfaces --> Creators --> Products
+    surfaces --> Interactions
+    Creators --> Profiles
+    surfaces --> Affiliate
 ```
 
-### Mini App: Embedded Wallets
+---
 
-For user-controlled purchases with full visibility and funding options:
+## What This Demonstrates
 
-- Auto-created on first Privy login (`createOnLogin: 'all-users'`)
-- User can fund via Apple Pay, Google Pay, Coinbase, or direct transfer
-- Balance checked on-chain via viem: `balanceOf()` on Base USDC contract
-- Used for client-side x402 payment signing
+Both apps share the same Podium infrastructure but deliver radically different experiences:
+
+| Dimension | Sage | Familiar |
+|-----------|------|----------|
+| **Discovery model** | Conversation-first — the agent suggests products through dialogue | Browse-first — users explore a creator's curated feed |
+| **Monetization** | Subscription — Sage+ unlocks memory-aware personalization | Affiliate — revenue from retailer redirects |
+| **Intelligence** | Deep memory — extracts preferences, goals, concerns, avoidances across conversations | Creator taste profiles — seeds user preferences from a creator's curation patterns |
+| **User model** | Same `IntentProfile` and `Interaction` models | Same `IntentProfile` and `Interaction` models |
+
+The takeaway: Podium's primitives are **vertical-agnostic and experience-agnostic**. The same user model, interaction system, and enrichment pipeline support both a deeply personalized AI companion and a social commerce discovery tool.
 
 ## Adapting for Your Vertical
 
-To build a companion for a different product domain:
+To build a companion for a different product domain or experience model:
 
 <Steps>
   <Step title="Define your intent profile fields">
-    Replace skin type, concerns, and brand preferences with your domain's preference dimensions. The `IntentProfile` schema is flexible — use whatever fields describe your user's preferences.
+    Replace skin type, concerns, and brand preferences with your domain's preference dimensions. The profile schema is flexible — use whatever fields describe your user's preferences.
+  </Step>
+  <Step title="Choose your discovery model">
+    Conversation-first (like Sage), browse-first (like Familiar), or a hybrid. The same API endpoints support all patterns.
   </Step>
   <Step title="Curate your product catalog">
-    Populate `ProductCatalogItem` records with your products. Include images, prices, and external URLs.
+    Populate product records with your inventory, or use CreatorPersona to let creators curate for you. Include images, prices, and external URLs.
   </Step>
-  <Step title="Design your onboarding quiz">
-    Map quiz questions to profile fields. Each answer should patch the intent profile and award points.
+  <Step title="Pick your monetization">
+    [Subscriptions](/platform/subscriptions) for recurring revenue, affiliate links for commission-based monetization, [x402](/agentic/x402-payments) for direct USDC checkout, or any combination.
   </Step>
-  <Step title="Configure enrichment sources">
-    Register data sources relevant to your vertical in the enrichment pipeline. Different verticals need different review sites, APIs, and community sources.
-  </Step>
-  <Step title="Build your agent's recommendation logic">
-    Use the Companion API's `recommendations` endpoint, the agentic product feed, or your own LLM-based ranking — or a combination.
-  </Step>
-  <Step title="Connect payments">
-    Integrate Privy wallets and x402 for USDC payments, or use Stripe for card-based checkout.
+  <Step title="Deploy to your surfaces">
+    Both apps use the same pattern: one codebase, deployed to web and Telegram. The app detects its surface and renders accordingly.
   </Step>
 </Steps>
-
-## Tech Stack Reference
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Bot runtime | Bun | JavaScript execution |
-| Bot framework | grammY | Telegram Bot API with session middleware |
-| Bot HTTP | Hono | Lightweight webhook server |
-| Mini app | React 18 + Vite 6 | Single-page application |
-| Mini app styling | Tailwind CSS v4 | Utility-first CSS |
-| Telegram integration | @twa-dev/sdk | Mini app ↔ Telegram bridge |
-| AI | LLM (configurable) | Product recommendation ranking |
-| Wallets | Privy | Server + embedded wallet infrastructure |
-| Payments | x402 (@x402/fetch) | USDC on Base |
-| State | React Query (TanStack) | Server state management |
-| Local storage | SQLite (bun:sqlite) | Telegram → Podium user mapping |
