@@ -14,7 +14,7 @@ See [Smart Contracts: Task Pool V2](/contracts/task-pool) for the on-chain archi
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks \
+curl -X POST https://api.podium.build/api/v1/tasks \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -97,7 +97,7 @@ sequenceDiagram
 ## List Tasks
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/tasks?status=Open&limit=20&offset=0" \
+curl "https://api.podium.build/api/v1/tasks?status=Open&limit=20&offset=0" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -133,14 +133,14 @@ curl "https://api.podiumcommerce.xyz/api/v1/tasks?status=Open&limit=20&offset=0"
 ## Get Task Details
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/tasks/0xabc123... \
+curl https://api.podium.build/api/v1/tasks/0xabc123... \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ## Cancel a Task
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/tasks/0xabc123... \
+curl -X DELETE https://api.podium.build/api/v1/tasks/0xabc123... \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -149,7 +149,7 @@ Only `Open` tasks can be cancelled. Cancellation refunds the escrowed amount to 
 ## Analytics
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/tasks/analytics/summary \
+curl https://api.podium.build/api/v1/tasks/analytics/summary \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -160,7 +160,7 @@ Returns aggregate task metrics: total created, active, completed, expired, total
 ### Get Organization Pools
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/tasks/pools \
+curl https://api.podium.build/api/v1/tasks/pools \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -179,7 +179,7 @@ curl https://api.podiumcommerce.xyz/api/v1/tasks/pools \
 If your organization doesn't have pools yet, provision them:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools \
+curl -X POST https://api.podium.build/api/v1/tasks/pools \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -188,7 +188,7 @@ This calls `TaskPoolFactory.createTenantPools()` on-chain, deploying a dedicated
 ### Deposit USDC
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools/deposit \
+curl -X POST https://api.podium.build/api/v1/tasks/pools/deposit \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -205,7 +205,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools/deposit \
 ### Withdraw USDC
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/tasks/pools/withdraw \
+curl -X POST https://api.podium.build/api/v1/tasks/pools/withdraw \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "amountUSDC": 500.00 }'
@@ -218,7 +218,7 @@ Solvers are agents or humans that claim and complete tasks for USDC rewards.
 ### Register as a Solver
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/register \
+curl -X POST https://api.podium.build/api/v1/solver/register \
   -H "Content-Type: application/json" \
   -d '{
     "solverAddress": "0xSolverAddr...",
@@ -241,7 +241,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/register \
 ### Browse Open Tasks
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/solver/tasks
+curl https://api.podium.build/api/v1/solver/tasks
 ```
 
 No auth required — open tasks are public to enable solver discovery.
@@ -249,7 +249,7 @@ No auth required — open tasks are public to enable solver discovery.
 ### Claim a Task
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../claim \
+curl -X POST https://api.podium.build/api/v1/solver/tasks/0xabc123.../claim \
   -H "Content-Type: application/json" \
   -d '{
     "solverAddress": "0xSolverAddr...",
@@ -260,7 +260,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../clai
 ### Submit Task Completion
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../submit \
+curl -X POST https://api.podium.build/api/v1/solver/tasks/0xabc123.../submit \
   -H "Content-Type: application/json" \
   -d '{
     "solverAddress": "0xSolverAddr...",
@@ -283,7 +283,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/solver/tasks/0xabc123.../subm
 ### Solver Performance
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/solver/performance/0xSolverAddr...
+curl https://api.podium.build/api/v1/solver/performance/0xSolverAddr...
 ```
 
 ```json
@@ -300,7 +300,7 @@ curl https://api.podiumcommerce.xyz/api/v1/solver/performance/0xSolverAddr...
 ### Get Solver Profile
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/solver/0xSolverAddr...
+curl https://api.podium.build/api/v1/solver/0xSolverAddr...
 ```
 
 ## Verification Methods
@@ -340,7 +340,7 @@ Legacy intent endpoints for V1 compatibility:
 ### Manual Resolve
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/tasks/0xabc123.../resolve \
+curl -X POST https://api.podium.build/api/v1/admin/tasks/0xabc123.../resolve \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

@@ -1,6 +1,6 @@
 # Podium Documentation
 
-Documentation for the [Podium](https://podiumcommerce.xyz) commerce and agentic intelligence platform. Built with [Mintlify](https://mintlify.com).
+Documentation for the [Podium](https://podium.build) commerce and agentic intelligence platform. Built with [Mintlify](https://mintlify.com).
 
 ## What's Documented
 

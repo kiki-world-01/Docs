@@ -26,14 +26,14 @@ The SDK auto-detects the environment from your key prefix:
 | Key Prefix | Routes To |
 |-----------|-----------|
 | `podium_test_` | `https://podium-staging.up.railway.app/api/v1` |
-| `podium_live_` | `https://api.podiumcommerce.xyz/api/v1` |
+| `podium_live_` | `https://api.podium.build/api/v1` |
 
 ### Environment Setup
 
 Add your API key to your `.env` file:
 
 ```bash
-# Get your key from https://www.podiumcommerce.xyz/onboarding
+# Get your key from https://app.podium.build/onboarding
 PODIUM_API_KEY=podium_test_sk_your_key_here
 ```
 
@@ -273,4 +273,4 @@ The SDK follows semver. Breaking changes increment the major version:
 npm install @podium-sdk/node-sdk@latest
 ```
 
-Check the [Podium API Playground](https://api.podiumcommerce.xyz/docs) for the latest endpoint documentation. The playground is always in sync with the production API.
+Check the [Podium API Playground](https://api.podium.build/docs) for the latest endpoint documentation. The playground is always in sync with the production API.

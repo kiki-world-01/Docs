@@ -14,7 +14,7 @@ Reward programs are created by creators, linked to campaigns or standalone, and 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/nft-reward \
+curl -X POST https://api.podium.build/api/v1/nft-reward \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -86,7 +86,7 @@ The contract addresses are `null` until the reward is published, at which point 
 ### Update Reward Details
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz \
+curl -X PUT https://api.podium.build/api/v1/nft-reward/clreward_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -98,7 +98,7 @@ curl -X PUT https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz \
 ### Update On-Chain Metadata
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz/nft \
+curl -X PUT https://api.podium.build/api/v1/nft-reward/clreward_xyz/nft \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -116,7 +116,7 @@ At least one of `imageUrl` or `animationUrl` is required.
 ### Publish
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz/publish \
+curl -X PUT https://api.podium.build/api/v1/nft-reward/clreward_xyz/publish \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -125,7 +125,7 @@ Publishing deploys the ERC-721 contract on-chain and sets the reward status to `
 ### Disable
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz/disable \
+curl -X PATCH https://api.podium.build/api/v1/nft-reward/clreward_xyz/disable \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -138,7 +138,7 @@ Mint a reward token to a specific user:
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/nft-reward/clreward_xyz/grant \
+curl -X POST https://api.podium.build/api/v1/nft-reward/clreward_xyz/grant \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -212,7 +212,7 @@ Users redeem rewards they've earned:
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddr/42/redeem \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/nfts/base/0xContractAddr/42/redeem \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -240,7 +240,7 @@ The redemption flow:
 ### Check Redemption Status
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddr/42/status \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/nfts/base/0xContractAddr/42/status \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -261,7 +261,7 @@ curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xCont
 ### Full Collection
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/nfts \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -280,7 +280,7 @@ Airdrops distribute rewards to multiple users at once.
 ### Get Airdrop Details
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/airdrop/clairdrop_abc \
+curl https://api.podium.build/api/v1/airdrop/clairdrop_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 

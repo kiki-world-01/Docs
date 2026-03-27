@@ -14,7 +14,7 @@ Users are created through Privy authentication — when a user signs in via emai
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user \
+curl -X POST https://api.podium.build/api/v1/user \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -77,7 +77,7 @@ const user = await client.user.create({
 <CodeGroup>
 
 ```bash cURL
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890 \
+curl -X PATCH https://api.podium.build/api/v1/user/clxyz1234567890 \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -129,7 +129,7 @@ Resolve a Privy DID to a Podium user. This is the primary way to link Privy-auth
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/user/privy/did:privy:abc123/profile \
+curl https://api.podium.build/api/v1/user/privy/did:privy:abc123/profile \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -150,7 +150,7 @@ Each user can have multiple wallets from different providers.
 ### List Wallets
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/wallets \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -176,7 +176,7 @@ curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets \
 Transfer tokens from a user's Privy server wallet. This is used for automated x402 payments and agent-initiated transfers.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets/0x742d.../send \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/wallets/0x742d.../send \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -201,7 +201,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/wallets/
 ### Get Order History
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/orders \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/orders \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -214,7 +214,7 @@ Create a new order by adding an initial product:
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/order \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -235,7 +235,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order \
 ### Add a Product to an Existing Order
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/product/clprod_def456 \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/order/clord_xyz/product/clprod_def456 \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "quantity": 1, "variantIds": ["clvar_size_l"] }'
@@ -244,7 +244,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/cl
 ### Remove an Item from an Order
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/item/clitem_abc \
+curl -X DELETE https://api.podium.build/api/v1/user/clxyz1234567890/order/clord_xyz/item/clitem_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "quantity": 1 }'
@@ -257,7 +257,7 @@ Pass `quantity` to reduce the count rather than removing the entire line item.
 ### Get Points Balance
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/points \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -276,7 +276,7 @@ Optionally scope to a single creator with `?creatorId=clcreator_abc`.
 ### Grant or Deduct Points
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/points \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -295,7 +295,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
 ### Points Transaction History
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points/history?page=1&limit=20&creatorId=clcreator_abc" \
+curl "https://api.podium.build/api/v1/user/clxyz1234567890/points/history?page=1&limit=20&creatorId=clcreator_abc" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -306,7 +306,7 @@ Returns paginated transaction records with type, amount, timestamp, and linked m
 ### Get User's Reward Collection
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/nfts \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -321,7 +321,7 @@ curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts \
 ### Redeem a Reward
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/redeem \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/redeem \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -330,7 +330,7 @@ Path parameters: `{network}` / `{contractAddress}` / `{tokenId}`. The redeem end
 ### Check Redemption Status
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/status \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/nfts/base/0xContractAddress/42/status \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -351,7 +351,7 @@ curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/nfts/base/0xCont
 ### Follow a User
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/followers/follow \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/followers/follow \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "followingId": "cluser_target" }'
@@ -360,7 +360,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/follower
 ### Unfollow a User
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/followers/follow \
+curl -X DELETE https://api.podium.build/api/v1/user/clxyz1234567890/followers/follow \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "followingId": "cluser_target" }'
@@ -369,7 +369,7 @@ curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/follow
 ### Follow a Creator
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/clcreator_abc/followers/follow \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/creator/clcreator_abc/followers/follow \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -387,14 +387,14 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/
 ### List Notifications
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notifications \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/notifications \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Mark as Read
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notification/clnotif_abc \
+curl -X PUT https://api.podium.build/api/v1/user/clxyz1234567890/notification/clnotif_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "status": "READ" }'
@@ -403,7 +403,7 @@ curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notificat
 ### Delete a Notification
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notification/clnotif_abc \
+curl -X DELETE https://api.podium.build/api/v1/user/clxyz1234567890/notification/clnotif_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -412,7 +412,7 @@ curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/notifi
 Users can create creator profiles (storefronts) from their account:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/creator \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -425,7 +425,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator 
 Check slug availability first:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/check-availability \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/creator/check-availability \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "displayName": "Jane'\''s Clean Beauty", "slug": "janes-clean-beauty" }'
@@ -436,7 +436,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/creator/
 Set up a Stream Chat channel between a user and a creator:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/chat \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/chat \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

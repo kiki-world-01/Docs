@@ -18,7 +18,7 @@ Grant or deduct points directly. This is the primary method for companion agents
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/points \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -103,7 +103,7 @@ sequenceDiagram
 ### Step 1: Apply Points During Checkout
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/checkout \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/order/clord_xyz/checkout \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "points": 500 }'
@@ -114,7 +114,7 @@ This reserves 500 points against the order and reduces the payment amount accord
 ### Step 2a: Finalize (Payment Succeeded)
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/points/finalize \
+curl -X PUT https://api.podium.build/api/v1/user/clxyz1234567890/order/clord_xyz/points/finalize \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -123,7 +123,7 @@ Commits the point reservation. After this call, the points are permanently deduc
 ### Step 2b: Revert (Payment Failed)
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/order/clord_xyz/points/revert \
+curl -X POST https://api.podium.build/api/v1/user/clxyz1234567890/order/clord_xyz/points/revert \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -138,7 +138,7 @@ Deletes the `PURCHASE` point transactions for the order and returns the points t
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points \
+curl https://api.podium.build/api/v1/user/clxyz1234567890/points \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -165,7 +165,7 @@ Optionally scope to a single creator: `?creatorId=clcreator_abc`.
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/user/clxyz1234567890/points/history?page=1&limit=20" \
+curl "https://api.podium.build/api/v1/user/clxyz1234567890/points/history?page=1&limit=20" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 

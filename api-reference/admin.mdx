@@ -8,7 +8,7 @@ description: API key management, organization settings, subscription tiers, and 
 Admin endpoints manage platform-level configuration including API keys, organizations, subscription tiers, and the enrichment pipeline. Most require `ADMIN` role access.
 
 <Note>
-  Most developers interact with API keys and organization settings through the [Podium Developer Portal](https://www.podiumcommerce.xyz/onboarding). The admin API is for programmatic management and platform-level automation.
+  Most developers interact with API keys and organization settings through the [Podium Developer Portal](https://app.podium.build/onboarding). The admin API is for programmatic management and platform-level automation.
 </Note>
 
 ## API Key Management
@@ -18,7 +18,7 @@ Admin endpoints manage platform-level configuration including API keys, organiza
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys \
+curl -X POST https://api.podium.build/api/v1/admin/api-keys \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "organizationId": "clorg_abc" }'
@@ -53,7 +53,7 @@ const key = await client.apiKeys.create({
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/admin/api-keys?organizationId=clorg_abc" \
+curl "https://api.podium.build/api/v1/admin/api-keys?organizationId=clorg_abc" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -78,7 +78,7 @@ const keys = await client.apiKeys.list({ organizationId: 'clorg_abc' });
 ### Get Key Details
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+curl https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -87,7 +87,7 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
 <CodeGroup>
 
 ```bash cURL
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+curl -X PATCH https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "isActive": false }'
@@ -109,7 +109,7 @@ Setting `isActive: false` immediately blocks all requests using this key.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz/rotate \
+curl -X POST https://api.podium.build/api/v1/admin/api-keys/clkey_xyz/rotate \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -139,7 +139,7 @@ Key rotation:
 <CodeGroup>
 
 ```bash cURL
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/admin/api-keys/clkey_xyz \
+curl -X DELETE https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -158,7 +158,7 @@ Permanently removes the key. This cannot be undone.
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/organizations \
+curl https://api.podium.build/api/v1/admin/organizations \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -173,7 +173,7 @@ const orgs = await client.organizations.list();
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/organizations \
+curl -X POST https://api.podium.build/api/v1/admin/organizations \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -206,7 +206,7 @@ const org = await client.organizations.create({
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc \
+curl https://api.podium.build/api/v1/admin/organizations/clorg_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -223,7 +223,7 @@ Settings control organization-specific behavior like blockchain preferences, x40
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
+curl https://api.podium.build/api/v1/admin/organizations/clorg_abc/settings \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -250,7 +250,7 @@ const org = await client.organizations.get({ id: 'clorg_abc' });
 <CodeGroup>
 
 ```bash cURL
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/organizations/clorg_abc/settings \
+curl -X PATCH https://api.podium.build/api/v1/admin/organizations/clorg_abc/settings \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -279,7 +279,7 @@ Global application configuration:
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/app-config \
+curl https://api.podium.build/api/v1/admin/app-config \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -290,7 +290,7 @@ const config = await client.admin.listAppConfig();
 </CodeGroup>
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/app-config \
+curl -X PATCH https://api.podium.build/api/v1/admin/app-config \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -304,7 +304,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/app-config \
 ### List Tiers
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/subscription-tiers \
+curl https://api.podium.build/api/v1/admin/subscription-tiers \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -343,7 +343,7 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/subscription-tiers \
 ### Get Tier Details
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/subscription-tiers/tier_growth \
+curl https://api.podium.build/api/v1/admin/subscription-tiers/tier_growth \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -356,7 +356,7 @@ Admin-level campaign management across the organization:
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/campaigns \
+curl https://api.podium.build/api/v1/admin/campaigns \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -373,7 +373,7 @@ const campaigns = await client.admin.listCampaigns({
 ### Approve or Reject a Campaign
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/admin/campaigns/clcamp_xyz/status \
+curl -X PATCH https://api.podium.build/api/v1/admin/campaigns/clcamp_xyz/status \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "status": "APPROVED" }'
@@ -388,7 +388,7 @@ Admin endpoints for managing the [enrichment pipeline](/agentic/enrichment-pipel
 ### Trigger Source Ingestion
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/run \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "sourceId": "clsource_sephora" }'
@@ -399,7 +399,7 @@ Dispatches an `enrichment-crawl` event for the specified source. The system fetc
 ### Ingest Products from a Domain
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/crawl-domain \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/crawl-domain \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -420,7 +420,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/crawl-domain
 Dry-run endpoint to preview which product URLs Podium would find on a domain, without ingesting anything:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/map-domain \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/map-domain \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "domain": "sephora.com", "search": "moisturizer", "limit": 20 }'
@@ -431,7 +431,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/map-domain \
 Discover and ingest products from shopping search results. Provide specific queries, filter by category, or omit both to run the full discovery catalog:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/serp-search \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/serp-search \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -451,14 +451,14 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/serp-search 
 View the discovery query catalog — how many queries are available per category:
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/serp-catalog \
+curl https://api.podium.build/api/v1/admin/enrichment/serp-catalog \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Recompute Baselines
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/recompute \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/baseline/recompute \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "productId": "clprod_abc123" }'
@@ -467,7 +467,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/rec
 Omit `productId` to recompute all stale baselines. For immediate (synchronous) recomputation:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/recompute-now \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/baseline/recompute-now \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -476,14 +476,14 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/rec
 View detailed statistics across all three baseline levels (product, category, market):
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/baseline/stats \
+curl https://api.podium.build/api/v1/admin/enrichment/baseline/stats \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Pipeline Status
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
+curl https://api.podium.build/api/v1/admin/enrichment/status \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -508,7 +508,7 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
 Sync enrichment data into the companion product catalog. Creates `ProductCatalogItem` records from enrichment raw records:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/catalog-sync \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/catalog-sync \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -517,7 +517,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/catalog-sync
 Re-queue all unprocessed raw records for AI-powered attribute extraction:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/reprocess \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/reprocess \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -526,7 +526,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/reprocess \
 #### Create a Source
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/sources \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -542,7 +542,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
 #### List Sources
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
+curl https://api.podium.build/api/v1/admin/enrichment/sources \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -575,7 +575,7 @@ curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/sources \
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/admin/tasks/pending-review \
+curl https://api.podium.build/api/v1/admin/tasks/pending-review \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -588,7 +588,7 @@ const tasks = await client.admin.getTasksPendingReview();
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/tasks/0xabc123.../resolve \
+curl -X POST https://api.podium.build/api/v1/admin/tasks/0xabc123.../resolve \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "approved": true }'

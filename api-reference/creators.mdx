@@ -18,7 +18,7 @@ Public endpoints don't require the user to own the creator.
 <CodeGroup>
 
 ```bash cURL
-curl https://api.podiumcommerce.xyz/api/v1/creator/clean-beauty-co \
+curl https://api.podium.build/api/v1/creator/clean-beauty-co \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -50,14 +50,14 @@ const creator = await client.merchant.getBySlug({ slug: "clean-beauty-co" });
 ### Public Stats
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/clean-beauty-co/stats \
+curl https://api.podium.build/api/v1/creator/clean-beauty-co/stats \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Browse Products
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/clean-beauty-co/products \
+curl https://api.podium.build/api/v1/creator/clean-beauty-co/products \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -76,7 +76,7 @@ Returns only published products. For all products including drafts, use the auth
 <CodeGroup>
 
 ```bash cURL
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc \
+curl -X PATCH https://api.podium.build/api/v1/creator/id/clcreator_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -128,7 +128,7 @@ All fields are optional — include only what you want to change.
 ### Create a Product
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/product \
+curl -X POST https://api.podium.build/api/v1/creator/id/clcreator_abc/product \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -144,7 +144,7 @@ See [Products API](/api-reference/products) for the full product create/update s
 ### List All Products (Including Drafts)
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/products \
+curl https://api.podium.build/api/v1/creator/id/clcreator_abc/products \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -170,14 +170,14 @@ curl https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/products \
 ### List Orders
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/orders \
+curl https://api.podium.build/api/v1/creator/id/clcreator_abc/orders \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Update Order Shipping Status
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/order/clord_xyz \
+curl -X PATCH https://api.podium.build/api/v1/creator/id/clcreator_abc/order/clord_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "shippingStatus": "SHIPPED" }'
@@ -194,7 +194,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/ord
 ### Generate Shipping Label
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/order/clord_xyz/shipping/label \
+curl https://api.podium.build/api/v1/creator/id/clcreator_abc/order/clord_xyz/shipping/label \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -207,7 +207,7 @@ Creators receive payouts through Stripe Connect. The onboarding flow creates a S
 ### Initiate Stripe Connect
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/stripe/account \
+curl -X POST https://api.podium.build/api/v1/creator/id/clcreator_abc/stripe/account \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -264,7 +264,7 @@ graph LR
 ### View Payouts
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/payouts \
+curl https://api.podium.build/api/v1/creator/id/clcreator_abc/payouts \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -344,7 +344,7 @@ The `payouts-sweep` cron job runs periodically to:
 Creators can organize followers into groups for targeted campaigns and communications:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/clcreator_abc/group \
+curl -X POST https://api.podium.build/api/v1/creator/id/clcreator_abc/group \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
