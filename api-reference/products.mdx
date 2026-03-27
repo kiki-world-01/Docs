@@ -14,7 +14,7 @@ Creator product endpoints use `/api/v1/creator/id/{creatorId}/product`. Public l
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product \
+curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/product \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -103,7 +103,7 @@ const product = await client.merchantProducts.create({
 `PATCH` merges the provided fields into the existing product. This endpoint also handles attributes, media, supply, shipping config, and point eligibility.
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId} \
+curl -X PATCH https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId} \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -212,7 +212,7 @@ graph LR
 Transitions a `DRAFT` product to `PUBLISHED`, making it visible in public listings.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId}/publish \
+curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId}/publish \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -221,7 +221,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/produc
 Returns an `ARCHIVED` product to `DRAFT` status.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId}/restore \
+curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId}/restore \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -230,7 +230,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/produc
 Permanently deletes an `ARCHIVED` product. This is irreversible.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId}/purge \
+curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId}/purge \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -241,7 +241,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/produc
 ### Get a Single Product
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId} \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -250,14 +250,14 @@ Returns the product with all attributes, media, and variant details. Works for p
 ### Get Product by Slug
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/slug/{slug} \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/product/slug/{slug} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### List Creator Products
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/products \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/products \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -266,7 +266,7 @@ Returns all products for a creator with aggregated sales counts.
 ### List Published Products (Public)
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/products?categories=serum,moisturizer&limit=20&cursor=clx9prod050"
+curl "https://api.podium.build/api/v1/products?categories=serum,moisturizer&limit=20&cursor=clx9prod050"
 ```
 
 Public endpoint — no authentication required. Returns only `PUBLISHED` products. Supports cursor-based pagination and category filtering.
@@ -274,7 +274,7 @@ Public endpoint — no authentication required. Returns only `PUBLISHED` product
 ### Delete (Archive) a Product
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId} \
+curl -X DELETE https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -287,7 +287,7 @@ Moves the product to `ARCHIVED` status. Use `/restore` to bring it back, or `/pu
 A shortcut endpoint that creates an order and optionally initiates Stripe checkout in a single request:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/product/{productId}/buy-now \
+curl -X POST https://api.podium.build/api/v1/product/{productId}/buy-now \
   -H "Content-Type: application/json" \
   -d '{
     "quantity": 1,
@@ -309,21 +309,21 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/product/{productId}/buy-now \
 ### Product Analytics
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/product/{productId}/analytics \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/product/{productId}/analytics \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Aggregate Product Analytics
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/products/analytics \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/products/analytics \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Sales Data
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/products/sales \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/products/sales \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -332,7 +332,7 @@ curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/products/sales
 ## Categories
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/categories
+curl https://api.podium.build/api/v1/categories
 ```
 
 Returns all product categories. No authentication required.

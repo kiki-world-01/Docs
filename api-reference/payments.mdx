@@ -41,7 +41,7 @@ sequenceDiagram
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "points": 0 }'
@@ -97,7 +97,7 @@ When a shipping quote is requested, the shipping fee is added to the order and t
 
 ```bash
 # This updates both the order shippingFee AND the Stripe PaymentIntent amount
-curl -X POST https://api.podiumcommerce.xyz/api/v1/order/{orderId}/shipping/quote \
+curl -X POST https://api.podium.build/api/v1/order/{orderId}/shipping/quote \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "firstName": "Jane", "lastName": "Doe", "address": { ... } }'
@@ -130,7 +130,7 @@ Creators receive their share of each sale through Stripe Connect. The platform r
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/stripe/account \
+curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/stripe/account \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -195,7 +195,7 @@ sequenceDiagram
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/x402/orders/{orderId}/pay
+curl -X POST https://api.podium.build/api/v1/x402/orders/{orderId}/pay
 ```
 
 ```typescript SDK
@@ -220,7 +220,7 @@ When called without an `X-PAYMENT` header:
   "payTo": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD1e",
   "maxAmountRequired": "25000000",
   "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  "resource": "https://api.podiumcommerce.xyz/api/v1/x402/orders/clx9order001/pay"
+  "resource": "https://api.podium.build/api/v1/x402/orders/clx9order001/pay"
 }
 ```
 
@@ -252,7 +252,7 @@ When called without an `X-PAYMENT` header:
 For automated crypto checkout using Privy server-managed wallets:
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout/embedded-wallet \
+curl -X PATCH https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout/embedded-wallet \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -293,7 +293,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId
 Multi-token crypto checkout via Coinbase Commerce:
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout/coinbase \
+curl -X PATCH https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout/coinbase \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

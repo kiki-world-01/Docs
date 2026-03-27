@@ -25,7 +25,7 @@ Orders start as `OPEN` and can have products added to them. Creating an order wi
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -81,21 +81,21 @@ const order = await client.userOrders.create({
 Retrieve the current open order for a user (only one open order at a time):
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/user/{userId}/order \
+curl https://api.podium.build/api/v1/user/{userId}/order \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Add Product to Order
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/product/{productId} \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/product/{productId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Remove Item from Order
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/item/{orderItemId} \
+curl -X DELETE https://api.podium.build/api/v1/user/{userId}/order/{orderId}/item/{orderItemId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -132,7 +132,7 @@ The most common flow for consumer-facing applications. Creates a Stripe PaymentI
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -196,13 +196,13 @@ Machine-native payment for autonomous agents. No authentication required — the
 
 ```bash
 # Step 1: Request payment requirements (returns HTTP 402)
-curl -X POST https://api.podiumcommerce.xyz/api/v1/x402/orders/{orderId}/pay
+curl -X POST https://api.podium.build/api/v1/x402/orders/{orderId}/pay
 
 # Response: 402 Payment Required
 # Headers include X-PAYMENT-REQUIREMENTS with amount, payTo address, and network
 
 # Step 2: Submit payment with signed USDC transfer
-curl -X POST https://api.podiumcommerce.xyz/api/v1/x402/orders/{orderId}/pay \
+curl -X POST https://api.podium.build/api/v1/x402/orders/{orderId}/pay \
   -H "X-PAYMENT: <base64-encoded-payment-payload>"
 ```
 
@@ -231,7 +231,7 @@ x402 checkout requires the organization to have `x402PayToAddress` configured in
 For automated crypto checkout using Privy server-managed wallets. The transaction is executed server-side — no user interaction required during payment.
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout/embedded-wallet \
+curl -X PATCH https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout/embedded-wallet \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -277,7 +277,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId
 Multi-token crypto checkout via Coinbase Commerce:
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/checkout/coinbase \
+curl -X PATCH https://api.podium.build/api/v1/user/{userId}/order/{orderId}/checkout/coinbase \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -307,7 +307,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId
 ### Apply Points Discount
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/points \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/points \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "points": 500 }'
@@ -318,7 +318,7 @@ Points are held in a pending state until finalized after payment or reverted on 
 ### Apply Discount Code
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/discount \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/discount \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "code": "SUMMER2026" }'
@@ -329,7 +329,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}
 After successful payment, commit the point spend:
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/points/finalize \
+curl -X PUT https://api.podium.build/api/v1/user/{userId}/order/{orderId}/points/finalize \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -338,7 +338,7 @@ curl -X PUT https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/
 On payment failure, return held points to the user:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/points/revert \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/points/revert \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -353,7 +353,7 @@ Podium integrates with Shippo for shipping rate calculation and label generation
 Returns available shipping rates and updates the Stripe PaymentIntent amount to include shipping:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/order/{orderId}/shipping/quote \
+curl -X POST https://api.podium.build/api/v1/order/{orderId}/shipping/quote \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -372,7 +372,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/order/{orderId}/shipping/quot
 ### Generate Shipping Label
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/creator/id/{creatorId}/order/{orderId}/shipping/label \
+curl https://api.podium.build/api/v1/creator/id/{creatorId}/order/{orderId}/shipping/label \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -387,7 +387,7 @@ Anonymous buyers can place orders without creating a Podium account.
 ### Create Guest Order
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/guest/order \
+curl -X POST https://api.podium.build/api/v1/guest/order \
   -H "Content-Type: application/json" \
   -d '{
     "productId": "clx9prod001",
@@ -399,7 +399,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/guest/order \
 ### Guest Stripe Checkout
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/guest/order/{orderId}/checkout
+curl -X POST https://api.podium.build/api/v1/guest/order/{orderId}/checkout
 ```
 
 Returns a Stripe PaymentIntent `clientSecret` — same flow as authenticated checkout but without user context.
@@ -407,7 +407,7 @@ Returns a Stripe PaymentIntent `clientSecret` — same flow as authenticated che
 ### Guest Coinbase Checkout
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/guest/order/{orderId}/checkout/coinbase \
+curl -X PATCH https://api.podium.build/api/v1/guest/order/{orderId}/checkout/coinbase \
   -H "Content-Type: application/json" \
   -d '{ "callsId": "...", "amount": "25.00", "customer": { ... } }'
 ```
@@ -419,7 +419,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/guest/order/{orderId}/checko
 If payment fails on the client side (before webhook), notify the server:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/user/{userId}/order/{orderId}/payment-failed \
+curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/payment-failed \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

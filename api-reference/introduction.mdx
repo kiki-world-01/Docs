@@ -7,18 +7,18 @@ description: Base URLs, authentication, error handling, pagination, and conventi
 
 | Environment | Base URL |
 |------------|----------|
-| **Production** | `https://api.podiumcommerce.xyz/api/v1` |
+| **Production** | `https://api.podium.build/api/v1` |
 | **Staging** | `https://podium-staging.up.railway.app/api/v1` |
 | **Local** | `http://localhost:3030/api/v1` |
 
-All endpoints are prefixed with `/api/v1`. The interactive API playground is available at [api.podiumcommerce.xyz/docs](https://api.podiumcommerce.xyz/docs).
+All endpoints are prefixed with `/api/v1`. The interactive API playground is available at [api.podium.build/docs](https://api.podium.build/docs).
 
 ## Authentication
 
 Most endpoints require a Bearer token:
 
 ```bash
-curl -X GET https://api.podiumcommerce.xyz/api/v1/products \
+curl -X GET https://api.podium.build/api/v1/products \
   -H "Authorization: Bearer podium_live_your_key_here"
 ```
 
@@ -37,7 +37,7 @@ Some endpoints require no authentication:
 All request bodies use JSON with `Content-Type: application/json`. Every endpoint validates its input with Zod schemas — invalid requests return a 422 with field-level error details.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/product \
+curl -X POST https://api.podium.build/api/v1/product \
   -H "Authorization: Bearer podium_live_..." \
   -H "Content-Type: application/json" \
   -d '{

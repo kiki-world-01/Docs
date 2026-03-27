@@ -21,7 +21,7 @@ Campaigns capture structured user intent through interactive mechanics. They gen
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign \
+curl -X POST https://api.podium.build/api/v1/campaign \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -57,7 +57,7 @@ Use `PUT /campaign/{id}` to set up the campaign content, timing, and reward stru
 <CodeGroup>
 
 ```bash cURL
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz \
+curl -X PUT https://api.podium.build/api/v1/campaign/clcamp_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -163,14 +163,14 @@ graph LR
 ### Submit for Review
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/submit \
+curl -X PATCH https://api.podium.build/api/v1/campaign/clcamp_xyz/submit \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Publish
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/publish \
+curl -X PATCH https://api.podium.build/api/v1/campaign/clcamp_xyz/publish \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "requiresReview": false }'
@@ -183,7 +183,7 @@ Set `requiresReview: false` to skip the SUBMITTED → APPROVED step and publish 
 Only a subset of fields can be changed after publishing:
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz \
+curl -X PATCH https://api.podium.build/api/v1/campaign/clcamp_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -204,7 +204,7 @@ Editable after publish: `title`, `description`, `hero`, `showInstructions`, `sho
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/vote \
+curl -X POST https://api.podium.build/api/v1/campaign/clcamp_xyz/vote \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -245,7 +245,7 @@ Voting creates a `CampaignJourney` record linking the user to the campaign and r
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_survey/survey \
+curl -X POST https://api.podium.build/api/v1/campaign/clcamp_survey/survey \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -286,7 +286,7 @@ Survey responses are stored as `CampaignResponse` records and feed into the enri
 ### Get Survey Report
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_survey/survey/report \
+curl https://api.podium.build/api/v1/campaign/clcamp_survey/survey/report \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -297,7 +297,7 @@ Returns aggregated response distributions per question.
 Link an on-chain reward to a campaign:
 
 ```bash
-curl -X PUT https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/nft \
+curl -X PUT https://api.podium.build/api/v1/campaign/clcamp_xyz/nft \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -325,7 +325,7 @@ At least one of `imageUrl` or `animationUrl` is required.
 ### Campaign Overview
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/analytics \
+curl https://api.podium.build/api/v1/campaign/clcamp_xyz/analytics \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -344,7 +344,7 @@ curl https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/analytics \
 ### Attribute Vote Distribution
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/campaign/clcamp_xyz/attributes \
+curl https://api.podium.build/api/v1/campaign/clcamp_xyz/attributes \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 

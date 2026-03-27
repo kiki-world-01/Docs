@@ -7,7 +7,7 @@ description: Create an account, get an API key, and make your first call in unde
 
 <Steps>
   <Step title="Sign up">
-    Head to the [Podium Developer Portal](https://www.podiumcommerce.xyz/onboarding) and sign in with email, Google, or a crypto wallet (powered by Privy).
+    Head to the [Podium Developer Portal](https://app.podium.build/onboarding) and sign in with email, Google, or a crypto wallet (powered by Privy).
   </Step>
   <Step title="Create an organization">
     During onboarding you'll create an **Organization** — this is your tenant. All API keys, products, orders, and data are scoped to your organization.
@@ -30,7 +30,7 @@ description: Create an account, get an API key, and make your first call in unde
     | Prefix | Environment | API Base URL |
     |--------|------------|--------------|
     | `podium_test_` | Staging | `https://podium-staging.up.railway.app/api/v1` |
-    | `podium_live_` | Production | `https://api.podiumcommerce.xyz/api/v1` |
+    | `podium_live_` | Production | `https://api.podium.build/api/v1` |
   </Step>
 </Steps>
 
@@ -45,7 +45,7 @@ Verify your key works by listing products:
 <CodeGroup>
 
 ```bash cURL
-curl -X GET https://api.podiumcommerce.xyz/api/v1/products \
+curl -X GET https://api.podium.build/api/v1/products \
   -H "Authorization: Bearer podium_live_your_key_here"
 ```
 
@@ -61,7 +61,7 @@ console.log(products)
 ```
 
 ```typescript Fetch
-const res = await fetch('https://api.podiumcommerce.xyz/api/v1/products', {
+const res = await fetch('https://api.podium.build/api/v1/products', {
   headers: {
     'Authorization': 'Bearer podium_live_your_key_here'
   }
@@ -101,10 +101,10 @@ const user     = await client.user.getUsernameByUsername({ username: 'jane' })
 ## 4. Explore the API
 
 <CardGroup cols={2}>
-  <Card title="Interactive Docs" icon="play" href="https://api.podiumcommerce.xyz/docs">
+  <Card title="Interactive Docs" icon="play" href="https://api.podium.build/docs">
     Try endpoints live with the Scalar API playground — paste your key and send requests
   </Card>
-  <Card title="OpenAPI Spec" icon="file-code" href="https://api.podiumcommerce.xyz/openapi.json">
+  <Card title="OpenAPI Spec" icon="file-code" href="https://api.podium.build/openapi.json">
     Download the full OpenAPI 3.1 spec for code generation or import into Postman
   </Card>
 </CardGroup>
@@ -125,7 +125,7 @@ const user     = await client.user.getUsernameByUsername({ username: 'jane' })
 
 ## 6. Manage Your Keys
 
-From the [Dashboard](https://www.podiumcommerce.xyz/dashboard/settings/api-keys) you can:
+From the [Dashboard](https://app.podium.build/dashboard/settings/api-keys) you can:
 
 - **Create** additional API keys (up to your tier's limit)
 - **Rotate** a key — generates a new key while the old one remains valid for 30 minutes

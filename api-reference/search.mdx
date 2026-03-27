@@ -14,7 +14,7 @@ Podium provides multiple search and discovery surfaces powered by PostgreSQL `ts
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/search?query=hyaluronic+serum&type=product&limit=20&page=1" \
+curl "https://api.podium.build/api/v1/search?query=hyaluronic+serum&type=product&limit=20&page=1" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -76,7 +76,7 @@ Universal search provides a unified search experience with optional LLM-powered 
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/universal-search?query=best+moisturizer+for+dry+skin&entityTypes=product,campaign&llmMode=auto&limit=10" \
+curl "https://api.podium.build/api/v1/universal-search?query=best+moisturizer+for+dry+skin&entityTypes=product,campaign&llmMode=auto&limit=10" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -135,7 +135,7 @@ const results = await client.universalSearch.list({
 ### Search Suggestions
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/universal-search/suggestions?query=hya&limit=5" \
+curl "https://api.podium.build/api/v1/universal-search/suggestions?query=hya&limit=5" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -159,7 +159,7 @@ curl "https://api.podiumcommerce.xyz/api/v1/universal-search/suggestions?query=h
 Legacy autocomplete endpoint for backward compatibility:
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/autocomplete?query=clea&limit=10" \
+curl "https://api.podium.build/api/v1/autocomplete?query=clea&limit=10" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -179,13 +179,13 @@ Curated content surfaces for browsing.
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/discover?suggested=true&page=1&limit=20" \
+curl "https://api.podium.build/api/v1/discover?suggested=true&page=1&limit=20" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ```typescript HTTP
 const res = await fetch(
-  "https://api.podiumcommerce.xyz/api/v1/discover?suggested=true&page=1&limit=20",
+  "https://api.podium.build/api/v1/discover?suggested=true&page=1&limit=20",
   { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
 );
 const feed = await res.json();
@@ -217,13 +217,13 @@ Returns a personalized product feed based on the user's intent profile, interact
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/for-you/feed?userId=clxyz1234567890&page=1" \
+curl "https://api.podium.build/api/v1/for-you/feed?userId=clxyz1234567890&page=1" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ```typescript HTTP
 const res = await fetch(
-  "https://api.podiumcommerce.xyz/api/v1/for-you/feed?userId=clxyz1234567890&page=1",
+  "https://api.podium.build/api/v1/for-you/feed?userId=clxyz1234567890&page=1",
   { headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` } }
 );
 const feed = await res.json();
@@ -240,7 +240,7 @@ const feed = await res.json();
 ### Recommended Creators
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/for-you/creators?userId=clxyz1234567890" \
+curl "https://api.podium.build/api/v1/for-you/creators?userId=clxyz1234567890" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
@@ -251,7 +251,7 @@ Users can save items for later across three entity types.
 ### Save an Item
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/saved-item \
+curl -X POST https://api.podium.build/api/v1/saved-item \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -264,14 +264,14 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/saved-item \
 ### List Saved Items
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/saved-item?userId=clxyz1234567890" \
+curl "https://api.podium.build/api/v1/saved-item?userId=clxyz1234567890" \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
 ### Remove Saved Item
 
 ```bash
-curl -X DELETE https://api.podiumcommerce.xyz/api/v1/saved-item/clsaved_abc \
+curl -X DELETE https://api.podium.build/api/v1/saved-item/clsaved_abc \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 

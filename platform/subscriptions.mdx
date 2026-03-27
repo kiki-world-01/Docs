@@ -80,7 +80,7 @@ All subscription endpoints are prefixed with `/api/v1/companion/subscription`.
 ### Create Checkout Session
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/subscription/checkout \
+curl -X POST https://api.podium.build/api/v1/companion/subscription/checkout \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -102,7 +102,7 @@ Redirect the user to the returned `url` to complete payment. On success, Stripe 
 ### Customer Portal
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/subscription/portal \
+curl -X POST https://api.podium.build/api/v1/companion/subscription/portal \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -123,7 +123,7 @@ Opens the Stripe customer portal where the user can update payment methods, view
 ### Subscription Status
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/subscription/{userId}/status \
+curl https://api.podium.build/api/v1/companion/subscription/{userId}/status \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -191,7 +191,7 @@ const apiKey = process.env.PODIUM_API_KEY
 
 // 1. Check subscription status and usage
 const status = await fetch(
-  `https://api.podiumcommerce.xyz/api/v1/companion/subscription/${userId}/status`,
+  `https://api.podium.build/api/v1/companion/subscription/${userId}/status`,
   { headers: { Authorization: `Bearer ${apiKey}` } }
 ).then(r => r.json())
 
@@ -209,7 +209,7 @@ if (status.isSubscribed) {
 } else {
   // Free user at limit — trigger upgrade flow
   const checkout = await fetch(
-    'https://api.podiumcommerce.xyz/api/v1/companion/subscription/checkout',
+    'https://api.podium.build/api/v1/companion/subscription/checkout',
     {
       method: 'POST',
       headers: {

@@ -227,7 +227,7 @@ The session returns payment details for x402 execution or Stripe checkout URL. S
 
 ```typescript
 // 1. Discover products
-const feed = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/products/feed?limit=10');
+const feed = await fetch('https://api.podium.build/api/v1/agentic/products/feed?limit=10');
 const { products } = await feed.json();
 
 // 2. Filter by agent logic (e.g., match user preferences)
@@ -238,7 +238,7 @@ const matches = products.filter(p =>
 );
 
 // 3. Create checkout session for best match
-const session = await fetch('https://api.podiumcommerce.xyz/api/v1/agentic/checkout/sessions', {
+const session = await fetch('https://api.podium.build/api/v1/agentic/checkout/sessions', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({

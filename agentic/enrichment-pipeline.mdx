@@ -352,7 +352,7 @@ All handlers are idempotent — safe to retry on failure. Raw records track a `p
 Trigger ingestion for a specific source:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
+curl -X POST https://api.podium.build/api/v1/admin/enrichment/run \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "sourceId": "clsource_sephora" }'
@@ -361,7 +361,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/admin/enrichment/run \
 Check pipeline status:
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/admin/enrichment/status \
+curl https://api.podium.build/api/v1/admin/enrichment/status \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 

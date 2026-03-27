@@ -22,7 +22,7 @@ An intent profile stores what a user wants — their preferences, constraints, a
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
+curl -X POST https://api.podium.build/api/v1/companion/profile/{userId} \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -75,7 +75,7 @@ const { data: profile } = await client.companion.createProfile({
 ### Get a Profile
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
+curl https://api.podium.build/api/v1/companion/profile/{userId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -84,7 +84,7 @@ curl https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
 `PATCH` merges fields into the existing profile. Omitted fields are unchanged.
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
+curl -X PATCH https://api.podium.build/api/v1/companion/profile/{userId} \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -98,7 +98,7 @@ curl -X PATCH https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId} \
 Points are stored on the intent profile and can be used for gamification, tier gating, or reward eligibility.
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId}/points \
+curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/points \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -145,7 +145,7 @@ The Companion has its own product catalog (`ProductCatalogItem`) separate from t
 ### List Products
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/companion/products?category=moisturizer&minPrice=20&maxPrice=100&limit=10" \
+curl "https://api.podium.build/api/v1/companion/products?category=moisturizer&minPrice=20&maxPrice=100&limit=10" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -185,7 +185,7 @@ curl "https://api.podiumcommerce.xyz/api/v1/companion/products?category=moisturi
 ### Get Product by ID
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/products/{productId} \
+curl https://api.podium.build/api/v1/companion/products/{productId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -194,7 +194,7 @@ curl https://api.podiumcommerce.xyz/api/v1/companion/products/{productId} \
 Agents or backend services can add products to the companion catalog:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/products \
+curl -X POST https://api.podium.build/api/v1/companion/products \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -212,7 +212,7 @@ curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/products \
 Add up to 100 products in a single request:
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/products/batch \
+curl -X POST https://api.podium.build/api/v1/companion/products/batch \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -269,7 +269,7 @@ Interactions record how a user engages with products. They power the recommendat
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/interactions \
+curl -X POST https://api.podium.build/api/v1/companion/interactions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -299,7 +299,7 @@ await client.companion.createInteractions({
 ### Get User Interactions
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/interactions/{userId} \
+curl https://api.podium.build/api/v1/companion/interactions/{userId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -341,7 +341,7 @@ The recommendation engine uses AI-powered ranking to score products based on a u
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.podiumcommerce.xyz/api/v1/companion/recommendations/{userId}?count=5&category=serum" \
+curl "https://api.podium.build/api/v1/companion/recommendations/{userId}?count=5&category=serum" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -405,7 +405,7 @@ The conversational agent's `create_order` tool uses these endpoints automaticall
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/orders \
+curl -X POST https://api.podium.build/api/v1/companion/orders \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -474,21 +474,21 @@ const { data: order } = await client.companion.createOrders({
 ### List User Orders
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/orders/{userId} \
+curl https://api.podium.build/api/v1/companion/orders/{userId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Get Order Detail
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/orders/detail/{orderId} \
+curl https://api.podium.build/api/v1/companion/orders/detail/{orderId} \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Update Order Status
 
 ```bash
-curl -X PATCH https://api.podiumcommerce.xyz/api/v1/companion/orders/{orderId}/status \
+curl -X PATCH https://api.podium.build/api/v1/companion/orders/{orderId}/status \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -553,7 +553,7 @@ Retrieve durable conversation history for a user. Messages include role, content
 ### Get Chat History
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/companion/agent/chat/history/{userId}?limit=50" \
+curl "https://api.podium.build/api/v1/companion/agent/chat/history/{userId}?limit=50" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -621,7 +621,7 @@ Retrieve the resolved product catalog for a creator persona. Creator personas ar
 ### Get Creator Products
 
 ```bash
-curl https://api.podiumcommerce.xyz/api/v1/companion/creator/{handle}/products \
+curl https://api.podium.build/api/v1/companion/creator/{handle}/products \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -667,7 +667,7 @@ Merge a creator's taste profile — preferred brands, price ranges, product conc
 ### Seed Profile from Creator
 
 ```bash
-curl -X POST https://api.podiumcommerce.xyz/api/v1/companion/profile/{userId}/seed-from-creator \
+curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/seed-from-creator \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -706,7 +706,7 @@ The subscription system handles billing, usage tracking, and tier management for
 Connect external platform users (e.g., Telegram) to Podium users. The companion looks up users by a synthetic email pattern.
 
 ```bash
-curl "https://api.podiumcommerce.xyz/api/v1/companion/user/by-telegram/{telegramId}?privyId=did:privy:abc123" \
+curl "https://api.podium.build/api/v1/companion/user/by-telegram/{telegramId}?privyId=did:privy:abc123" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

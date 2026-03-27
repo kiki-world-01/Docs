@@ -176,7 +176,7 @@
       "anchors": [
         {
           "anchor": "API Playground",
-          "href": "https://api.podiumcommerce.xyz/docs",
+          "href": "https://api.podium.build/docs",
           "icon": "play"
         },
         {
@@ -191,13 +191,13 @@
     "links": [
       {
         "label": "API Playground",
-        "href": "https://api.podiumcommerce.xyz/docs"
+        "href": "https://api.podium.build/docs"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Get API Key",
-      "href": "https://www.podiumcommerce.xyz/onboarding"
+      "href": "https://app.podium.build/onboarding"
     }
   },
   "footer": {
@@ -206,7 +206,7 @@
     }
   },
   "api": {
-    "baseUrl": "https://api.podiumcommerce.xyz/api/v1",
+    "baseUrl": "https://api.podium.build/api/v1",
     "auth": {
       "method": "bearer"
     }
