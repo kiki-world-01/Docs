@@ -31,17 +31,20 @@ npm install @podiumcommerce/node-sdk
 ```typescript
 import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
-const podium = createPodiumClient({
+const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY!,
 })
 
-// Search the catalog
-const { items } = await podium.catalog.search({
+// List products
+const products = await client.product.list({ page: 1, limit: 5 })
+console.log(products)
+
+// Or search across entities
+const results = await client.search.search({
   query: 'vitamin c serum',
   limit: 5,
 })
-
-console.log(items)
+console.log(results)
 ```
 
 <Tip>
