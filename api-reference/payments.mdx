@@ -48,7 +48,7 @@ curl -X POST https://api.podium.build/api/v1/user/{userId}/order/{orderId}/check
 ```
 
 ```typescript SDK
-import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+import { createPodiumClient, ApiError } from '@podiumcommerce/node-sdk';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 
@@ -135,7 +135,7 @@ curl -X POST https://api.podium.build/api/v1/creator/id/{creatorId}/stripe/accou
 ```
 
 ```typescript SDK
-import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+import { createPodiumClient, ApiError } from '@podiumcommerce/node-sdk';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 
@@ -199,7 +199,7 @@ curl -X POST https://api.podium.build/api/v1/x402/orders/{orderId}/pay
 ```
 
 ```typescript SDK
-import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
+import { createPodiumClient, ApiError } from '@podiumcommerce/node-sdk';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 

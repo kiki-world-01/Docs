@@ -23,7 +23,7 @@ curl https://api.podium.build/api/v1/creator/clean-beauty-co \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from "@podium-sdk/node-sdk";
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 const creator = await client.merchant.getBySlug({ slug: "clean-beauty-co" });
@@ -93,7 +93,7 @@ curl -X PATCH https://api.podium.build/api/v1/creator/id/clcreator_abc \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from "@podium-sdk/node-sdk";
+import { createPodiumClient } from "@podiumcommerce/node-sdk";
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 const updated = await client.merchant.updateByCreatorId({

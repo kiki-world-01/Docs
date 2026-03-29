@@ -3,9 +3,9 @@
   "name": "Podium",
   "theme": "palm",
   "colors": {
-    "primary": "#3D38F5",
-    "light": "#6C69F8",
-    "dark": "#2A26C4"
+    "primary": "#1A35E8",
+    "light": "#4D63F0",
+    "dark": "#1528C0"
   },
   "logo": {
     "light": "/logo/light.png",
@@ -181,7 +181,7 @@
         },
         {
           "anchor": "npm SDK",
-          "href": "https://www.npmjs.com/package/@podium-sdk/node-sdk",
+          "href": "https://www.npmjs.com/package/@podiumcommerce/node-sdk",
           "icon": "npm"
         }
       ]
@@ -215,6 +215,6 @@
     "thumbsRating": true
   },
   "modeToggle": {
-    "default": "dark"
+    "default": "light"
   }
 }

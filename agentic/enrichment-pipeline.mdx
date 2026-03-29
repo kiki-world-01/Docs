@@ -296,7 +296,7 @@ All extracted attributes pass through a multi-phase normalization:
 After the pipeline processes enrichment data, agents query the agentic product feed to access enriched product attributes. The feed includes baselines for each product with attribute type, top values, and confidence scores.
 
 ```typescript
-import { createPodiumClient } from '@podium-sdk/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk';
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 
 const feed = await client.agentic.listProductsFeed({

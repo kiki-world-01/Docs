@@ -38,7 +38,7 @@ graph LR
 ```bash
 npx create-vite swipe-widget --template react-ts
 cd swipe-widget
-npm install @podium-sdk/node-sdk framer-motion
+npm install @podiumcommerce/node-sdk framer-motion
 ```
 
 ## Step 1: Fetch Products for the Stack
@@ -46,7 +46,7 @@ npm install @podium-sdk/node-sdk framer-motion
 Load products from the agentic product feed, personalized if you have a user ID.
 
 ```typescript
-import { createPodiumClient } from '@podium-sdk/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk';
 
 const client = createPodiumClient({
   apiKey: import.meta.env.VITE_PODIUM_API_KEY,

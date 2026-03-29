@@ -48,7 +48,7 @@ graph LR
 ```bash
 mkdir my-shopping-bot && cd my-shopping-bot
 npm init -y
-npm install grammy hono @podium-sdk/node-sdk @privy-io/server-auth
+npm install grammy hono @podiumcommerce/node-sdk @privy-io/server-auth
 ```
 
 ## Step 1: Bot Setup with grammY
@@ -56,7 +56,7 @@ npm install grammy hono @podium-sdk/node-sdk @privy-io/server-auth
 ```typescript
 import { Bot, webhookCallback } from 'grammy';
 import { Hono } from 'hono';
-import { createPodiumClient } from '@podium-sdk/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk';
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });

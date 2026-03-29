@@ -64,7 +64,7 @@ Regardless of which client or framework you use, the integration pattern is the 
 ```mermaid
 graph LR
     Agent["AI Agent / IDE"] -->|"tool call"| Wrapper["Tool Definition"]
-    Wrapper -->|"SDK method"| SDK["@podium-sdk/node-sdk"]
+    Wrapper -->|"SDK method"| SDK["@podiumcommerce/node-sdk"]
     SDK -->|"HTTPS"| API["Podium API"]
     API -->|"JSON response"| SDK
     SDK --> Wrapper

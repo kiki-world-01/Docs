@@ -6,15 +6,15 @@ description: Install, configure, and authenticate with the Podium TypeScript SDK
 ## Installation
 
 ```bash
-npm install @podium-sdk/node-sdk
+npm install @podiumcommerce/node-sdk
 ```
 
-The SDK is published as `@podium-sdk/node-sdk` on npm with full TypeScript type definitions.
+The SDK is published as `@podiumcommerce/node-sdk` on npm with full TypeScript type definitions.
 
 ## Configuration
 
 ```typescript
-import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY
@@ -152,7 +152,7 @@ async function getAllProducts() {
 The SDK throws typed errors with HTTP status codes and structured error bodies:
 
 ```typescript
-import { ApiError } from '@podium-sdk/node-sdk'
+import { ApiError } from '@podiumcommerce/node-sdk'
 
 try {
   const products = await client.product.list({ page: 1 })
@@ -270,7 +270,7 @@ The SDK is regenerated from the Podium API's OpenAPI spec whenever the API surfa
 The SDK follows semver. Breaking changes increment the major version:
 
 ```bash
-npm install @podium-sdk/node-sdk@latest
+npm install @podiumcommerce/node-sdk@latest
 ```
 
 Check the [Podium API Playground](https://api.podium.build/docs) for the latest endpoint documentation. The playground is always in sync with the production API.
