@@ -190,6 +190,18 @@
   "navbar": {
     "links": [
       {
+        "label": "Home",
+        "href": "https://podium.build"
+      },
+      {
+        "label": "Pricing",
+        "href": "https://podium.build/pricing"
+      },
+      {
+        "label": "Dashboard",
+        "href": "https://app.podium.build/dashboard"
+      },
+      {
         "label": "API Playground",
         "href": "https://api.podium.build/docs"
       }
