@@ -29,7 +29,7 @@ curl -X POST https://api.podium.build/api/v1/nft-reward \
 ```
 
 ```typescript SDK
-import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
 const reward = await client.nftRewards.createNftReward({
   requestBody: {

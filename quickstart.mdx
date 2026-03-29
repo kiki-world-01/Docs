@@ -50,7 +50,7 @@ curl -X GET https://api.podium.build/api/v1/products \
 ```
 
 ```typescript TypeScript SDK
-import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
 const client = createPodiumClient({
   apiKey: 'podium_live_your_key_here'
@@ -78,11 +78,11 @@ A successful response returns a JSON array of products scoped to your organizati
 The SDK auto-detects staging vs production from your key prefix:
 
 ```bash
-npm install @podium-sdk/node-sdk
+npm install @podiumcommerce/node-sdk
 ```
 
 ```typescript
-import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY
@@ -95,7 +95,7 @@ const user     = await client.user.getUsernameByUsername({ username: 'jane' })
 ```
 
 <Tip>
-  The SDK is published as `@podium-sdk/node-sdk` on npm. It ships with full TypeScript types generated from the OpenAPI spec.
+  The SDK is published as `@podiumcommerce/node-sdk` on npm. It ships with full TypeScript types generated from the OpenAPI spec.
 </Tip>
 
 ## 4. Explore the API

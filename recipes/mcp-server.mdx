@@ -11,7 +11,7 @@ Build a full MCP server that lets Claude (or any MCP client) search products, ma
 graph LR
     subgraph mcp ["MCP Server"]
         Tools["8 Podium Tools"]
-        SDK["@podium-sdk/node-sdk"]
+        SDK["@podiumcommerce/node-sdk"]
     end
 
     subgraph clients ["MCP Clients"]
@@ -37,7 +37,7 @@ graph LR
 ```bash
 mkdir podium-mcp-server && cd podium-mcp-server
 npm init -y
-npm install @modelcontextprotocol/sdk @podium-sdk/node-sdk zod
+npm install @modelcontextprotocol/sdk @podiumcommerce/node-sdk zod
 npm install -D typescript @types/node
 ```
 
@@ -62,7 +62,7 @@ npm install -D typescript @types/node
 // src/index.ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createPodiumClient } from '@podium-sdk/node-sdk';
+import { createPodiumClient } from '@podiumcommerce/node-sdk';
 import { z } from 'zod';
 
 const client = createPodiumClient({
