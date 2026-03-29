@@ -1,81 +1,28 @@
 ---
 title: Quick Start
-description: Create an account, get an API key, and make your first call in under 5 minutes
+description: Make your first API call in 60 seconds
 ---
 
-## 1. Create Your Account
+<Info>
+  **Time to first call: ~60 seconds.** Get your API key from the [Developer Portal](https://app.podium.build/onboarding) — sign in, and your key is generated automatically. Free plan, no credit card.
+</Info>
 
-<Steps>
-  <Step title="Sign up">
-    Head to the [Podium Developer Portal](https://app.podium.build/onboarding) and sign in with email, Google, or a crypto wallet (powered by Privy).
-  </Step>
-  <Step title="Create an organization">
-    During onboarding you'll create an **Organization** — this is your tenant. All API keys, products, orders, and data are scoped to your organization.
-  </Step>
-  <Step title="Choose a plan">
-    Pick a subscription tier that matches your usage. You can upgrade any time from the dashboard.
+## 1. Get Your API Key
 
-    | Tier | Price | Requests/Month | Rate Limit |
-    |------|-------|---------------|------------|
-    | **Builder** | Free | 10,000 | 5/sec |
-    | **Growth** | $99/mo | 100,000 | 20/sec |
-    | **Pro** | $499/mo | 1,000,000 | 50/sec |
-    | **Enterprise** | Custom | Unlimited | Custom |
-  </Step>
-  <Step title="Generate an API key">
-    The onboarding flow generates your first API key automatically. You can create additional keys from **Dashboard > Settings > API Keys**.
-
-    Keys are prefixed by environment:
-
-    | Prefix | Environment | API Base URL |
-    |--------|------------|--------------|
-    | `podium_test_` | Staging | `https://podium-staging.up.railway.app/api/v1` |
-    | `podium_live_` | Production | `https://api.podium.build/api/v1` |
-  </Step>
-</Steps>
-
-<Warning>
-  Your full API key is only shown once at creation time. Copy it immediately and store it securely. The dashboard only displays the key prefix after that.
-</Warning>
+Head to [app.podium.build/onboarding](https://app.podium.build/onboarding) and sign in. Your API key is generated instantly.
 
 ## 2. Make Your First Call
 
-Verify your key works by listing products:
+Paste this into your terminal (replace the key):
 
-<CodeGroup>
-
-```bash cURL
-curl -X GET https://api.podium.build/api/v1/products \
-  -H "Authorization: Bearer podium_live_your_key_here"
+```bash
+curl https://api.podium.build/api/v1/products \
+  -H "Authorization: Bearer YOUR_API_KEY"
 ```
-
-```typescript TypeScript SDK
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
-
-const client = createPodiumClient({
-  apiKey: 'podium_live_your_key_here'
-})
-
-const products = await client.product.list({ page: 1 })
-console.log(products)
-```
-
-```typescript Fetch
-const res = await fetch('https://api.podium.build/api/v1/products', {
-  headers: {
-    'Authorization': 'Bearer podium_live_your_key_here'
-  }
-});
-const products = await res.json();
-```
-
-</CodeGroup>
 
 A successful response returns a JSON array of products scoped to your organization.
 
-## 3. Install the TypeScript SDK
-
-The SDK auto-detects staging vs production from your key prefix:
+## 3. Try the SDK
 
 ```bash
 npm install @podiumcommerce/node-sdk
@@ -85,68 +32,77 @@ npm install @podiumcommerce/node-sdk
 import { createPodiumClient } from '@podiumcommerce/node-sdk'
 
 const client = createPodiumClient({
-  apiKey: process.env.PODIUM_API_KEY
+  apiKey: process.env.PODIUM_API_KEY!,
 })
 
-// The SDK is organized by namespace
-const products = await client.product.list({ page: 1 })
-const creator  = await client.merchant.getBySlug({ slug: 'clean-beauty-co' })
-const user     = await client.user.getUsernameByUsername({ username: 'jane' })
+// List products
+const products = await client.product.list({ page: 1, limit: 5 })
+console.log(products)
+
+// Or search across entities
+const results = await client.search.search({
+  query: 'vitamin c serum',
+  limit: 5,
+})
+console.log(results)
 ```
 
 <Tip>
-  The SDK is published as `@podiumcommerce/node-sdk` on npm. It ships with full TypeScript types generated from the OpenAPI spec.
+  The SDK auto-detects staging vs production from your key prefix (`podium_test_` vs `podium_live_`). Ships with full TypeScript types from the OpenAPI spec.
 </Tip>
 
-## 4. Explore the API
+## 4. Explore
 
 <CardGroup cols={2}>
-  <Card title="Interactive Docs" icon="play" href="https://api.podium.build/docs">
-    Try endpoints live with the Scalar API playground — paste your key and send requests
+  <Card title="API Playground" icon="play" href="https://api.podium.build/docs">
+    Try endpoints live — paste your key and send requests
   </Card>
-  <Card title="OpenAPI Spec" icon="file-code" href="https://api.podium.build/openapi.json">
-    Download the full OpenAPI 3.1 spec for code generation or import into Postman
+  <Card title="Build a Shopping Agent" icon="robot" href="/recipes/shopping-agent">
+    Full tutorial: memory, scoring, checkout, and settlement
+  </Card>
+  <Card title="Agent Tooling" icon="wrench" href="/ai-tools/overview">
+    Plug Podium into Claude, Cursor, LangChain, or any MCP runtime
+  </Card>
+  <Card title="Machine Payments" icon="coins" href="/agentic/x402-payments">
+    Autonomous USDC settlement on Base
   </Card>
 </CardGroup>
 
-## 5. Choose Your Path
+## API Key Details
+
+Keys are prefixed by environment:
+
+| Prefix | Environment | API Base URL |
+|--------|------------|--------------|
+| `podium_test_` | Staging | `https://podium-staging.up.railway.app/api/v1` |
+| `podium_live_` | Production | `https://api.podium.build/api/v1` |
+
+<Warning>
+  Your full API key is only shown once at creation time. Copy it immediately and store it securely. The dashboard only displays the key prefix after that.
+</Warning>
+
+Manage keys from the [Dashboard](https://app.podium.build/dashboard/settings/api-keys) — create, rotate, enable/disable, or delete.
+
+## Pricing
+
+| Tier | Price | Requests/Month | Rate Limit |
+|------|-------|---------------|------------|
+| **Builder** | Free | 10,000 | 5/sec |
+| **Growth** | $99/mo | 100,000 | 20/sec |
+| **Pro** | $499/mo | 1,000,000 | 100/sec |
+
+[See full pricing →](https://podium.build/pricing)
+
+## Ready to build?
 
 <CardGroup cols={3}>
   <Card title="Build an Agent" icon="robot" href="/agentic/overview">
-    Use the agentic product feed, companion API, and x402 payments to build intelligent commerce agents
+    Intelligent commerce agents with memory, scoring, and settlement
   </Card>
   <Card title="Commerce API" icon="cart-shopping" href="/api-reference/introduction">
-    Products, orders, checkout, creators, payments, points, campaigns, and NFTs
+    Products, orders, checkout, creators, payments, and more
   </Card>
   <Card title="Smart Contracts" icon="link" href="/contracts/overview">
     On-chain Task Pool, solver reputation, and USDC settlement on Base
-  </Card>
-</CardGroup>
-
-## 6. Manage Your Keys
-
-From the [Dashboard](https://app.podium.build/dashboard/settings/api-keys) you can:
-
-- **Create** additional API keys (up to your tier's limit)
-- **Rotate** a key — generates a new key while the old one remains valid for 30 minutes
-- **Enable/Disable** keys without deleting them
-- **Delete** keys permanently
-
-All key changes take effect immediately (cached keys expire within 15–150 seconds).
-
-## What's Next
-
-<CardGroup cols={2}>
-  <Card title="Memory Intelligence" icon="brain" href="/agentic/memory-intelligence">
-    Agents now build structured memory automatically from conversations — preferences, reason tags, and domain taxonomy are extracted and scored without extra code
-  </Card>
-  <Card title="Subscription Monetization" icon="credit-card" href="/platform/subscriptions">
-    Add paid tiers to your companion agents with Stripe billing, usage gating, and memory-as-premium
-  </Card>
-  <Card title="Creator Agents" icon="wand-magic-sparkles" href="/agentic/beauty-companion">
-    Build agents that leverage creator taste profiles for curated product discovery and affiliate commerce
-  </Card>
-  <Card title="Use Cases" icon="lightbulb" href="/guides/use-cases">
-    Explore 60+ commerce experiences — from subscription-gated AI agents to creator-curated shopping
   </Card>
 </CardGroup>
