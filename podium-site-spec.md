@@ -408,7 +408,7 @@ that scales with the intelligence you build on it.
 **Code block (right column):** Dark card, same surface as Intelligence section card. Monospace, `var(--text-code)`, syntax-highlighted manually (no library). Shows:
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk'
+import { createPodiumClient } from '@podium-sdk/node-sdk'
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY

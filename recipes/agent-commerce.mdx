@@ -33,11 +33,11 @@ graph LR
 ## Prerequisites
 
 ```bash
-npm install @podiumcommerce/node-sdk
+npm install @podium-sdk/node-sdk
 ```
 
 ```typescript
-import { createPodiumClient, ApiError } from '@podiumcommerce/node-sdk';
+import { createPodiumClient, ApiError } from '@podium-sdk/node-sdk';
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY,
@@ -51,7 +51,7 @@ Expose Podium operations as [Model Context Protocol](https://modelcontextprotoco
 ```typescript
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 import { z } from 'zod';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
@@ -250,7 +250,7 @@ const status = await client.agentic.getCheckoutSessions({
 The x402 protocol enables machine-native payments. The agent pays with USDC — no card, no human approval.
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 
@@ -295,7 +295,7 @@ Wrap the SDK as typed LangChain tools for reliable agent chains:
 ```typescript
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 

@@ -9,14 +9,14 @@ The Vercel AI SDK is the standard for building streaming AI applications in Next
 ## Prerequisites
 
 ```bash
-npm install @podiumcommerce/node-sdk ai @ai-sdk/openai zod
+npm install @podium-sdk/node-sdk ai @ai-sdk/openai zod
 ```
 
 ## Client Setup
 
 ```typescript
 // lib/podium.ts
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 export const podium = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY!,

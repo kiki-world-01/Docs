@@ -26,11 +26,11 @@ Create a `codex.md` (or `AGENTS.md`) at the root of your project to give Codex p
 
 ## SDK
 
-- Package: `@podiumcommerce/node-sdk`
-- Install: `npm install @podiumcommerce/node-sdk`
+- Package: `@podium-sdk/node-sdk`
+- Install: `npm install @podium-sdk/node-sdk`
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY,
@@ -83,7 +83,7 @@ Then prompt it to build a Podium integration:
 > "Install the Podium SDK and create an API route that fetches personalized product recommendations for a user and returns them as JSON"
 
 Codex will:
-1. Run `npm install @podiumcommerce/node-sdk`
+1. Run `npm install @podium-sdk/node-sdk`
 2. Create the file with correct imports from the instructions context
 3. Write a function using `client.companion.listRecommendations()`
 

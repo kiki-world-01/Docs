@@ -13,7 +13,7 @@ This guide shows how to integrate Podium as an OpenClaw plugin with full tool ac
 - OpenClaw installed and running (`openclaw gateway`)
 - Node.js >= 22
 - A [Podium API key](https://app.podium.build/onboarding)
-- `@podiumcommerce/node-sdk` installed
+- `@podium-sdk/node-sdk` installed
 
 ## Option A: Plugin (Recommended)
 
@@ -25,7 +25,7 @@ The plugin approach registers Podium tools natively in OpenClaw's agent runtime.
 mkdir -p ~/.openclaw/extensions/podium
 cd ~/.openclaw/extensions/podium
 npm init -y
-npm install @podiumcommerce/node-sdk
+npm install @podium-sdk/node-sdk
 ```
 
 ### 2. Plugin Manifest
@@ -52,7 +52,7 @@ npm install @podiumcommerce/node-sdk
 ```typescript
 // ~/.openclaw/extensions/podium/index.ts
 import { Type } from '@sinclair/typebox';
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 export default function (api: any) {
   const client = createPodiumClient({

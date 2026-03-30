@@ -20,12 +20,12 @@ Create a `CLAUDE.md` at the root of your project to give Claude Code persistent 
 
 ## SDK
 
-- Package: `@podiumcommerce/node-sdk`
-- Install: `npm install @podiumcommerce/node-sdk`
+- Package: `@podium-sdk/node-sdk`
+- Install: `npm install @podium-sdk/node-sdk`
 - Client setup:
 
 ```typescript
-import { createPodiumClient } from '@podiumcommerce/node-sdk';
+import { createPodiumClient } from '@podium-sdk/node-sdk';
 
 const client = createPodiumClient({
   apiKey: process.env.PODIUM_API_KEY,
@@ -115,7 +115,7 @@ Then ask it to scaffold a Podium integration:
 > "Install the Podium SDK, create a services/podium.ts file that initializes the client, and add a function that searches products by category and returns the top 5 by price"
 
 Claude Code will:
-1. Run `npm install @podiumcommerce/node-sdk`
+1. Run `npm install @podium-sdk/node-sdk`
 2. Create the file with correct imports and SDK patterns (from CLAUDE.md context)
 3. Write a typed function using `client.agentic.listProductsFeed()`
 
