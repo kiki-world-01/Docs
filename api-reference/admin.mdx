@@ -564,6 +564,106 @@ curl https://api.podium.build/api/v1/admin/enrichment/sources \
 | `POST` | `/admin/enrichment/sources` | Create a new enrichment source |
 | `GET` | `/admin/enrichment/sources` | List all enrichment sources |
 
+## Telemetry Dashboard
+
+Monitor the cost, latency, and error rates of external API calls across the enrichment pipeline and agent systems.
+
+### Summary
+
+```bash
+curl "https://api.podium.build/api/v1/admin/telemetry/summary?days=7" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns aggregated metrics for the specified time window:
+
+```json
+{
+  "costByProvider": {
+    "embeddings": 12.45,
+    "extraction": 8.30,
+    "search": 3.20
+  },
+  "latency": {
+    "p50": 230,
+    "p95": 1450
+  },
+  "dailyCost": [
+    { "date": "2026-04-09", "cost": 3.40 },
+    { "date": "2026-04-08", "cost": 4.10 }
+  ],
+  "errorRate": 0.02,
+  "tokenVolume": 1250000
+}
+```
+
+### Per-Operation Breakdown
+
+```bash
+curl "https://api.podium.build/api/v1/admin/telemetry/operations?days=7" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns cost, latency, and call count broken down by provider and operation (e.g., "embeddings/create", "extraction/attributes", "search/discover").
+
+### Recent Records
+
+```bash
+curl "https://api.podium.build/api/v1/admin/telemetry/recent?limit=50" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns the most recent telemetry records for debugging. Optionally filter by provider with `?provider=embeddings`.
+
+### Telemetry Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/telemetry/summary` | Aggregated cost, latency, and error metrics |
+| `GET` | `/admin/telemetry/operations` | Per provider + operation breakdown |
+| `GET` | `/admin/telemetry/recent` | Recent records for debugging |
+
+## Amazon Creator Quality
+
+Monitor and manage the quality of creator data from Amazon Influencer storefronts.
+
+### Quality Dashboard
+
+```bash
+curl "https://api.podium.build/api/v1/admin/enrichment/amazon-quality" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+Returns feed-safe distribution, brand quality metrics, and affiliate tag coverage across all Amazon creators.
+
+### Reprocess Amazon Creators
+
+Trigger a backfill of Amazon creator product data. This re-runs the two-phase extraction pipeline (storefront → collections → product resolution) for specified creators.
+
+```bash
+curl -X POST "https://api.podium.build/api/v1/admin/enrichment/amazon-reprocess" \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dryRun": false,
+    "maxCreators": 10,
+    "batchSize": 5
+  }'
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dryRun` | boolean | `false` | Preview mode — shows which creators would be processed without running extraction |
+| `maxCreators` | number | all | Limit the number of creators to process |
+| `batchSize` | number | 10 | Creators per async batch |
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/enrichment/amazon-quality` | Amazon creator data quality dashboard |
+| `POST` | `/admin/enrichment/amazon-reprocess` | Backfill Amazon creator product data |
+
 ## Task Administration
 
 | Endpoint | Description |
@@ -628,9 +728,15 @@ See [Task Pool API](/api-reference/task-pool-api) for details.
 | `PATCH` | `/admin/campaigns/{id}/status` | Approve/reject campaign |
 | `POST` | `/admin/enrichment/run` | Trigger crawl |
 | `POST` | `/admin/enrichment/baseline/recompute` | Recompute baselines |
+| `GET` | `/admin/enrichment/baseline/stats` | Baseline statistics |
 | `GET` | `/admin/enrichment/status` | Pipeline status |
 | `POST` | `/admin/enrichment/sources` | Create source |
 | `GET` | `/admin/enrichment/sources` | List sources |
+| `POST` | `/admin/enrichment/amazon-reprocess` | Backfill Amazon creators |
+| `GET` | `/admin/enrichment/amazon-quality` | Amazon data quality |
+| `GET` | `/admin/telemetry/summary` | Cost and latency summary |
+| `GET` | `/admin/telemetry/operations` | Per-operation breakdown |
+| `GET` | `/admin/telemetry/recent` | Recent telemetry records |
 | `GET` | `/admin/tasks/pending-review` | Tasks for review |
 | `POST` | `/admin/tasks/{taskId}/resolve` | Resolve task |
 | `POST` | `/admin/tasks/{taskId}/retry-verification` | Retry verification |

@@ -58,6 +58,7 @@
             "group": "Guides",
             "pages": [
               "guides/integrations",
+              "guides/world-agent-kit",
               "guides/use-cases"
             ]
           },
@@ -89,7 +90,9 @@
             "group": "Intelligence Layer",
             "pages": [
               "agentic/conversational-agent",
+              "agentic/guest-experience",
               "agentic/memory-intelligence",
+              "agentic/ranking-intelligence",
               "agentic/enrichment-pipeline",
               "agentic/product-feed"
             ]
@@ -117,6 +120,7 @@
             "group": "Intelligence & Agents",
             "pages": [
               "api-reference/companion",
+              "api-reference/voice",
               "api-reference/task-pool-api",
               "api-reference/search"
             ]

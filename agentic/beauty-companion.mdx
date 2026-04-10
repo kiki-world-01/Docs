@@ -24,13 +24,19 @@ A personal skincare agent: quiz onboarding → conversational discovery → pers
 ### User Journey
 
 <Steps>
-  <Step title="Onboarding quiz">
-    New users complete a 4-step conversational quiz that builds their intent profile. Questions are experiential rather than clinical — "How does your skin feel by early afternoon?" instead of "What is your skin type?"
+  <Step title="Guest experience or onboarding">
+    **New visitors** can try Sage without an account via the [guest experience](/agentic/guest-experience). Guest users get 5 messages with a soft sign-up nudge at message 3 and a hard gate at message 5. On sign-up, all guest chat history and profile data merge into the real account.
 
-    Each answer patches the user's [intent profile](/api-reference/companion#intent-profiles) and awards points.
+    **Signing-up users** can onboard two ways:
+    - **Structured quiz** — a 4-step experiential quiz ("How does your skin feel by early afternoon?" instead of "What is your skin type?") that builds the intent profile and awards points
+    - **Conversational onboarding** — skip the quiz entirely. The agent naturally collects skin type, concerns, brands, and budget during the first few messages of conversation. See [Conversational Onboarding](/agentic/conversational-agent#conversational-onboarding)
+
+    Users can also report **current actives** (products they're already using) during onboarding, which the agent uses to avoid redundant recommendations and assess ingredient interactions.
   </Step>
   <Step title="Conversational discovery">
-    The [Conversational Agent](/agentic/conversational-agent) uses the profile to deliver personalized recommendations with streaming SSE responses. Users see quick-reply chips for common follow-ups and reason tags explaining why each product was suggested.
+    The [Conversational Agent](/agentic/conversational-agent) uses the profile to deliver personalized recommendations with streaming SSE responses. Users see quick-reply chips for common follow-ups and [reason tags](/agentic/conversational-agent#reason-tags) explaining why each product was suggested.
+
+    **Voice input** is supported — users can speak instead of type, with audio transcribed via the [Voice Transcription API](/api-reference/voice). Domain-specific vocabulary hints improve accuracy for ingredient names and brand names.
   </Step>
   <Step title="Purchase">
     Two purchase modes depending on the product source:
@@ -40,14 +46,40 @@ A personal skincare agent: quiz onboarding → conversational discovery → pers
     Spend confirmation cards show the product, price, and daily spending limit before the user commits.
   </Step>
   <Step title="Subscription monetization">
-    Free users get 25 messages/month and basic recommendations. Sage+ subscribers get unlimited messages and memory-aware personalization — the agent loads accumulated intelligence into every conversation turn.
+    Sage supports a tiered subscription model:
 
-    See [Subscriptions](/platform/subscriptions) for the full billing integration.
+    | Tier | Messages | Features |
+    |------|----------|----------|
+    | **Free** | 25/month | Basic recommendations, limited history |
+    | **Trialing** | Unlimited (14 days) | Full memory-aware personalization |
+    | **Sage+** | Unlimited | Memory, greetings, priority support |
+
+    Subscriptions are managed via Stripe with automatic lifecycle tracking. See [Subscriptions](/platform/subscriptions) for the full billing integration.
   </Step>
   <Step title="Ongoing engagement">
-    Returning subscribers receive personalized greetings that reference their last conversation. Chat history is durable with full pagination support.
+    Returning subscribers receive [personalized greetings](/agentic/conversational-agent#first-return-greeting) that reference their last conversation, products they've tried, and goals they're working toward. Chat history is durable with full pagination support.
+
+    The agent generates **email insights** from conversation memory — a personalized paragraph summarizing what it has learned about the user's preferences, concerns, and goals. These insights power lifecycle email campaigns for re-engagement.
   </Step>
 </Steps>
+
+### Lifecycle Emails
+
+Sage integrates with a lifecycle email automation system that triggers personalized emails at key moments:
+
+| Email | Trigger | Content |
+|---|---|---|
+| **Welcome** | Account creation | Welcome + next steps |
+| **Post-onboarding** | First conversation summary | AI-generated insight paragraph from conversation memory |
+| **Subscription confirmation** | Stripe checkout complete | Plan details + trial end date |
+| **Trial reminder** | 3 days before trial expires | Reminder with upgrade CTA |
+| **First conversation** | First chat message sent | Personalized follow-up |
+| **Purchase confirmation** | Order placed | Product details + tracking |
+| **Usage nudge** | Approaching message limit (message 20/25) | Remaining count + upgrade CTA |
+| **Tier limit reached** | Free tier exhausted | Conversion prompt |
+| **Re-engagement** | 7+ days inactive | Personalized prompt based on conversation history |
+
+Emails are personalized using data from the user's intent profile, conversation memory, and interaction history. The `sageInsightSummary` — a rich, multi-sentence paragraph generated from the user's AgentMemory — is available as a template variable for particularly personalized email content.
 
 ### Platform Features Used
 
@@ -72,12 +104,15 @@ graph TB
     end
 
     subgraph podium ["Podium Platform"]
+        Guest["Guest Experience"]
         Agent["Conversational Agent"]
+        Voice["Voice Transcription"]
         Profiles["Intent Profiles"]
-        Recs["Recommendations"]
+        Recs["Recommendations + Ranking"]
         Subs["Subscriptions"]
         Orders["Concierge Orders"]
         Memory["Agent Memory"]
+        Email["Lifecycle Emails"]
     end
 
     subgraph payments ["Payments"]
@@ -85,10 +120,13 @@ graph TB
         Stripe["Stripe (Subscriptions)"]
     end
 
+    surfaces --> Guest --> Agent
     surfaces --> Agent
+    Voice --> Agent
     Agent --> Profiles
     Agent --> Recs
     Agent --> Memory
+    Memory --> Email
     surfaces --> Subs --> Stripe
     surfaces --> Orders --> x402
 ```
@@ -133,6 +171,7 @@ A creator-based shopping agent: pick a creator → browse their curated products
 | [Intent Profiles](/api-reference/companion#intent-profiles) | User preferences seeded from creator data |
 | Affiliate URLs | ShopMy, Amazon Associates, LTK link resolution |
 | Guest Mode | 5-swipe preview with interaction replay on auth |
+| Lifecycle Events | Separate event stream for Familiar user creation, sessions, and interactions |
 
 ### Architecture
 

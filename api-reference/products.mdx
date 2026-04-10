@@ -266,10 +266,17 @@ Returns all products for a creator with aggregated sales counts.
 ### List Published Products (Public)
 
 ```bash
-curl "https://api.podium.build/api/v1/products?categories=serum,moisturizer&limit=20&cursor=clx9prod050"
+curl "https://api.podium.build/api/v1/products?categories=serum,moisturizer&sort=popular&limit=20&cursor=clx9prod050"
 ```
 
-Public endpoint — no authentication required. Returns only `PUBLISHED` products. Supports cursor-based pagination and category filtering.
+Public endpoint — no authentication required. Returns only `PUBLISHED` products. Supports cursor-based pagination, category filtering, and sorting.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `categories` | string | — | Comma-separated category filter |
+| `sort` | string | `created` | Sort order: `popular` (by interaction-weighted popularity), `created` (newest first) |
+| `limit` | number | 20 | Results per page |
+| `cursor` | string | — | Cursor for pagination |
 
 ### Delete (Archive) a Product
 
@@ -360,6 +367,38 @@ Returns all product categories. No authentication required.
 | `attributes` | array | Configurable attribute variants |
 | `createdAt` | datetime | Creation timestamp |
 | `updatedAt` | datetime | Last update timestamp |
+
+### Catalog Item Extended Fields
+
+The `ProductCatalogItem` (used by the Companion and enrichment pipeline) includes additional fields beyond the base Product model:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `domain` | string? | Product domain: `beauty`, `wellness`, `fashion`, `home` |
+| `productFamily` | string? | Normalized family key for variant deduplication (strips shade, size, and color suffixes) |
+| `popularityScore` | float? | Interaction-weighted popularity computed from views, rank-ups, and purchases |
+| `previousPrice` | float? | Previous price before the last change (enables price-drop detection) |
+| `lastPriceChangeAt` | datetime? | When the price last changed |
+| `priceDropPercent` | float? | Percentage price decrease from previous price |
+| `brandTier` | integer? | Brand classification: 1 (prestige), 2 (enthusiast), 3 (mainstream), 4 (mass market) |
+| `feedSafe` | boolean | Whether the product meets quality gates for inclusion in recommendation feeds |
+| `affiliateUrl` | string? | Tracked affiliate purchase URL |
+| `trackingNumber` | string? | Shipment tracking number (post-purchase) |
+| `trackingUrl` | string? | Carrier tracking URL (post-purchase) |
+
+### Product Family Deduplication
+
+Products from different sources often refer to the same item with slight name variations. The `productFamily` field normalizes product names to group variants:
+
+- **Shade variants**: "NARS Concealer - #Chantilly" and "NARS Concealer - #Vanilla" → same family
+- **Size variants**: "CeraVe Cream 30ml" and "CeraVe Cream 50ml" → same family
+- **Color parentheticals**: "Lipstick (Rose)" and "Lipstick (Berry)" → same family
+
+This ensures users see one card per product in recommendation feeds and discovery surfaces, regardless of how many variants exist in the catalog.
+
+### Price History
+
+Products track price changes for transactional nudge purposes. When a price drops, the system can proactively notify users who previously interacted with the product. See [Transactional Nudges](/agentic/conversational-agent#nudge-types) for how price drops trigger re-engagement.
 
 ## Endpoint Summary
 

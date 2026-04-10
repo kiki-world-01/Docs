@@ -9,10 +9,12 @@ The Conversational Agent is Podium's AI-powered shopping companion engine. It gi
 
 The agent:
 
-- **Knows the user** — loads their intent profile, interaction history, and conversation memory before every turn
+- **Knows the user** — loads their intent profile, interaction history, conversation memory, and active product usage before every turn
 - **Uses tools** — can search products, get recommendations, record interactions, update profiles, and create orders mid-conversation
-- **Streams responses** — delivers progressive text deltas, tool execution events, and product cards over Server-Sent Events
+- **Streams responses** — delivers progressive text deltas, tool execution events, product cards, and quick-reply chips over Server-Sent Events
 - **Remembers everything** — persistent conversation history with automatic summarization keeps context across sessions
+- **Handles concurrency** — serializes requests per user to prevent duplicate responses during rapid messaging
+- **Onboards conversationally** — new users can build their profile through natural conversation instead of a structured quiz
 - **Is configurable** — persona, tone, rules, enabled tools, and model are all overridable per request
 
 ## Endpoints
@@ -176,6 +178,23 @@ async function chatWithAgent(userId: string, message: string) {
 }
 ```
 
+### Concurrency Handling
+
+The agent enforces a per-user concurrency lock to prevent duplicate responses during rapid messaging. If a second request arrives while the first is still being processed:
+
+```json
+{
+  "type": "busy",
+  "message": "I'm still working on your previous message. Please wait a moment."
+}
+```
+
+The lock uses a unique token per request and releases automatically when the response stream completes. If the lock mechanism is temporarily unavailable, the system fails open and allows the request through.
+
+<Tip>
+Handle the `busy` response in your frontend by showing a "still thinking" indicator and disabling the send button until the current response completes.
+</Tip>
+
 ## Built-in Tools
 
 The agent has access to 7 commerce tools that map directly to Podium API operations. Each tool is callable by the AI during conversation — no developer code needed.
@@ -208,6 +227,30 @@ This is useful for:
 - **Browse-only mode**: Enable only `search_products` and `get_recommendations`
 - **Profile-building mode**: Enable `update_profile` and `record_interaction`
 - **Full commerce mode**: Enable all tools including `create_order`
+
+### Reason Tags
+
+Every product recommendation includes a human-readable **reason tag** that explains *why* the agent chose it. Reason tags are derived from the scoring pipeline and the user's profile:
+
+| Signal Source | Example Tag |
+|---|---|
+| Enrichment data | "Highly rated for sensitive skin" |
+| User skin type match | "Matches your dry skin type" |
+| User concern match | "Targets your hydration concerns" |
+| Memory goal match | "Aligns with your anti-aging goal" |
+| Budget alignment | "Within your $50 budget" |
+| Brand affinity | "From The Ordinary — a brand you love" |
+| Ingredient match | "Contains hyaluronic acid — a top ingredient for you" |
+
+Reason tags appear alongside product cards in both synchronous and streaming responses, giving users (and downstream UIs) transparency into why each recommendation was made.
+
+### Domain-Aware Search
+
+The `search_products` tool supports domain and category filtering to improve result relevance:
+
+- **Domain filter** — restrict results to beauty, wellness, fashion, or home
+- **Category enrichment** — the agent maps user intent to canonical categories (e.g., "eye cream for dark circles" → `eye_care` category, not generic "eye" substring matching)
+- **Intelligent fallback** — when no domain or category matches, the system falls back to length-sorted token matching, skipping short generic tokens that produce noisy results
 
 ## Conversational Order Flow
 
@@ -303,6 +346,35 @@ Configure the agent's identity and behavior per request:
 
 Different verticals can share the same agent infrastructure with entirely different personalities and expertise.
 
+### Domain-Expert Context
+
+The agent's system prompt adapts based on the product domain, loading domain-specific expertise, vocabulary, and recommendation criteria. A beauty-focused conversation receives skincare science context, while a wellness conversation gets supplement formulation guidance. This happens automatically based on the user's profile and conversation context.
+
+## Conversational Onboarding
+
+New users who haven't completed a structured quiz can build their profile through natural conversation. When no quiz data exists (`quizCompletedAt` is null), the agent's system prompt switches to an onboarding mode that naturally collects:
+
+- Skin type or product preferences
+- Key concerns or goals
+- Brand preferences and budget range
+- Product avoidances or sensitivities
+
+The agent weaves these questions into the conversation rather than presenting a formal questionnaire, creating a more natural first-time experience. Once enough data is captured, the system marks onboarding as complete and transitions to standard recommendation mode.
+
+### Surface-Aware Prompts
+
+The system prompt adapts to the client surface — web, Telegram mini app, or embedded widget. Each surface has different UI capabilities (image rendering, inline buttons, link handling), and the agent tailors its response format accordingly.
+
+## User Context: Current Actives
+
+The agent has access to the user's currently active products (populated during onboarding or updated via profile). When a user reports what they're currently using, the agent:
+
+- Avoids recommending products they already have
+- Can assess potential ingredient interactions
+- References current products when making complementary suggestions
+
+For example, if a user reports using retinol and vitamin C, the agent knows to suggest time-of-day separation and won't redundantly recommend another retinol product.
+
 ## Proactive Nudges
 
 Beyond reactive conversations, Podium's agent can proactively re-engage users through scheduled nudges. The nudge system runs as a background cron job and generates personalized outreach based on user signals.
@@ -315,6 +387,8 @@ Beyond reactive conversations, Podium's agent can proactively re-engage users th
 | `purchase_follow_up` | Recent purchase completed | "How's the HA serum working for you? Let me know and I can adjust your recommendations." |
 | `profile_deepening` | Incomplete preference profile | "I noticed you haven't told me about your SPF preferences — want to do a quick quiz?" |
 | `seasonal` | Seasonal product relevance | "Winter's here — time to switch up your moisturizer. Want me to find something heavier-duty?" |
+| `price_drop` | Price decreased on a product the user interacted with | "Good news — that CeraVe moisturizer you liked dropped 20% in price. Want to grab it?" |
+| `reorder_reminder` | Enough time has passed since a consumable purchase | "You bought that vitamin C serum about 6 weeks ago — running low? I can reorder for you." |
 
 ### How It Works
 

@@ -153,12 +153,14 @@ curl "https://api.podium.build/api/v1/companion/products?category=moisturizer&mi
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `category` | string | — | Filter by category |
+| `category` | string | — | Filter by subcategory (e.g., `serum`, `moisturizer`, `supplements`) |
+| `domain` | string | — | Filter by product domain: `beauty`, `wellness`, `fashion`, `home` |
 | `brand` | string | — | Filter by brand |
 | `minPrice` | number | — | Minimum price |
 | `maxPrice` | number | — | Maximum price |
 | `inStock` | boolean | — | Filter by availability |
 | `search` | string | — | Full-text search across name, brand, category |
+| `sort` | string | — | Sort order: `popular` (by interaction-weighted popularity score), default is relevance |
 | `limit` | number | 20 | Results per page |
 | `offset` | number | 0 | Pagination offset |
 
@@ -689,15 +691,118 @@ curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/seed-fro
 
 ---
 
+## Guest Sessions
+
+Let users try your agent before signing up. Guest sessions create a temporary anonymous user with full access to the conversational agent, subject to message limits. See the [Guest Experience](/agentic/guest-experience) guide for the full flow.
+
+### Create a Guest Session
+
+```bash
+curl -X POST https://api.podium.build/api/v1/companion/guest/session \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "guestUserId": "clxyz1234567890abcdef"
+}
+```
+
+Use the `guestUserId` as the `userId` parameter in chat, interaction, and recommendation endpoints. The guest user is subject to a configurable message limit (default: 5 messages) with a soft nudge at message 3.
+
+### Convert Guest to User
+
+After authentication, merge the guest's session data into the real user account:
+
+```bash
+curl -X POST https://api.podium.build/api/v1/companion/guest/convert \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "guestUserId": "clxyz1234567890abcdef",
+    "realUserId": "clxyz0987654321fedcba"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "merged": true
+}
+```
+
+Conversion transfers chat history, intent profile data, and agent memory from the guest to the real user. The guest record is deleted after successful merge. Unconverted guests are automatically cleaned up after 7 days.
+
+### Guest Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/guest/session` | Create an anonymous guest user |
+| `POST` | `/companion/guest/convert` | Merge guest data into a real user account |
+
+---
+
 ## Subscription Endpoints
 
-The subscription system handles billing, usage tracking, and tier management for companion agents. For full documentation — including tiers, usage gating, memory gating, and integration examples — see [Subscriptions](/platform/subscriptions).
+The subscription system handles billing, usage tracking, and tier management for companion agents.
+
+### Subscription Tiers
+
+| Tier | Enum | Messages | Memory | Billing |
+|------|------|----------|--------|---------|
+| **Free** | `FREE` | 25/month | Limited | No charge |
+| **Trialing** | `TRIALING` | Unlimited | Full | 14-day free trial |
+| **Active** | `ACTIVE` | Unlimited | Full | Recurring Stripe billing |
+| **Past Due** | `PAST_DUE` | Unlimited (grace) | Full | Payment retry in progress |
+| **Canceled** | `CANCELED` | Reverts to Free | Limited | Subscription ended |
+
+### Create Checkout Session
+
+```bash
+curl -X POST https://api.podium.build/api/v1/companion/subscription/checkout \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "clxyz1234567890",
+    "plan": "sage_plus",
+    "successUrl": "https://yourapp.com/success",
+    "cancelUrl": "https://yourapp.com/cancel"
+  }'
+```
+
+Returns a Stripe checkout URL. On successful payment, the user's tier transitions to `TRIALING` (if trial eligible) or `ACTIVE`.
+
+### Check Subscription Status
+
+```bash
+curl https://api.podium.build/api/v1/companion/subscription/{userId}/status \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "tier": "ACTIVE",
+  "messagesUsed": 42,
+  "messagesLimit": null,
+  "trialEndsAt": null,
+  "currentPeriodEnd": "2026-05-01T00:00:00Z"
+}
+```
+
+### Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/companion/subscription/checkout` | Create a Stripe checkout session |
-| `POST` | `/companion/subscription/portal` | Open Stripe customer portal |
-| `GET` | `/companion/subscription/{userId}/status` | Get subscription status and usage |
+| `POST` | `/companion/subscription/portal` | Open Stripe customer portal for self-service management |
+| `GET` | `/companion/subscription/{userId}/status` | Get subscription tier, usage, and billing dates |
+
+For full documentation on subscription architecture, see [Subscriptions](/platform/subscriptions).
 
 ---
 

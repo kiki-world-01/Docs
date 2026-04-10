@@ -197,6 +197,43 @@ When computing signal scores, the system applies domain-specific weights and che
 
 This polarity-aware scoring prevents the classic failure mode where an agent penalizes products for *not* containing an avoided ingredient — the exact opposite of what the user wants.
 
+## Email Insight Surface
+
+Memory powers a personalized email insight system. The `generateEmailInsight` function composes a multi-sentence, first-person summary from structured memory — attributes, goals, concerns, avoidances, and negatively-reviewed products — capped at 500 characters for email readability.
+
+```json
+{
+  "sageInsightSummary": "I know you're focused on hydration and anti-aging for your sensitive, dry skin. You love The Ordinary and CeraVe, but fragrance is a no-go. That retinol serum was too intense, so I'll stick to gentler actives for now. Your budget sweet spot for serums is $15–45."
+}
+```
+
+This insight is:
+
+- **Synced to the email automation system** as a contact property after every summary job
+- **Used as a template variable** (`{{sageInsightSummary}}`) in lifecycle emails — particularly the post-onboarding email
+- **Included in the `memory_queued` SSE event** as `insightSummary` so frontends can render a "here's what I'm holding" card
+
+The first time a summary is generated (when no prior memory exists), the system detects this as a milestone and triggers the post-onboarding email with the rich insight text.
+
+## User Preference Embeddings
+
+Each user accumulates a **preference embedding** (`enrichmentVec`) stored on their intent profile. This vector is a mathematical representation of the user's taste, computed from their interaction history:
+
+| Interaction | Weight | Effect |
+|---|---|---|
+| Purchase | 5x | Strong pull toward similar products |
+| Rank Up / Save | 2x | Moderate positive signal |
+| View / Click | 0.5x | Weak exploratory signal |
+| Rank Down / Dismiss | -2x | Push away from similar products |
+
+The preference vector is L2-normalized and updated automatically on high-signal interactions. During recommendation ranking, **cosine similarity** between the user's vector and each candidate product's embedding creates a personalization signal that's independent of explicit filters.
+
+<Tip>
+Preference embeddings start empty and build organically. For new users, ranking falls back to population-level signals (popularity, quality score, brand tier) until enough interactions create a meaningful vector.
+</Tip>
+
+See [Ranking Intelligence](/agentic/ranking-intelligence) for how embeddings integrate with the full ranking pipeline.
+
 ## How Memory Feeds Into the Platform
 
 Memory is not isolated to conversations. It flows into multiple platform capabilities:
@@ -209,6 +246,8 @@ graph LR
     Memory --> Nudges["Proactive Nudges"]
     Memory --> Tags["Reason Tag Generation"]
     Memory --> Greeting["Return-Visit Greetings"]
+    Memory --> Email["Lifecycle Emails"]
+    Memory --> Embeddings["Preference Embeddings"]
 ```
 
 | Consumer | How It Uses Memory |
@@ -216,5 +255,7 @@ graph LR
 | [Conversational Agent](/agentic/conversational-agent) | Personalizes responses, remembers past products and preferences |
 | [Product Feed](/agentic/product-feed) | Memory-aware intent scoring and domain-specific weights |
 | [Enrichment Pipeline](/agentic/enrichment-pipeline) | Domain taxonomy aligns enrichment attributes with scoring |
+| [Ranking Intelligence](/agentic/ranking-intelligence) | User preference embeddings feed into learned ranking model |
 | Recommendations | Reason tags, avoidance filtering, price range enforcement |
 | Proactive Nudges | Targets re-engagement based on memory gaps and product outcomes |
+| Lifecycle Emails | AI-generated insight summaries for personalized email content |

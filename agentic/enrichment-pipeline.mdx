@@ -176,7 +176,115 @@ Products are organized into a two-level `domain:subcategory` system. This taxono
 | **fashion** | clothing, shoes, accessories, bags, jewelry, watches |
 | **home** | decor, kitchen, bedding, bath, storage, lighting, furniture |
 
-Each product is tagged with a domain and subcategory at ingestion time. The domain determines which scoring weights, [expert personas](/agentic/memory-intelligence#domain-specific-expert-personas), and brand tier thresholds are applied during recommendation ranking.
+Each product is tagged with a domain and subcategory at ingestion time. The domain determines which scoring weights, [expert personas](/agentic/memory-intelligence), and brand tier thresholds are applied during [recommendation ranking](/agentic/ranking-intelligence).
+
+### Domain-Specific Scoring
+
+Each domain applies different weight multipliers to enrichment signals, because "quality" means different things in different verticals:
+
+| Domain | Emphasized Signals | De-Emphasized Signals |
+|--------|-------------------|----------------------|
+| **Beauty** | Ingredient quality, certifications, texture, skin-type match | Price position (wide range is expected) |
+| **Wellness** | Clinical evidence, purity signals, dosage clarity | Packaging, color |
+| **Fashion** | Brand tier, style coherence, seasonal relevance | Ingredient signals (not applicable) |
+| **Home** | Material quality, durability signals, design awards | Scent, skin-type (not applicable) |
+
+Signal polarity is also domain-aware — a high `longevity` score is positive for beauty (long-wear makeup) but the system treats longevity differently for supplements (shelf life vs. product wear time).
+
+## Ingredient Intelligence
+
+The enrichment pipeline includes a specialized ingredient subsystem that provides deep ingredient-level analysis for beauty and wellness products.
+
+### Canonical Dictionary
+
+The system maintains a canonical dictionary of **2,600+ ingredients** with normalized names, common aliases, and functional categories. This dictionary powers:
+
+- **INCI normalization** — converts International Nomenclature of Cosmetic Ingredients (INCI) names to human-readable equivalents
+- **Parenthetical stripping** — handles entries like "Water (Aqua)" by normalizing to the primary name
+- **Alias resolution** — maps variant spellings and regional names to canonical entries
+
+### Ingredient Extraction Pipeline
+
+Ingredient data flows through five phases:
+
+```mermaid
+flowchart LR
+    Phase0["Phase 0<br/>Dictionary + Normalize"]
+    Phase1["Phase 1<br/>Structured Sweep"]
+    Phase2["Phase 2<br/>Deep Extraction"]
+    Phase3["Phase 3<br/>Affinity Modeling"]
+    Phase4["Phase 4<br/>Caching + Integration"]
+
+    Phase0 --> Phase1 --> Phase2 --> Phase3 --> Phase4
+```
+
+1. **Dictionary and Normalization** — canonical ingredient dictionary with INCI normalization and external database integration for safety data, comedogenicity ratings, and functional classifications
+2. **Structured Sweep** — extracts ingredient lists from existing product metadata (descriptions, ingredient fields), yielding high-confidence signals with zero external API cost
+3. **Deep Extraction** — for products without structured ingredient data, the pipeline uses AI-powered extraction from product pages, resolving full ingredient lists with confidence scores
+4. **Affinity Modeling** — computes per-user ingredient affinities from interaction history. Users who consistently rank up products with niacinamide build a positive niacinamide affinity that influences future recommendations
+5. **Caching and Integration** — ingredient affinities and catalog-wide ingredient frequencies are cached and wired into the [scoring pipeline](/agentic/ranking-intelligence), adding a personalized ingredient boost to recommendations
+
+### Ingredient Affinity
+
+User ingredient affinity is computed from interaction history and applied as a personalization signal in the recommendation pipeline:
+
+- When a user ranks up, saves, or purchases products containing specific ingredients, those ingredients accumulate positive affinity
+- When a user ranks down or dismisses products, their ingredients accumulate negative affinity
+- The affinity score feeds into the [ranking pipeline](/agentic/ranking-intelligence) as an additive boost per matched ingredient
+
+### Catalog Frequency
+
+The system tracks how often each ingredient appears across the product catalog. This prevents common ingredients (like "Water" or "Glycerin") from dominating affinity scores. Rare ingredients that a user consistently engages with carry more signal weight than ubiquitous ones.
+
+<Info>
+Catalog frequency denominators are computed only from products that have `key_ingredient` signals, ensuring accurate frequency calculations. The frequency cache is invalidated and recomputed after bulk ingestion operations.
+</Info>
+
+## Data Quality
+
+The enrichment pipeline includes several quality safeguards that ensure poisoned or low-quality data doesn't corrupt your product catalog or recommendations.
+
+### Product Deduplication
+
+Products from different sources often refer to the same item with slight name variations (shade variants, size variants, color parentheticals). The `productFamily` system normalizes product names by stripping:
+
+- Shade suffixes ("NARS Concealer - #Chantilly" → "NARS Concealer")
+- Size suffixes ("30ml", "50ml")
+- Color parentheticals
+- SEO suffixes and extra whitespace
+
+Products in the same family are grouped so users see one card per product, regardless of how many variants exist in the catalog.
+
+### Quality Gates
+
+Several automated gates prevent contaminated data from reaching the product feed:
+
+| Gate | What It Catches |
+|------|----------------|
+| **ASIN validation** | Rejects products where the extracted identifier doesn't match the input |
+| **Diversity gate** | Rejects a creator's product batch if >30% of products share the same name |
+| **Brand quality gate** | Rejects a batch if >80% of brands are "Unknown" |
+| **Feed-safe filter** | Excludes products with placeholder brands, zero prices, or unresolved URLs from recommendation feeds |
+
+### Ubiquity Decay
+
+Ingredients and attributes that appear in too many products lose their recommendation value — if everything has "hyaluronic acid," it's not a useful differentiator. The system applies a smooth quadratic decay curve:
+
+- Attributes appearing in **<15%** of products retain full signal weight
+- Attributes appearing in **15--60%** are progressively down-weighted
+- Attributes appearing in **>60%** of products receive zero signal weight
+
+### Adaptive Exploration
+
+To prevent recommendation bubbles, the system varies how aggressively it exploits known preferences vs. exploring new products:
+
+| User Type | Exploration Rate | Strategy |
+|---|---|---|
+| New users | 25% | Broad discovery to learn preferences fast |
+| Moderate users | 15% | Balance between personalization and novelty |
+| Power users | 8% | Mostly refined, with occasional surprises |
+
+Exploration rates adapt based on interaction volume, and even exploration slots use population-level signals (popularity, quality, brand diversity) rather than pure randomness.
 
 ## Data Sources
 
@@ -224,15 +332,34 @@ Podium continuously discovers new products relevant to your vertical from multip
 
 This means your companion's product catalog grows organically without manual curation.
 
-### Creator Storefronts
+### Creator Intelligence
 
-Source type: `CREATOR_STOREFRONT`. Podium discovers creators from affiliate platforms, ingests their curated product collections, and enriches the catalog with their selections. Each discovered creator becomes a `CreatorPersona` with:
+Source type: `CREATOR_STOREFRONT`. Podium discovers creators from multiple affiliate platforms, ingests their curated product collections, and enriches the catalog. The Creator Intelligence pipeline operates in three stages:
+
+**Discovery** — automated discovery across multiple affiliate platforms finds new creator candidates. Candidates are staged in a pre-qualification table before expensive data processing begins.
+
+**Enrichment** — qualified creators are scraped and enriched. Each creator becomes a `CreatorPersona` with:
 
 - Resolved product IDs linked to your catalog
-- Creator metadata (handle, display name, platform, avatar)
-- Product count and resolution status
+- Creator metadata (handle, display name, platform, avatar, bio)
+- Computed features: domain tags, popularity score, product count, feed-safe count
+- Affiliate URLs with proper attribution tags
 
-Creator storefronts are a high-signal data source — a creator's curation reflects expert taste and audience trust, which feeds into recommendation quality.
+**Recommendations** — creators are recommended to users via Thompson Sampling, which balances showing popular creators with exploring lesser-known ones. Creator recommendations consider domain match, product overlap with user preferences, and diversity.
+
+#### Supported Platforms
+
+| Platform | Discovery Method | Product Resolution |
+|---|---|---|
+| **ShopMy** | Automated niche-query discovery | Direct product URL resolution |
+| **LTK (ShopLTK)** | Automated niche-query discovery | Affiliate URL → retailer URL resolution |
+| **Amazon Influencer** | Two-phase extraction (storefront → collections → ASINs) | ASIN → full product data resolution |
+
+Amazon creators use a specialized pipeline: Level 1 scrapes storefront collections to harvest product identifiers, then Level 2 batch-resolves those identifiers to real product data with proper pricing, brand, and category information.
+
+<Info>
+Creator storefronts are a high-signal data source — a creator's curation reflects expert taste and audience trust, which feeds directly into recommendation quality and the [product feed](/agentic/product-feed).
+</Info>
 
 ### Wellness Vertical
 
@@ -342,12 +469,19 @@ All handlers are idempotent — safe to retry on failure. Raw records track a `p
 |--------|------|---------|
 | `POST` | `/admin/enrichment/run` | Trigger ingestion for a specific source |
 | `POST` | `/admin/enrichment/baseline/recompute` | Trigger baseline computation |
+| `GET` | `/admin/enrichment/baseline/stats` | Baseline coverage and quality metrics |
 | `GET` | `/admin/enrichment/status` | Dashboard: all sources with last run status and counts |
 | `POST` | `/admin/enrichment/sources` | Register a new enrichment source |
 | `GET` | `/admin/enrichment/sources` | List all configured sources |
 | `POST` | `/admin/enrichment/crawl-domain` | Ingest products from a domain |
 | `POST` | `/admin/enrichment/map-domain` | Discover product URLs on a domain |
 | `POST` | `/admin/enrichment/discover` | Trigger product discovery |
+| `POST` | `/admin/enrichment/catalog-sync` | Sync enrichment signals to product catalog |
+| `POST` | `/admin/enrichment/reprocess` | Re-run extraction on existing raw records |
+| `POST` | `/admin/enrichment/serp-search` | Trigger search-based product discovery |
+| `POST` | `/admin/enrichment/serp-catalog` | Discover products via search catalog |
+| `POST` | `/admin/enrichment/amazon-reprocess` | Backfill Amazon creator product data |
+| `GET` | `/admin/enrichment/amazon-quality` | Amazon creator data quality dashboard |
 
 Trigger ingestion for a specific source:
 

@@ -369,6 +369,120 @@ PATCH /api/v1/creator/id/{creatorId}
 | Label generation fails | Check the creator's Shippo account is connected and has a valid payment method |
 | Rates seem high | Review product weight/dimension data — incorrect values inflate shipping costs |
 
+---
+
+## Lifecycle Email Automation
+
+Podium integrates with email automation platforms to trigger personalized lifecycle emails at key user moments. The system fires events and syncs contact properties so your email templates have access to rich, up-to-date user data.
+
+### Lifecycle Events
+
+| Event | Trigger | Available Data |
+|---|---|---|
+| `user_created` | New user account created | Email, name, source, creation date |
+| `onboarding_completed` | User completes profile quiz | Skin type, concerns, brands, preferences |
+| `first_conversation` | First chat message sent | User profile, first message content |
+| `message_count_updated` | Chat messages accumulate | Message count, remaining until limit |
+| `free_tier_exhausted` | Free message limit reached | Count, limit, upgrade URL |
+| `subscription_purchased` | Stripe checkout completed | Plan name, trial end date |
+| `subscription_cancelled` | Subscription ended | Cancellation date, last active date |
+| `order_placed` | Purchase completed | Product details, order ID, amount |
+
+### Contact Properties
+
+The system keeps email contact records in sync with the latest user data:
+
+| Property | Description | Updated When |
+|---|---|---|
+| `firstName` | User's first name | Account creation, profile update |
+| `skinType` | Primary skin type | Quiz completion, profile update |
+| `sageInsightSummary` | AI-generated insight paragraph from [Agent Memory](/agentic/memory-intelligence#email-insight-surface) | After every summary job |
+| `trialEndsAt` | Trial expiration date | Subscription purchase |
+| `messagesUsed` | Messages consumed this period | Each chat message |
+| `lastActiveAt` | Last interaction timestamp | Any API interaction |
+
+### Email Templates
+
+Templates use double-brace variables (e.g., `{{firstName}}`, `{{sageInsightSummary}}`) to personalize content. The `sageInsightSummary` variable is particularly powerful — it contains a multi-sentence, first-person narrative generated from the user's structured conversation memory.
+
+### Scheduled Emails
+
+Some lifecycle emails are time-delayed rather than event-triggered:
+
+| Email | Schedule | Purpose |
+|---|---|---|
+| **Trial reminder** | 3 days before trial expires | Urgency-based conversion |
+| **Re-engagement** | 7+ days inactive | Personalized win-back based on conversation history |
+
+Scheduled emails are deduped — each user receives at most one of each type per eligibility window.
+
+### Multi-App Support
+
+The lifecycle system routes events by app surface. Users from different applications (e.g., a conversational agent vs. a creator-based shopping app) receive separate event streams with app-specific contact properties, enabling distinct email journeys for each surface.
+
+---
+
+## Playground API
+
+The Playground API provides a **zero-auth** product search endpoint for marketing sites and demo experiences. Visitors can search the real product catalog without an API key.
+
+### Endpoint
+
+```
+GET /api/v1/playground?search=moisturizer&limit=5
+```
+
+### Rate Limits
+
+| Limit | Value |
+|---|---|
+| Requests per day per IP | 10 |
+| Max results per request | 10 |
+
+### Response
+
+```json
+{
+  "products": [
+    {
+      "id": "prod_abc123",
+      "name": "CeraVe Moisturizing Cream",
+      "brand": "CeraVe",
+      "price": 18.99,
+      "domain": "beauty",
+      "category": "moisturizer",
+      "inStock": true,
+      "imageUrl": "https://cdn.example.com/cerave.jpg",
+      "purchaseUrl": "https://example.com/products/cerave-cream",
+      "topIngredients": ["ceramides", "hyaluronic acid", "niacinamide"]
+    }
+  ],
+  "_meta": {
+    "rateLimit": {
+      "remaining": 8,
+      "limit": 10,
+      "resetAt": "2026-04-10T00:00:00Z"
+    }
+  }
+}
+```
+
+When the rate limit is exceeded, the endpoint returns `429` with an upgrade CTA: "Get a free API key for unlimited access." This naturally funnels interested visitors to the [developer portal](https://app.podium.build/onboarding).
+
+### Use Cases
+
+- **Marketing site hero** — embed a live product search on your landing page
+- **Agent demo** — let visitors see real recommendations without sign-up
+- **Combine with [Guest Experience](/agentic/guest-experience)** — search first, then seamlessly transition into a guest chat session
+
+---
+
+## World Agent Kit
+
+For building Mini Apps on the World platform with human-verified agent access, see the dedicated [World Agent Kit Integration](/guides/world-agent-kit) guide.
+
+---
+
 ## External Documentation Links
 
 | Service | Documentation |

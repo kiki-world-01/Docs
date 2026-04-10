@@ -556,6 +556,126 @@ const shop = await client.shopify.getShopByCreatorId({
 
 ---
 
+## Voice Transcription
+
+Voice transcription uses multipart/form-data, so it's called via `fetch` rather than the SDK client:
+
+```typescript
+const formData = new FormData()
+formData.append('userId', userId)
+formData.append('audio', audioBlob, 'recording.webm')
+formData.append('promptHint', 'niacinamide, retinol, hyaluronic acid, CeraVe')
+formData.append('language', 'en')
+
+const response = await fetch(
+  'https://api.podium.build/api/v1/voice/transcribe',
+  {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.PODIUM_API_KEY}` },
+    body: formData,
+  }
+)
+
+const { text, durationMs } = await response.json()
+
+// Feed transcript into the conversational agent
+const agentResponse = await client.companion.chat({
+  userId,
+  message: text,
+})
+```
+
+See [Voice Transcription](/api-reference/voice) for the full endpoint spec.
+
+---
+
+## Guest Session Flow
+
+Create an anonymous session, chat with the agent, and merge on sign-up:
+
+```typescript
+// 1. Create guest session (no auth needed for the guest)
+const { guestUserId } = await client.guests.createSession()
+
+// 2. Chat as guest — standard agent chat with the guest userId
+const response = await fetch(
+  'https://api.podium.build/api/v1/companion/agent/chat/stream',
+  {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId: guestUserId,
+      message: "What's a good moisturizer for dry skin?",
+    }),
+  }
+)
+
+// 3. After the user signs up, merge their guest data
+await client.guests.convert({
+  guestUserId,
+  realUserId: authenticatedUser.id,
+})
+```
+
+See [Guest Experience](/agentic/guest-experience) for the full flow including message gating and SSE events.
+
+---
+
+## Playground Search
+
+Anonymous product search — no API key required:
+
+```typescript
+const response = await fetch(
+  'https://api.podium.build/api/v1/playground?search=vitamin+c+serum&limit=5'
+)
+
+const { products, _meta } = await response.json()
+console.log(`Found ${products.length} products`)
+console.log(`Rate limit remaining: ${_meta.rateLimit.remaining}/${_meta.rateLimit.limit}`)
+
+for (const product of products) {
+  console.log(`${product.name} by ${product.brand} — $${product.price}`)
+  if (product.topIngredients?.length) {
+    console.log(`  Key ingredients: ${product.topIngredients.join(', ')}`)
+  }
+}
+```
+
+See [Playground API](/guides/integrations#playground-api) for rate limits and response shape.
+
+---
+
+## Telemetry Dashboard
+
+Query enrichment pipeline telemetry for cost and latency monitoring:
+
+```typescript
+// Cost and latency summary for the last 7 days
+const summary = await client.admin.getTelemetrySummary({ days: 7 })
+console.log('Total cost by provider:', summary.costByProvider)
+console.log(`Latency P50: ${summary.latency.p50}ms, P95: ${summary.latency.p95}ms`)
+
+// Per-operation breakdown
+const ops = await client.admin.getTelemetryOperations({ days: 7 })
+for (const op of ops) {
+  console.log(`${op.provider}/${op.operation}: ${op.callCount} calls, $${op.totalCost}`)
+}
+
+// Recent records for debugging
+const recent = await client.admin.getTelemetryRecent({ limit: 10 })
+for (const record of recent) {
+  console.log(`${record.provider} ${record.operation}: ${record.durationMs}ms`)
+}
+```
+
+See [Telemetry Dashboard](/api-reference/admin#telemetry-dashboard) for endpoint details.
+
+---
+
 ## Error Handling
 
 All SDK methods throw `ApiError` with structured error details:

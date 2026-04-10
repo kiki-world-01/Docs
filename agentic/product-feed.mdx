@@ -175,9 +175,83 @@ Reason tags are generated during recommendation re-ranking by combining signals 
 
 See [Memory & Intelligence — Reason Tags](/agentic/memory-intelligence#reason-tags) for the full list of tag types and how they're computed.
 
+## Domain-Specific Scoring
+
+The feed applies different scoring weights depending on the product's domain. This ensures that "quality" is evaluated through the right lens for each vertical:
+
+| Domain | Primary Signals | Secondary Signals |
+|---|---|---|
+| **Beauty** | Ingredient quality, certifications, skin-type match, texture | Brand tier, sentiment |
+| **Wellness** | Clinical evidence, purity, dosage clarity | Certifications, brand tier |
+| **Fashion** | Brand tier, style coherence, seasonal relevance | Material quality |
+| **Home** | Material quality, durability, design awards | Brand tier, price position |
+
+Domain-specific weights are applied automatically based on the product's `domain` field. Products without a domain fall back to universal weights.
+
+## Curation Layer
+
+Before products reach the feed, they pass through a curation layer that ensures quality:
+
+### Brand Tiering
+
+Every brand is classified into a tier that reflects its market positioning:
+
+| Tier | Positioning | Example Brands |
+|------|-------------|---------------|
+| 1 | Prestige / professional | La Mer, Thorne, Bottega Veneta |
+| 2 | Enthusiast / premium DTC | Drunk Elephant, Seed, COS |
+| 3 | Mainstream / trusted | CeraVe, Nature Made, Nike |
+| 4 | Mass market / value | Kirkland, generic brands |
+
+Brand tier influences ranking — tier 1 and 2 brands receive a quality boost, while tier 4 brands are down-weighted unless the user has explicitly shown affinity.
+
+### Feed-Safe Filtering
+
+Products must pass quality gates before appearing in recommendation feeds:
+
+- Must have a valid brand (no "Unknown" or placeholder names)
+- Must have a non-zero price
+- Must have a resolved, purchasable URL
+- Must not be flagged by the diversity or brand quality gates
+
+Products that fail these gates are stored in the catalog but excluded from `feedSafe` queries.
+
+## Affiliate Monetization
+
+Products in the feed carry affiliate-tracked purchase URLs. The system maps **20+ retailers** to their affiliate networks and generates deep links with attribution:
+
+| Network | Retailers |
+|---------|----------|
+| **Amazon Associates** | Amazon direct product links |
+| **ShopMy** | Creator-curated retailer links |
+| **LTK** | Creator affiliate links |
+| **CJ Affiliate** | Sephora, Ulta, and more |
+| **Rakuten** | Various retail partners |
+| **Awin** | International retailers |
+| **Impact** | DTC brand programs |
+
+Each purchase URL includes a `subID` parameter for attribution tracking. Affiliate tracking domains (redirect URLs) are resolved to their final retailer destination, so the `productUrl` always points to the real product page.
+
+## Creator Intelligence
+
+The feed incorporates creator-curated products from the [Creator Intelligence pipeline](/agentic/enrichment-pipeline#creator-intelligence). Creators are recommended to users via Thompson Sampling — a contextual bandit approach that balances showing popular creators with exploring lesser-known ones.
+
+### Creator Features
+
+Each creator in the system has computed features that influence how their products are ranked:
+
+| Feature | Description |
+|---------|-------------|
+| `popularityScore` | Weighted from follower signals and interaction history |
+| `domainTags` | Product domains the creator specializes in |
+| `feedSafeCount` | Number of quality-gated products available |
+| `thumbnailUrls` | Top product images for creator discovery UI |
+
+Creator recommendations consider domain match (beauty creator for beauty queries), product overlap with user preferences, and diversity (avoid showing only one platform's creators).
+
 ## ML Scoring Layer
 
-Beyond the two-lane intent score, Podium applies machine learning signals to improve product ranking over time.
+Beyond the two-lane intent score, Podium applies machine learning signals to improve product ranking over time. See [Ranking Intelligence](/agentic/ranking-intelligence) for the full learned ranking model, A/B testing infrastructure, and user preference embeddings.
 
 ### Popularity Scoring
 
@@ -193,7 +267,7 @@ For each product, the system maintains a pre-computed feature set (quality score
 
 ### Impression Tracking
 
-Every product shown to a user is logged with its display position. This creates a feedback loop: the system can distinguish between products that were seen and ignored vs products that were never shown, enabling accurate conversion-rate estimation and position-bias correction.
+Every product shown to a user is logged with its display position, scoring arm (heuristic vs. learned), and learned score. This creates a feedback loop: the system can distinguish between products that were seen and ignored vs. products that were never shown, enabling accurate conversion-rate estimation and position-bias correction.
 
 ## Checkout Sessions
 
