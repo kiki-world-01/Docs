@@ -218,8 +218,12 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/podaboratory"
-    }
+      "x": "https://x.com/podiumcommerce"
+    },
+    "links": [
+      { "label": "Support", "href": "mailto:team@podium.build" },
+      { "label": "Dashboard", "href": "https://app.podium.build/dashboard" }
+    ]
   },
   "api": {
     "baseUrl": "https://api.podium.build/api/v1",
@@ -228,7 +232,8 @@
     }
   },
   "feedback": {
-    "thumbsRating": true
+    "thumbsRating": true,
+    "suggestEdit": true
   },
   "modeToggle": {
     "default": "light"
