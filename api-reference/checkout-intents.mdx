@@ -1,0 +1,511 @@
+---
+title: Checkout Intents
+description: The two-phase API behind Universal Checkout. Create an intent from a merchant URL, confirm with a verified buyer, settle in USDC or card.
+---
+
+## Overview
+
+The Checkout Intents API is the request-level surface of [Universal Checkout](/agentic/universal-checkout). All endpoints are prefixed with `/api/v1`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/checkout-intents` | Create an intent from a product URL. Resolves the offer. |
+| `GET` | `/checkout-intents` | List your org's intents (filter by state or adapter). |
+| `GET` | `/checkout-intents/:id` | Retrieve the current state of an intent. |
+| `POST` | `/checkout-intents/:id/confirm` | Confirm payment and place the order. |
+| `GET` | `/checkout-intents/:id/payment-config` | Get the Stripe publishable key the frontend must tokenize against. |
+| `POST` | `/products/lookup` | Canonicalize any merchant URL into a product record. |
+| `POST` | `/agentic/checkout/sessions` | Catalog-product checkout session (Podium-native). |
+
+<Warning>
+**Breaking change (May 2026):** `buyer.phone` is now required on `POST /checkout-intents` and on `POST /checkout-intents/:id/confirm`. The field accepts E.164-ish input (digits, spaces, parentheses, hyphens, optional leading `+`) and must contain at least 7 digits after stripping formatting. Requests missing or malformed return a `400` with a Zod validation error on `path: ["buyer", "phone"]`. Update your client to collect a phone number during the buyer-details step.
+</Warning>
+
+## State machine
+
+| State | Terminal? | Meaning |
+|---|---|---|
+| `processing` | no | Intent created, resolving the offer through the selected adapter |
+| `awaiting_confirmation` | no | Offer resolved, ready for `POST .../confirm` |
+| `confirming` | no | Confirm received, placing the order |
+| `completed` | yes | Order placed on the merchant |
+| `failed` | yes | Order rejected. See `failureReason`. |
+
+Poll `GET /checkout-intents/:id` until `state` is `completed` or `failed`. The `checkout-intent-completed` and `checkout-intent-failed` async events (see [Webhooks](/api-reference/webhooks)) fire on terminal transitions if you want push delivery instead.
+
+---
+
+## Error envelope
+
+All Checkout Intents errors return the standard Podium envelope:
+
+```json
+{
+  "errors": [
+    {
+      "message": "merchant_unsupported: ...",
+      "path": ["..."]
+    }
+  ]
+}
+```
+
+HTTP status is conveyed by the response code. There is no machine-readable `error.code` field. Match on the substring/prefix in `errors[0].message`, or on `errors[0].path` for Zod validation failures.
+
+| Status | Stable token | Meaning |
+|---|---|---|
+| `400` | `path: ["buyer", "phone"]` | Zod validation failed on the phone field. Missing or malformed (E.164-ish, 7+ digits). |
+| `400` | other Zod `path` | Body validation failed on another field. The `path` array tells you exactly which one. |
+| `402` | `payment_required` substring | Adapter requires x402 settlement upfront. |
+| `404` | n/a | URL could not be resolved to a product (create), or intent does not exist (get/confirm). |
+| `409` | n/a | Intent is not in `awaiting_confirmation` (cannot confirm). |
+| `422` | `merchant_unsupported:` prefix in `errors[0].message` | No adapter can fulfill the URL given current org settings and user cohort. Treat as a graceful-fallback signal, not a hard error. The message tail lists the enablement paths and may change. |
+
+---
+
+## Create a checkout intent
+
+`POST /checkout-intents`
+
+Resolves the URL, picks the merchant adapter, and returns the intent in `awaiting_confirmation` with the resolved offer attached.
+
+### Request body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `productUrl` | string (URL) | Yes | A merchant product URL. Intermediaries (ShopMy, Google Shopping) are followed automatically. If no adapter can fulfill the URL, the endpoint returns `422 merchant_unsupported`. |
+| `quantity` | integer | No | Defaults to `1`. |
+| `buyer` | object | Yes | Buyer identity. See below. |
+| `buyer.firstName` | string | Yes | |
+| `buyer.lastName` | string | Yes | |
+| `buyer.email` | string (email) | Yes | |
+| `buyer.phone` | string | Yes | E.164-ish. Must contain at least 7 digits. |
+| `buyer.address1` | string | Yes | Street address. |
+| `buyer.address2` | string | No | |
+| `buyer.city` | string | Yes | |
+| `buyer.province` | string | Yes | State or province code. |
+| `buyer.postalCode` | string | Yes | |
+| `buyer.country` | string (2) | No | ISO 3166-1 alpha-2. Defaults to `US`. |
+| `constraints.maxTotal.amountSubunits` | integer | No | Reject the intent if total exceeds this cap (cents). |
+| `constraints.maxShipping.amountSubunits` | integer | No | Reject the intent if shipping exceeds this cap (cents). |
+
+### Example
+
+<CodeGroup>
+
+```typescript SDK
+import { createPodiumClient } from '@podium-sdk/node-sdk'
+
+const podium = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+
+const intent = await podium.checkoutIntents.createCheckoutIntent({
+  requestBody: {
+    productUrl: 'https://www.amazon.com/dp/B0CWXNS552',
+    quantity: 1,
+    buyer: {
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      phone: '+15551234567',
+      address1: '123 Main St',
+      city: 'New York',
+      province: 'NY',
+      postalCode: '10001',
+      country: 'US',
+    },
+  },
+})
+```
+
+```bash cURL
+curl -X POST https://api.podium.build/api/v1/checkout-intents \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productUrl": "https://www.amazon.com/dp/B0CWXNS552",
+    "quantity": 1,
+    "buyer": {
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane@example.com",
+      "phone": "+15551234567",
+      "address1": "123 Main St",
+      "city": "New York",
+      "province": "NY",
+      "postalCode": "10001",
+      "country": "US"
+    }
+  }'
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": "cm3int123abc",
+  "adapter": "rye",
+  "state": "awaiting_confirmation",
+  "productUrl": "https://www.amazon.com/dp/B0CWXNS552",
+  "productCatalogItemId": "cm3prod456",
+  "quantity": 1,
+  "subtotalSubunits": 2499,
+  "shippingSubunits": 599,
+  "taxSubunits": 250,
+  "totalSubunits": 3348,
+  "currencyCode": "USD",
+  "podiumOrderId": null,
+  "externalOrderId": null,
+  "createdAt": "2026-05-19T12:00:00.000Z"
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | The CheckoutIntent id. Use it in `GET /checkout-intents/:id` and `POST /checkout-intents/:id/confirm`. |
+| `adapter` | enum | `podium-native` \| `shopify` \| `concierge` \| `affiliate-redirect` \| `rye`. Tells you which `payment` shape to send at confirm time. |
+| `state` | enum | See [Intent lifecycle](/agentic/universal-checkout#intent-lifecycle-and-state-machine). |
+| `podiumOrderId` | string \| null | Set once the intent links to an internal Podium order row. `null` until then. |
+| `externalOrderId` | string \| null | Set once the merchant adapter assigns its own id (e.g. the Rye intent id). `null` until then. Use this when reconciling with the merchant. |
+| `failureReason` | object? | Present only on `state: "failed"`. Shape `{ code: string, message: string }`. |
+
+### Errors
+
+See [Error envelope](#error-envelope) for the canonical response shape and the table of stable tokens. The `422 merchant_unsupported` case is the most common on create. Example body:
+
+```json
+{
+  "errors": [
+    {
+      "message": "merchant_unsupported: no adapter can fulfill https://example.com/products/widget. Enable Rye on this org or onboard the merchant via Shopify to proceed.",
+      "path": []
+    }
+  ]
+}
+```
+
+<Note>
+Treat 422 as a graceful-fallback signal, not a hard error. Your agent should tell the user the merchant is not covered yet and surface the merchant link so they can buy on the merchant's site. Asking for shipping details only to fail with this status is worse UX than sharing the link up front.
+</Note>
+
+Coverage expands as [Merchant Intelligence](/platform/merchant-intelligence) classifies new storefronts. Domains that move into a covered class become eligible without code changes on your side.
+
+---
+
+## Retrieve a checkout intent
+
+`GET /checkout-intents/:id`
+
+Returns the current state. Poll until `state` is `completed` or `failed`.
+
+<CodeGroup>
+
+```typescript SDK
+const intent = await podium.checkoutIntents.getCheckoutIntent({ id: 'cm3int123abc' })
+```
+
+```bash cURL
+curl https://api.podium.build/api/v1/checkout-intents/cm3int123abc \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+</CodeGroup>
+
+### Errors
+
+`404` when the intent does not exist or belongs to a different org. See [Error envelope](#error-envelope) for the response shape.
+
+---
+
+## Confirm a checkout intent
+
+`POST /checkout-intents/:id/confirm`
+
+Phase 2 of the contract. Transitions the intent through `confirming` to `completed` or `failed`.
+
+### Request body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `payment` | object | Yes | Adapter-specific payment payload. See the table below. |
+| `buyer` | object (partial) | No | Updates to buyer details captured in `POST /checkout-intents`. `buyer.phone` must remain present (the breaking change applies here too). |
+
+### Payment payload by adapter
+
+The exact `payment` shape depends on which adapter owns the intent. Read `intent.adapter` to decide. For the Stripe-backed paths, call `GET /checkout-intents/:id/payment-config` first to get the right publishable key.
+
+| Adapter | `payment` shape | Notes |
+|---|---|---|
+| `podium-native` | `{ stripeConfirmationToken }` | Tokenize against the Podium publishable key. |
+| `shopify` | `{ stripeConfirmationToken }` | Tokenize against the Podium publishable key. |
+| `rye` | `{ stripeToken }` | Tokenize against the adapter publishable key returned by `payment-config`. |
+| `x402` paths | `{ xPaymentHeader }` | USDC settlement via x402. See [x402 Payments](/agentic/x402-payments). |
+
+<Warning>
+Tokenizing a card with the wrong publishable key results in the charge failing because the token is bound to the wrong Stripe account. Always read `GET /checkout-intents/:id/payment-config` before mounting Stripe Elements.
+</Warning>
+
+### Example
+
+<CodeGroup>
+
+```typescript SDK
+const config = await podium.checkoutIntents.getCheckoutIntentPaymentConfig({ id: intent.id })
+
+const confirmed = await podium.checkoutIntents.confirmCheckoutIntent({
+  id: intent.id,
+  requestBody: {
+    payment: { stripeToken: 'tok_visa' },
+  },
+})
+```
+
+```bash cURL
+curl -X POST https://api.podium.build/api/v1/checkout-intents/cm3int123abc/confirm \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "payment": { "stripeToken": "tok_visa" } }'
+```
+
+</CodeGroup>
+
+### Errors
+
+See [Error envelope](#error-envelope) for the canonical response shape. The most common cases on confirm are:
+
+- `400` with a Zod validation error on `path: ["payment"]` (missing/malformed payment) or `path: ["buyer", "phone"]` (a partial buyer update that strips the phone).
+- `404` when the intent does not exist or belongs to a different org.
+- `409` when the intent is not in `awaiting_confirmation` (already confirming, completed, or failed).
+
+---
+
+## Get the payment config
+
+`GET /checkout-intents/:id/payment-config`
+
+Returns the Stripe publishable key the frontend must use to tokenize the buyer's card before calling `.../confirm`.
+
+```json
+{
+  "adapter": "rye",
+  "paymentKind": "stripe_token",
+  "stripePublishableKey": "pk_live_xxxxx"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `adapter` | string | Adapter that owns this intent. |
+| `paymentKind` | string | `stripe_token` or `stripe_payment_intent`. |
+| `stripePublishableKey` | string | Publishable key to mount Stripe Elements against. |
+
+---
+
+## List checkout intents
+
+`GET /checkout-intents`
+
+Tenant-scoped listing.
+
+### Query parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `state` | enum | `processing`, `awaiting_confirmation`, `confirming`, `completed`, `failed` |
+| `adapter` | enum | `podium_native`, `shopify`, `concierge`, `affiliate_redirect`, `rye` |
+| `limit` | integer | Default `50`, max `100`. |
+
+```bash
+curl "https://api.podium.build/api/v1/checkout-intents?state=completed&limit=20" \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+---
+
+## Product lookup
+
+`POST /products/lookup`
+
+Resolve any merchant product URL into a canonical product record. Useful before creating an intent if your agent wants to show product details first.
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `url` | string (URL) | Yes |  | Any merchant product URL. Intermediaries (ShopMy redirects, Google Shopping) are followed automatically. |
+| `enrich` | boolean | No | `true` | When `true`, runs a Firecrawl scrape on cache miss to populate name, brand, price, image. Set to `false` for fast lookup-only calls. |
+| `persist` | boolean | No | `true` | When `true`, persists the resolved item to the product catalog. Set to `false` to preview without mutating. |
+
+<CodeGroup>
+
+```typescript SDK
+const result = await podium.products.lookup({
+  requestBody: { url: 'https://www.sephora.com/product/example' },
+})
+```
+
+```bash cURL
+curl -X POST https://api.podium.build/api/v1/products/lookup \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://www.sephora.com/product/example" }'
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "cached": true,
+  "rewritten": false,
+  "inputUrl": "https://www.sephora.com/product/example",
+  "resolvedUrl": "https://sephora.com/product/example",
+  "derivedRetailer": {
+    "retailer": "sephora",
+    "retailerType": "AFFILIATE_PARTNER"
+  },
+  "item": {
+    "id": "cm3prod123xyz",
+    "name": "Niacinamide 10% + Zinc 1%",
+    "brand": "The Ordinary",
+    "price": 6.5,
+    "productUrl": "https://sephora.com/product/example",
+    "purchaseMode": "affiliate",
+    "canAgentCheckout": false
+  }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `cached` | boolean | `true` if the URL was already in the catalog. |
+| `rewritten` | boolean | `true` if an intermediary redirect was followed to a different URL. |
+| `resolvedUrl` | string | The canonical retailer URL after rewrites. |
+| `derivedRetailer` | object | Retailer name and type derived from the resolved URL. |
+| `item.purchaseMode` | enum | `x402_platform`, `stripe_platform`, `affiliate`, or `external`. |
+| `item.canAgentCheckout` | boolean | Whether an agent checkout adapter can transact on this URL. |
+
+---
+
+## Create an agentic checkout session (catalog products)
+
+`POST /agentic/checkout/sessions`
+
+Order-backed checkout for products that already live in your Podium catalog. Returns the authoritative state plus a Stripe `clientSecret` when settlement is via card.
+
+Use this when you already have a `productId`. Use `POST /checkout-intents` when you have a merchant URL.
+
+### Request body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `items` | array | Yes | At least one `{ id, quantity }`. |
+| `shippingAddress` | object | No | Buyer shipping address. |
+| `constraints.maxTotal` | integer (cents) | No | Reject if total exceeds this cap. |
+| `constraints.maxShipping` | integer (cents) | No | Reject if shipping exceeds this cap. |
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.podium.build/api/v1/agentic/checkout/sessions \
+  -H "Authorization: Bearer $PODIUM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [{ "id": "clg0productid123", "quantity": 1 }],
+    "shippingAddress": {
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "address": {
+        "line1": "1 Main St",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "countryCode": "US"
+      }
+    },
+    "constraints": { "maxTotal": 10000, "maxShipping": 1500 }
+  }'
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": "ord_123",
+  "items": [{ "id": "prod_123", "unitAmount": 2500, "quantity": 1 }],
+  "subtotal": 2500,
+  "shipping": 0,
+  "tax": 0,
+  "total": 2500,
+  "clientSecret": "pi_secret_abc"
+}
+```
+
+---
+
+## End-to-end example
+
+```typescript
+import { createPodiumClient } from '@podium-sdk/node-sdk'
+
+const podium = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY })
+
+const buyer = {
+  firstName: 'Jane',
+  lastName: 'Doe',
+  email: 'jane@example.com',
+  phone: '+15551234567',
+  address1: '123 Main St',
+  city: 'New York',
+  province: 'NY',
+  postalCode: '10001',
+  country: 'US',
+}
+
+const intent = await podium.checkoutIntents.createCheckoutIntent({
+  requestBody: {
+    productUrl: 'https://www.amazon.com/dp/B0CWXNS552',
+    quantity: 1,
+    buyer,
+  },
+})
+
+const config = await podium.checkoutIntents.getCheckoutIntentPaymentConfig({ id: intent.id })
+
+const confirmed = await podium.checkoutIntents.confirmCheckoutIntent({
+  id: intent.id,
+  requestBody: {
+    payment: { stripeToken: 'tok_visa' },
+  },
+})
+
+let state = confirmed.state
+while (state === 'processing' || state === 'confirming') {
+  await new Promise((r) => setTimeout(r, 1500))
+  const refreshed = await podium.checkoutIntents.getCheckoutIntent({ id: intent.id })
+  state = refreshed.state
+}
+```
+
+---
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Universal Checkout" icon="cart-shopping" href="/agentic/universal-checkout">
+    Concept page with the lifecycle diagram and adapter-coverage model.
+  </Card>
+  <Card title="Merchant Intelligence" icon="brain" href="/platform/merchant-intelligence">
+    How storefronts get classified into adapter coverage.
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/api-reference/webhooks">
+    `checkout-intent-completed` and `checkout-intent-failed` event payloads.
+  </Card>
+  <Card title="x402 Payments" icon="coins" href="/agentic/x402-payments">
+    USDC settlement on Base for adapters that support it.
+  </Card>
+</CardGroup>

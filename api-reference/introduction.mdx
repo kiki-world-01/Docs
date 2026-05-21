@@ -28,13 +28,13 @@ Keys prefixed with `podium_test_` route to staging; `podium_live_` routes to pro
 
 Some endpoints require no authentication:
 
-- `/agentic/*` — AI agent product discovery and checkout
-- `/webhooks/*` — Inbound webhook handlers
-- `/solver/*` — Solver discovery for Task Pool
+- `/agentic/*`. AI agent product discovery and checkout
+- `/webhooks/*`. Inbound webhook handlers
+- `/solver/*`. Solver discovery for Task Pool
 
 ## Request Format
 
-All request bodies use JSON with `Content-Type: application/json`. Every endpoint validates its input with Zod schemas — invalid requests return a 422 with field-level error details.
+All request bodies use JSON with `Content-Type: application/json`. Every endpoint validates its input with Zod schemas. Invalid requests return a 422 with field-level error details.
 
 ```bash
 curl -X POST https://api.podium.build/api/v1/product \
@@ -56,9 +56,9 @@ Successful responses return JSON. Single resources return the object directly; c
 
 | Status | Meaning |
 |--------|---------|
-| `200` | Success — resource returned |
-| `201` | Created — new resource |
-| `204` | No content — successful deletion |
+| `200` | Success. Resource returned |
+| `201` | Created. New resource |
+| `204` | No content. Successful deletion |
 
 ### Error Responses
 
@@ -79,14 +79,14 @@ Errors return a consistent shape:
 
 | Status | Meaning |
 |--------|---------|
-| `400` | Bad request — malformed input |
-| `401` | Unauthorized — missing or invalid API key |
-| `402` | Payment required — x402 crypto payment needed |
-| `403` | Forbidden — insufficient subscription tier or role |
+| `400` | Bad request. Malformed input |
+| `401` | Unauthorized. Missing or invalid API key |
+| `402` | Payment required. X402 crypto payment needed |
+| `403` | Forbidden. Insufficient subscription tier or role |
 | `404` | Not found |
-| `409` | Conflict — duplicate resource |
-| `422` | Validation error — request body failed schema validation |
-| `429` | Rate limited — retry after the indicated delay |
+| `409` | Conflict. Duplicate resource |
+| `422` | Validation error. Request body failed schema validation |
+| `429` | Rate limited. Retry after the indicated delay |
 | `500` | Internal server error |
 
 ## Pagination
@@ -95,7 +95,7 @@ Collection endpoints support offset-based pagination:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `limit` | integer | 20 | Items per page (1–100) |
+| `limit` | integer | 20 | Items per page (1-100) |
 | `offset` | integer | 0 | Number of items to skip |
 
 ```bash
@@ -110,28 +110,31 @@ Podium uses [CUID2](https://github.com/paralleldrive/cuid2) for all entity IDs. 
 clxyz1234567890abcdef  # Example CUID2
 ```
 
-## Companion & Intelligence Endpoints
+## Recent Additions
 
-Recent additions to the Companion API surface:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/companion/agent/chat/history/:userId` | Retrieve full chat history for a user's agent conversation |
-| `GET` | `/companion/creator/:handle/products` | List products curated by a specific creator persona |
-| `POST` | `/companion/profile/:userId/seed-from-creator` | Seed a user's preference profile from a creator's taste graph |
-| `POST` | `/companion/subscription/checkout` | Create a Stripe Checkout session for a subscription plan |
-| `POST` | `/companion/subscription/portal` | Generate a Stripe Customer Portal link for subscription management |
-| `GET` | `/companion/subscription/status/:userId` | Check a user's current subscription tier and usage limits |
+| Surface | Endpoint or change | Description |
+|---|---|---|
+| **Universal Checkout** | `POST /checkout-intents`, `GET /checkout-intents/:id`, `POST /checkout-intents/:id/confirm`, `GET /checkout-intents/:id/payment-config` | Two-phase checkout intent for supported merchant URLs. See [Universal Checkout](/agentic/universal-checkout) and the [Checkout Intents API](/api-reference/checkout-intents). |
+| **Universal Checkout** | `POST /products/lookup` | Resolve any merchant URL into a canonical product record. |
+| **Merchant Intelligence** | (platform feature, no public endpoint) | A platform-wide registry that classifies merchant storefronts and automatically expands checkout coverage. See [Merchant Intelligence](/platform/merchant-intelligence). |
+| **In-Chat Buyability** | `buyableInChat` on companion `ProductCard` surfaces | **Server-derived. Do not re-derive on the client.** Mirrors live adapter selection. See [Product Feed](/agentic/product-feed#buyableinchat) for the full contract. |
+| **Guest Sessions** | `POST /companion/guest/session`, `POST /companion/guest/convert` | Try-before-sign-up flow with merge-on-convert. See [Guest Experience](/agentic/guest-experience). |
+| **World Sign-In Nonce** | `POST /companion/world/nonce` | Server-issued single-use SIWE nonce for World wallet authentication. |
+| **Companion chat** | `GET /companion/agent/chat/history/:userId` | Retrieve full chat history for a user's agent conversation. |
+| **Companion creators** | `GET /companion/creator/:handle/products`, `POST /companion/profile/:userId/seed-from-creator` | Browse creator catalogs and seed user profiles from a creator's taste graph. |
+| **Subscriptions** | `POST /companion/subscription/checkout`, `POST /companion/subscription/portal`, `GET /companion/subscription/:userId/status` | Stripe-powered subscription billing for companion agents. |
 
 ### SSE Events
 
-The conversational agent endpoint (`POST /companion/agent/chat`) streams Server-Sent Events. In addition to `message` and `done`, the following event types may appear:
+The conversational agent endpoint (`POST /companion/agent/chat/stream`) streams Server-Sent Events. The full set of event types is documented in [Conversational Agent → Event Types](/agentic/conversational-agent#event-types). Recently added event types:
 
 | Event | Description |
 |-------|-------------|
-| `memory_queued` | A preference has been extracted and queued for memory storage |
-| `confirmation_required` | The agent is asking the user to confirm before proceeding (e.g., high-value purchase) |
-| `spend_limit_exceeded` | The requested action exceeds the user's configured spend limit |
+| `checkout_intent_created` | The agent created a Universal Checkout intent from a merchant URL. Payload mirrors the `POST /checkout-intents` response. |
+| `quiz_requested` | The agent summoned an inline profile quiz. Payload is an `InlineQuizDefinition`. |
+| `memory_queued` | A preference has been extracted and queued for memory storage. |
+| `confirmation_required` | The agent is asking the user to confirm before proceeding (e.g., high-value purchase). |
+| `spend_limit_exceeded` | The requested action exceeds the user's configured spend limit. |
 
 ## Endpoint Groups
 

@@ -11,145 +11,143 @@ Admin endpoints manage platform-level configuration including API keys, organiza
   Most developers interact with API keys and organization settings through the [Podium Developer Portal](https://app.podium.build/onboarding). The admin API is for programmatic management and platform-level automation.
 </Note>
 
-## API Key Management
+## API Keys
 
-### Create a Key
+You can create, list, rename, deactivate, rotate, and delete API keys. Every key carries a human-readable `name`, the last four characters of the secret (`lastChars`), and a recorded `lastUsedAt` so you can identify which key is doing what in production.
 
-<CodeGroup>
+<Note>
+These admin endpoints currently expose HTTP-only contracts. SDK coverage is pending an OpenAPI surface migration. Use the REST examples below until `AdminService` is regenerated to include these routes.
+</Note>
+
+### Response fields
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string (CUID) | Stable key identifier. Use this in PATCH, DELETE, and rotate calls. |
+| `name` | string? | Human-readable label. Set when you create the key, edit with PATCH. |
+| `prefix` | string | Always `podium_live_` or `podium_test_`. Routes to production or staging. |
+| `lastChars` | string | Last four characters of the secret. Used in the dashboard to disambiguate. |
+| `lastUsedAt` | datetime? | Timestamp of the most recent request authenticated by this key. Debounced server-side. |
+| `expiresAt` | datetime? | Optional expiry. `null` means no expiry. |
+| `isActive` | boolean | Active keys authenticate requests. Inactive keys are immediately blocked. |
+| `createdAt` | datetime | Creation timestamp. |
+
+### Create a key
+
+`POST /admin/api-keys`
+
+Returns the **full secret exactly once**. Store it securely; subsequent reads only return the masked metadata above.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | The organization to create the key under. |
+| `name` | string (max 100) | No | Optional human-readable label. Recommended. |
 
 ```bash cURL
 curl -X POST https://api.podium.build/api/v1/admin/api-keys \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "organizationId": "clorg_abc" }'
+  -d '{ "organizationId": "clorg_abc", "name": "Production backend" }'
 ```
-
-```typescript SDK
-import { createPodiumClient } from '@podium-sdk/node-sdk';
-const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
-const key = await client.apiKeys.create({
-  requestBody: { organizationId: 'clorg_abc' }
-});
-```
-
-</CodeGroup>
 
 ```json
 {
   "id": "clkey_xyz",
-  "key": "podium_live_sk_abc123...",
-  "organizationId": "clorg_abc",
-  "isActive": true,
-  "createdAt": "2026-03-07T12:00:00.000Z"
+  "apiKey": "podium_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 }
 ```
 
 <Warning>
-  The full API key is only returned once at creation time. Store it securely — subsequent queries return a masked version.
+The full secret (`apiKey`) is only returned once at creation time. Store it in a secrets manager. The list, get, and PATCH endpoints return `lastChars` only.
 </Warning>
 
-### List Organization Keys
+### List keys for an organization
 
-<CodeGroup>
-
-```bash cURL
-curl "https://api.podium.build/api/v1/admin/api-keys?organizationId=clorg_abc" \
-  -H "Authorization: Bearer $PODIUM_API_KEY"
-```
-
-```typescript SDK
-const keys = await client.apiKeys.list({ organizationId: 'clorg_abc' });
-```
-
-</CodeGroup>
+`GET /admin/api-keys?organizationId=clorg_abc`
 
 ```json
-[
-  {
-    "id": "clkey_xyz",
-    "keyPrefix": "podium_live_sk_abc1...",
-    "isActive": true,
-    "lastUsedAt": "2026-03-07T11:45:00.000Z",
-    "createdAt": "2026-01-15T10:00:00.000Z"
-  }
-]
+{
+  "apiKeys": [
+    {
+      "id": "clkey_xyz",
+      "name": "Production backend",
+      "prefix": "podium_live_",
+      "lastChars": "n4p6",
+      "lastUsedAt": "2026-05-06T10:00:00.000Z",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-01-15T10:30:00.000Z"
+    },
+    {
+      "id": "clkey_abc",
+      "name": null,
+      "prefix": "podium_live_",
+      "lastChars": "k2m8",
+      "lastUsedAt": null,
+      "expiresAt": null,
+      "isActive": false,
+      "createdAt": "2026-01-10T14:20:00.000Z"
+    }
+  ]
+}
 ```
 
-### Get Key Details
+### Get a key
 
-```bash
-curl https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
-  -H "Authorization: Bearer $PODIUM_API_KEY"
-```
+`GET /admin/api-keys/:id`
 
-### Deactivate a Key
+Returns the masked metadata for a single key.
 
-<CodeGroup>
+### Update a key (rename or activate / deactivate)
+
+`PATCH /admin/api-keys/:id`
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string (max 100) or `null` | Set to a new label, or `null` to clear it. |
+| `isActive` | boolean | `false` immediately blocks requests using this key. `true` re-enables. |
 
 ```bash cURL
 curl -X PATCH https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "isActive": false }'
+  -d '{ "name": "Production backend (us-east)", "isActive": true }'
 ```
 
-```typescript SDK
-await client.apiKeys.update({
-  id: 'clkey_xyz',
-  requestBody: { isActive: false }
-});
-```
+Either field is optional; send the field you want to change. Returns `{ ok: true }`.
 
-</CodeGroup>
+### Rotate a key
 
-Setting `isActive: false` immediately blocks all requests using this key.
+`POST /admin/api-keys/:id/rotate`
 
-### Rotate a Key
-
-<CodeGroup>
+Issues a new secret for the same `id`, invalidates the old secret, and publishes an `api-key-changed` event to flush caches across all API instances. The new secret is returned in the response **exactly once**.
 
 ```bash cURL
 curl -X POST https://api.podium.build/api/v1/admin/api-keys/clkey_xyz/rotate \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
-```typescript SDK
-const rotated = await client.apiKeys.createRotate({ id: 'clkey_xyz' });
-```
-
-</CodeGroup>
-
 ```json
 {
   "id": "clkey_xyz",
-  "key": "podium_live_sk_newkey456...",
-  "previousKeyId": "clkey_xyz_old",
-  "rotatedAt": "2026-03-07T12:00:00.000Z"
+  "apiKey": "podium_live_newsecret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 }
 ```
 
-Key rotation:
-1. Generates a new key value for the same key ID
-2. Invalidates the old key value
-3. Publishes an `api-key-changed` event to flush caches across all API instances
-4. Returns the new full key (one-time display)
+<Warning>
+The new secret is the only payload that contains the cleartext value. Subsequent reads return `lastChars` only. Plan your rotation so the new secret is captured by your secrets manager before the response is discarded.
+</Warning>
 
-### Delete a Key
+### Delete a key
 
-<CodeGroup>
+`DELETE /admin/api-keys/:id`
+
+Permanently removes the key. Returns `{ ok: true }`. This cannot be undone.
 
 ```bash cURL
 curl -X DELETE https://api.podium.build/api/v1/admin/api-keys/clkey_xyz \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
-
-```typescript SDK
-await client.apiKeys.delete({ id: 'clkey_xyz' });
-```
-
-</CodeGroup>
-
-Permanently removes the key. This cannot be undone.
 
 ## Organizations
 
@@ -347,6 +345,62 @@ curl https://api.podium.build/api/v1/admin/subscription-tiers/tier_growth \
   -H "Authorization: Bearer $PODIUM_API_KEY"
 ```
 
+## Creator Personas
+
+Admin endpoints for managing creator personas: the curated handles whose product catalogs feed [creator-linked discovery](/agentic/enrichment-pipeline#creator-intelligence) and the creator-based shopping surface described in [Reference Apps](/agentic/beauty-companion).
+
+<Note>
+These admin endpoints currently expose HTTP-only contracts. SDK coverage is pending an OpenAPI surface migration. Use the REST examples below until `AdminService` is regenerated to include these routes.
+</Note>
+
+### List active creator personas
+
+`GET /admin/creator-personas/active`
+
+Returns the public-safe subset of active creator personas. This is the endpoint most apps poll to render a creator-picker surface.
+
+```bash cURL
+curl https://api.podium.build/api/v1/admin/creator-personas/active \
+  -H "Authorization: Bearer $PODIUM_API_KEY"
+```
+
+```json
+[
+  {
+    "handle": "janedoe",
+    "displayName": "Jane Doe",
+    "platform": "SHOPMY",
+    "avatarUrl": "https://cdn.example.com/jane.jpg",
+    "productCount": 42,
+    "resolvedCount": 38,
+    "seedProfileData": {
+      "brands": ["The Ordinary", "CeraVe"],
+      "priceRange": { "min": 10, "max": 80 }
+    }
+  }
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `handle` | string | Unique creator handle. |
+| `displayName` | string | Creator's display name. |
+| `platform` | enum | `SHOPMY`, `LTK`, or `AMAZON_INFLUENCER`. |
+| `avatarUrl` | string? | Avatar image URL. |
+| `productCount` | integer | Total products in the creator's catalog. |
+| `resolvedCount` | integer | Products successfully resolved to the canonical catalog. Higher is better. |
+| `seedProfileData` | object? | Taste data used by [profile seeding](/api-reference/companion#profile-seeding-from-creator). |
+
+### Other persona endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/admin/creator-personas` | List all personas (active and inactive) with status and last-refresh timestamps. |
+| `POST` | `/admin/creator-personas` | Register a new persona by handle and trigger ingestion. |
+| `POST` | `/admin/creator-personas/:handle/refresh` | Re-run ingestion for an existing persona. |
+| `GET` | `/admin/creator-personas/:handle/audit` | Catalog audit report for the persona. |
+| `POST` | `/admin/creator-personas/re-enrich-batch` | Batch-refresh creator features (bio, tags, thumbnails) across many personas. |
+
 ## Campaign Administration
 
 Admin-level campaign management across the organization:
@@ -448,7 +502,7 @@ curl -X POST https://api.podium.build/api/v1/admin/enrichment/serp-search \
 
 ### Discovery Catalog Stats
 
-View the discovery query catalog — how many queries are available per category:
+View the discovery query catalog. How many queries are available per category:
 
 ```bash
 curl https://api.podium.build/api/v1/admin/enrichment/serp-catalog \
@@ -653,7 +707,7 @@ curl -X POST "https://api.podium.build/api/v1/admin/enrichment/amazon-reprocess"
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `dryRun` | boolean | `false` | Preview mode — shows which creators would be processed without running extraction |
+| `dryRun` | boolean | `false` | Preview mode. Shows which creators would be processed without running extraction |
 | `maxCreators` | number | all | Limit the number of creators to process |
 | `batchSize` | number | 10 | Creators per async batch |
 
@@ -709,12 +763,18 @@ See [Task Pool API](/api-reference/task-pool-api) for details.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/admin/api-keys` | Create API key |
-| `GET` | `/admin/api-keys` | List keys |
-| `GET` | `/admin/api-keys/{id}` | Get key (masked) |
-| `PATCH` | `/admin/api-keys/{id}` | Activate/deactivate |
+| `POST` | `/admin/api-keys` | Create API key (returns secret once) |
+| `GET` | `/admin/api-keys` | List keys for an organization |
+| `GET` | `/admin/api-keys/{id}` | Get key metadata (masked) |
+| `PATCH` | `/admin/api-keys/{id}` | Rename and/or activate / deactivate |
 | `DELETE` | `/admin/api-keys/{id}` | Delete key |
-| `POST` | `/admin/api-keys/{id}/rotate` | Rotate key |
+| `POST` | `/admin/api-keys/{id}/rotate` | Rotate key (returns new secret once) |
+| `GET` | `/admin/creator-personas` | List all creator personas |
+| `POST` | `/admin/creator-personas` | Register a new persona |
+| `GET` | `/admin/creator-personas/active` | List active personas (public-safe subset) |
+| `POST` | `/admin/creator-personas/:handle/refresh` | Re-run ingestion for a persona |
+| `GET` | `/admin/creator-personas/:handle/audit` | Catalog audit report |
+| `POST` | `/admin/creator-personas/re-enrich-batch` | Batch-refresh creator features |
 | `GET` | `/admin/organizations` | List organizations |
 | `POST` | `/admin/organizations` | Create organization |
 | `GET` | `/admin/organizations/{id}` | Get organization |

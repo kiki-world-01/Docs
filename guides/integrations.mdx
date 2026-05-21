@@ -141,8 +141,8 @@ const paymentIntent = await stripe.paymentIntents.create({
 
 If a creator doesn't complete Stripe onboarding within 48 hours, the `stripe-onboarding-reminder` cron sends an email reminder. The reminder tracks:
 
-- `stripeOnboardingReminderSentAt` — when the last reminder was sent
-- `stripeOnboardingReminderClaimedUntil` — suppresses reminders until this date
+- `stripeOnboardingReminderSentAt`. When the last reminder was sent
+- `stripeOnboardingReminderClaimedUntil`. Suppresses reminders until this date
 
 ### Troubleshooting
 
@@ -165,7 +165,7 @@ PRIVY_APP_SECRET=your_privy_app_secret
 
 ### Server Wallets (Backend / Agents)
 
-Server wallets are platform-managed — your backend controls signing. Used for automated x402 payments, reward minting, and agent-initiated transfers.
+Server wallets are platform-managed. Your backend controls signing. Used for automated x402 payments, reward minting, and agent-initiated transfers.
 
 ```typescript
 import { PrivyClient } from '@privy-io/server-auth';
@@ -367,7 +367,7 @@ PATCH /api/v1/creator/id/{creatorId}
 |-------|---------|
 | No shipping quotes | Verify the order has valid shipping addresses and product weights |
 | Label generation fails | Check the creator's Shippo account is connected and has a valid payment method |
-| Rates seem high | Review product weight/dimension data — incorrect values inflate shipping costs |
+| Rates seem high | Review product weight/dimension data. Incorrect values inflate shipping costs |
 
 ---
 
@@ -390,20 +390,24 @@ Podium integrates with email automation platforms to trigger personalized lifecy
 
 ### Contact Properties
 
-The system keeps email contact records in sync with the latest user data:
+The system keeps email contact records in sync with the latest user data. Property names are app-defined; you choose how to namespace them. The examples below show common patterns.
 
 | Property | Description | Updated When |
 |---|---|---|
 | `firstName` | User's first name | Account creation, profile update |
-| `skinType` | Primary skin type | Quiz completion, profile update |
-| `sageInsightSummary` | AI-generated insight paragraph from [Agent Memory](/agentic/memory-intelligence#email-insight-surface) | After every summary job |
+| `vertical:primaryDimension` | A primary preference dimension for your vertical (e.g., skin type for skincare, dietary preference for food, frame size for cycling) | Quiz completion, profile update |
+| `insightSummary` | AI-generated insight paragraph from [Agent Memory](/agentic/memory-intelligence#email-insight-surface) | After every summary job |
 | `trialEndsAt` | Trial expiration date | Subscription purchase |
 | `messagesUsed` | Messages consumed this period | Each chat message |
 | `lastActiveAt` | Last interaction timestamp | Any API interaction |
 
 ### Email Templates
 
-Templates use double-brace variables (e.g., `{{firstName}}`, `{{sageInsightSummary}}`) to personalize content. The `sageInsightSummary` variable is particularly powerful — it contains a multi-sentence, first-person narrative generated from the user's structured conversation memory.
+Templates use double-brace variables (e.g., `{{firstName}}`, `{{insightSummary}}`) to personalize content. The `insightSummary` variable is the richest signal: it contains a multi-sentence, first-person narrative generated from the user's structured conversation memory.
+
+#### Example: how Sage uses this
+
+Sage namespaces this property as `sageInsightSummary` (and adds a `skinType` field for its vertical). Its lifecycle emails reference `{{sageInsightSummary}}` directly. Other apps choose their own names. There is no platform-mandated naming convention; the underlying data is the same `AgentMemory` summary every app can access.
 
 ### Scheduled Emails
 
@@ -414,7 +418,7 @@ Some lifecycle emails are time-delayed rather than event-triggered:
 | **Trial reminder** | 3 days before trial expires | Urgency-based conversion |
 | **Re-engagement** | 7+ days inactive | Personalized win-back based on conversation history |
 
-Scheduled emails are deduped — each user receives at most one of each type per eligibility window.
+Scheduled emails are deduped. Each user receives at most one of each type per eligibility window.
 
 ### Multi-App Support
 
@@ -471,9 +475,9 @@ When the rate limit is exceeded, the endpoint returns `429` with an upgrade CTA:
 
 ### Use Cases
 
-- **Marketing site hero** — embed a live product search on your landing page
-- **Agent demo** — let visitors see real recommendations without sign-up
-- **Combine with [Guest Experience](/agentic/guest-experience)** — search first, then seamlessly transition into a guest chat session
+- **Marketing site hero**. Embed a live product search on your landing page
+- **Agent demo**. Let visitors see real recommendations without sign-up
+- **Combine with [Guest Experience](/agentic/guest-experience)**. Search first, then start a guest chat session with the same query as the opening message.
 
 ---
 

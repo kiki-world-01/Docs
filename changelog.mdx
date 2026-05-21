@@ -1,0 +1,30 @@
+---
+title: Changelog
+description: Release notes for the Podium platform.
+---
+
+## May 2026
+
+The May 2026 sync ships [Universal Checkout](/agentic/universal-checkout), [Merchant Intelligence](/platform/merchant-intelligence), server-derived [`buyableInChat`](/agentic/product-feed#buyableinchat) on companion product cards and agent tool results, inline profile quizzes and full [guest sessions](/agentic/guest-experience), API key management with names and last-used timestamps, a single-use World sign-in [nonce endpoint](/api-reference/companion#world-sign-in-nonce), tiered catalog image enrichment, and the Sonnet 4.6 model upgrade across SDK code samples.
+
+<Warning>
+**Breaking change.** `buyer.phone` is now required on `POST /checkout-intents` and `POST /checkout-intents/:id/confirm`. Format as E.164-ish (`+14155551234`). Missing or malformed phone numbers return `400` with a Zod validation error on `path: ["buyer", "phone"]`. There is no machine-readable `error.code` field today; match on the `path` array for validation failures and on the `merchant_unsupported:` prefix in `errors[0].message` for 422s. Existing integrations that omit phone must update before adopting Universal Checkout.
+</Warning>
+
+### Highlights
+
+- **Universal Checkout.** A two-phase intent primitive that lets your agent buy from supported merchant URLs. Create the intent, confirm with a verified buyer, settle in card or USDC, poll to terminal state. See the [concept](/agentic/universal-checkout) and the [API reference](/api-reference/checkout-intents).
+- **Merchant Intelligence.** A platform-wide registry that classifies merchant storefronts and automatically expands Universal Checkout coverage. Three-tier classifier (deterministic, JSON probes, LLM arbiter on Claude Sonnet 4.6). See [the concept page](/platform/merchant-intelligence).
+- **`buyableInChat` on companion product cards.** **Server-derived. Do not re-derive on the client.** Mirrors live adapter selection. Stamped on `companion/recommendations`, `companion/products`, `agent-gateway/*`, and agent tools (`search_products`, `compare_products`, `get_recommendations`). See [Product Feed](/agentic/product-feed#buyableinchat) for the full contract.
+- **Guest sessions and merge-on-convert.** Users can chat without signing in (default 5 messages, configurable via `GUEST_MESSAGE_LIMIT`). On sign-up, chat history, intent profile, and agent memory merge atomically. See [Guest Experience](/agentic/guest-experience).
+- **Inline profile quiz.** The agent can summon a structured quiz mid-conversation via the `start_inline_quiz` tool. The miniapp receives a `quiz_requested` SSE event. See [Conversational Agent → Inline Profile Quiz](/agentic/conversational-agent#inline-profile-quiz).
+- **API key management.** Keys now have a `name`, `lastChars`, and `lastUsedAt`. New `PATCH` and `POST .../rotate` operations. See [Admin → API Keys](/api-reference/admin#api-keys).
+- **World sign-in nonce.** `POST /companion/world/nonce` issues a single-use, 5-minute SIWE nonce for World Mini App `walletAuth`. See [Companion → World Sign-In Nonce](/api-reference/companion#world-sign-in-nonce).
+- **Catalog image enrichment.** Tiered scrape pipeline with image-quality validation across merchant-specific image APIs, headless fetch, and Apify-backed extraction. See [Enrichment Pipeline → Catalog Image Enrichment](/agentic/enrichment-pipeline#catalog-image-enrichment).
+- **Creator-linked enrichment.** New `PARALLEL_TASK` enrichment source for deep resolution of creator-linked products.
+- **Model upgrade.** All public code samples now reference `claude-sonnet-4-6` instead of the prior dated Sonnet 4 model id.
+
+### Deprecations
+
+- The companion message-counter API (`incrementMessageCount`) is deprecated. Newer apps use a metered credit-grant model. The existing endpoints remain supported. See [Subscriptions](/platform/subscriptions).
+- The legacy concierge/affiliate-redirect fallback in the checkout-intent path was removed. Use Universal Checkout for buy-by-URL flows.
