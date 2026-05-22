@@ -1,6 +1,6 @@
 ---
 title: Agentic Product Feed
-description: The endpoint agents call to discover products — scored with intent signals, tagged with provenance, and enriched with attribute baselines
+description: The endpoint agents call to discover products. Scored with intent signals, tagged with provenance, and enriched with attribute baselines
 ---
 
 ## Overview
@@ -9,9 +9,9 @@ The agentic product feed at `GET /agentic/products/feed` is the primary interfac
 
 - An **intent score** reflecting both user-declared preferences and market-derived intelligence
 - **Provenance metadata** showing exactly what signals contribute to the score
-- **Attribute baselines** — the top enriched attributes for the product (texture, sentiment, key ingredients, etc.)
+- **Attribute baselines**. The top enriched attributes for the product (texture, sentiment, key ingredients, etc.)
 
-The feed is **public** — no API key required. This enables AI agents to discover products without pre-provisioned credentials, lowering the integration barrier for the agentic commerce ecosystem.
+The feed is **public**. No API key required. This enables AI agents to discover products without pre-provisioned credentials, lowering the integration barrier for the agentic commerce ecosystem.
 
 ## Request
 
@@ -23,11 +23,11 @@ GET /api/v1/agentic/products/feed
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `limit` | integer | 20 | Max products to return (1–100) |
+| `limit` | integer | 20 | Max products to return (1-100) |
 | `offset` | integer | 0 | Pagination offset |
-| `category` | string | — | Filter by product category |
-| `minPrice` | integer | — | Minimum price in cents |
-| `maxPrice` | integer | — | Maximum price in cents |
+| `category` | string | | Filter by product category |
+| `minPrice` | integer | | Minimum price in cents |
+| `maxPrice` | integer | | Maximum price in cents |
 | `inStock` | boolean | true | Only return in-stock products |
 
 ## Response Shape
@@ -95,6 +95,30 @@ GET /api/v1/agentic/products/feed
 }
 ```
 
+## `buyableInChat`
+
+Companion `ProductCard` responses carry a server-derived `buyableInChat: boolean`. It's `true` when [Universal Checkout](/agentic/universal-checkout) would pick up this product URL at intent-create time, given the current org settings, user cohort, and [Merchant Intelligence](/platform/merchant-intelligence) classification.
+
+| Value | Meaning | Agent behavior |
+|---|---|---|
+| `true` | The product is buyable in-chat via Universal Checkout. | Offer the agent's `create_order` flow. |
+| `false` | The product is not currently buyable in-chat. | Share the merchant URL or use an affiliate redirect. |
+| `undefined` | Field omitted by this surface. Treat as `false` for safety. | Same as `false`. |
+
+**Server-derived. Do not re-derive on the client.** The conjunction of platform, org, cohort, and coverage rules is non-trivial and brittle to drift. The frontend can never promise something the backend will refuse, so trust this field as the single source of truth.
+
+### Where `buyableInChat` is stamped
+
+| Surface | Stamped? |
+|---|---|
+| `GET /companion/recommendations/:userId` | Yes |
+| `GET /companion/products` and `GET /companion/products/:id` | Yes |
+| `/agent-gateway/*` (World Agent Kit gateway) | Yes |
+| Agent tool results from `search_products`, `get_recommendations`, `compare_products` | Yes |
+| `GET /agentic/products/feed` and other `/agentic/*` discovery endpoints | No (not stamped today) |
+
+If you need the buyability signal on an `/agentic/*` surface, fetch the matching products through `GET /companion/products` or `GET /companion/recommendations/:userId` and merge.
+
 ## Intent Score Computation
 
 The intent score combines two signal lanes with fixed weighting:
@@ -125,7 +149,7 @@ Scales linearly from 0 to 1 as enrichment signals accumulate, capped at 500 sign
 
 ### Memory-Aware Scoring
 
-When a user has an [AgentMemory](/agentic/memory-intelligence#agentmemory), the scoring system incorporates their structured profile into signal weights. Goals, concerns, avoidances, and category-specific price ranges all influence which products score highest. Domain-specific weights are applied based on the product's vertical — beauty products are weighted differently than wellness supplements. See [Memory & Intelligence — Signal Scoring](/agentic/memory-intelligence#signal-scoring-with-polarity) for details.
+When a user has an [AgentMemory](/agentic/memory-intelligence#agentmemory), the scoring system incorporates their structured profile into signal weights. Goals, concerns, avoidances, and category-specific price ranges all influence which products score highest. Domain-specific weights are applied based on the product's vertical. Beauty products are weighted differently than wellness supplements. See [Memory & Intelligence. Signal Scoring](/agentic/memory-intelligence#signal-scoring-with-polarity) for details.
 
 ### Cold-Start Behavior
 
@@ -140,11 +164,11 @@ When a product is new and has zero votes, the intent score is driven entirely by
 
 ## Provenance Transparency
 
-Every product in the feed includes `intentProvenance` — a breakdown of exactly what signals contribute to the score. This enables agents to:
+Every product in the feed includes `intentProvenance`. A breakdown of exactly what signals contribute to the score. This enables agents to:
 
 - **Explain recommendations** to users ("This product has strong positive reviews from 87 market sources")
 - **Apply their own weighting** if the default 70/30 split doesn't match their use case
-- **Filter by confidence** — only recommend products with sufficient user-declared signals
+- **Filter by confidence**. Only recommend products with sufficient user-declared signals
 
 ## Attribute Baselines
 
@@ -160,7 +184,7 @@ Agents can use baselines to match products against user preferences. For example
 
 ## Reason Tags
 
-Products in the companion recommendations include a `reasonTag` field — a concise, human-readable explanation of why this product was recommended for a specific user.
+Products in the companion recommendations include a `reasonTag` field. A concise, human-readable explanation of why this product was recommended for a specific user.
 
 ```json
 {
@@ -171,9 +195,9 @@ Products in the companion recommendations include a `reasonTag` field — a conc
 }
 ```
 
-Reason tags are generated during recommendation re-ranking by combining signals from the user's memory profile — skin type, concerns, budget, brand preferences, and avoidances. Tags can be simple (`"Hydration"`) or compound (`"For oily skin · Under your $50 budget"`).
+Reason tags are generated during recommendation re-ranking by combining signals from the user's memory profile. Skin type, concerns, budget, brand preferences, and avoidances. Tags can be simple (`"Hydration"`) or compound (`"For oily skin · Under your $50 budget"`).
 
-See [Memory & Intelligence — Reason Tags](/agentic/memory-intelligence#reason-tags) for the full list of tag types and how they're computed.
+See [Memory & Intelligence. Reason Tags](/agentic/memory-intelligence#reason-tags) for the full list of tag types and how they're computed.
 
 ## Domain-Specific Scoring
 
@@ -203,7 +227,7 @@ Every brand is classified into a tier that reflects its market positioning:
 | 3 | Mainstream / trusted | CeraVe, Nature Made, Nike |
 | 4 | Mass market / value | Kirkland, generic brands |
 
-Brand tier influences ranking — tier 1 and 2 brands receive a quality boost, while tier 4 brands are down-weighted unless the user has explicitly shown affinity.
+Brand tier influences ranking. Tier 1 and 2 brands receive a quality boost, while tier 4 brands are down-weighted unless the user has explicitly shown affinity.
 
 ### Feed-Safe Filtering
 
@@ -234,7 +258,7 @@ Each purchase URL includes a `subID` parameter for attribution tracking. Affilia
 
 ## Creator Intelligence
 
-The feed incorporates creator-curated products from the [Creator Intelligence pipeline](/agentic/enrichment-pipeline#creator-intelligence). Creators are recommended to users via Thompson Sampling — a contextual bandit approach that balances showing popular creators with exploring lesser-known ones.
+The feed incorporates creator-curated products from the [Creator Intelligence pipeline](/agentic/enrichment-pipeline#creator-intelligence). Creators are recommended to users via Thompson Sampling. A contextual bandit approach that balances showing popular creators with exploring lesser-known ones.
 
 ### Creator Features
 
@@ -255,7 +279,7 @@ Beyond the two-lane intent score, Podium applies machine learning signals to imp
 
 ### Popularity Scoring
 
-Product popularity is computed from weighted user interactions — purchases carry the most weight, followed by purchase intent, affiliate clicks, and rank-ups. Negative interactions (skips, rank-downs) reduce the score. The raw sum is normalized by the square root of total interactions to prevent high-volume but low-quality signals from dominating.
+Product popularity is computed from weighted user interactions. Purchases carry the most weight, followed by purchase intent, affiliate clicks, and rank-ups. Negative interactions (skips, rank-downs) reduce the score. The raw sum is normalized by the square root of total interactions to prevent high-volume but low-quality signals from dominating.
 
 ### Temporal Decay
 

@@ -1,9 +1,9 @@
 ---
 title: Companion API
-description: Generalized personal agent infrastructure — intent profiles, product catalog, interactions, recommendations, and concierge orders
+description: Generalized personal agent infrastructure. Intent profiles, product catalog, interactions, recommendations, and concierge orders
 ---
 
-The Companion API provides the building blocks for personal shopping agents. It is **vertical-agnostic** — the [Beauty Companion](/agentic/beauty-companion) uses it for skincare, but the same endpoints power agents for any product domain.
+The Companion API provides the building blocks for personal shopping agents. It is **vertical-agnostic**. The same endpoints power agents for any product domain. See [Reference Apps](/agentic/beauty-companion) for worked examples.
 
 <Info>
   Looking for the conversational AI agent? See [Conversational Agent](/agentic/conversational-agent) for the chat and streaming endpoints that combine these primitives into a full AI shopping companion with tool-use, memory, and proactive nudges.
@@ -15,7 +15,7 @@ All endpoints are prefixed with `/api/v1/companion`.
 
 ## Intent Profiles
 
-An intent profile stores what a user wants — their preferences, constraints, and behavioral signals. Agents read and write profiles to personalize recommendations and execute purchases on a user's behalf.
+An intent profile stores what a user wants. Their preferences, constraints, and behavioral signals. Agents read and write profiles to personalize recommendations and execute purchases on a user's behalf.
 
 ### Create a Profile
 
@@ -121,10 +121,10 @@ curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/points \
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | CUID2 identifier |
-| `userId` | string | CUID2 — the Podium user this profile belongs to |
+| `userId` | string | CUID2. The Podium user this profile belongs to |
 | `skinType` | string? | Free-text preference dimension (use whatever fits your vertical) |
 | `concerns` | string[] | Array of preference tags |
-| `priceRange` | object? | `{ min: number, max: number }` — budget constraints |
+| `priceRange` | object? | `{ min: number, max: number }`. Budget constraints |
 | `brands` | string[] | Preferred brands |
 | `avoidances` | string[] | Things to exclude (ingredients, materials, etc.) |
 | `purchaseHistory` | json[] | Server-managed purchase records |
@@ -133,7 +133,7 @@ curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/points \
 | `quizCompletedAt` | datetime? | When the user completed an onboarding quiz |
 
 <Note>
-Profile fields like `skinType`, `concerns`, and `avoidances` are flexible string fields — they work for any product domain. A fashion agent might use `bodyType`, `stylePreferences`, and `fabricAvoidances` with the same schema structure.
+Profile fields like `skinType`, `concerns`, and `avoidances` are flexible string fields. They work for any product domain. A fashion agent might use `bodyType`, `stylePreferences`, and `fabricAvoidances` with the same schema structure.
 </Note>
 
 ---
@@ -153,14 +153,14 @@ curl "https://api.podium.build/api/v1/companion/products?category=moisturizer&mi
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `category` | string | — | Filter by subcategory (e.g., `serum`, `moisturizer`, `supplements`) |
-| `domain` | string | — | Filter by product domain: `beauty`, `wellness`, `fashion`, `home` |
-| `brand` | string | — | Filter by brand |
-| `minPrice` | number | — | Minimum price |
-| `maxPrice` | number | — | Maximum price |
-| `inStock` | boolean | — | Filter by availability |
-| `search` | string | — | Full-text search across name, brand, category |
-| `sort` | string | — | Sort order: `popular` (by interaction-weighted popularity score), default is relevance |
+| `category` | string | | Filter by subcategory (e.g., `serum`, `moisturizer`, `supplements`) |
+| `domain` | string | | Filter by product domain: `beauty`, `wellness`, `fashion`, `home` |
+| `brand` | string | | Filter by brand |
+| `minPrice` | number | | Minimum price |
+| `maxPrice` | number | | Maximum price |
+| `inStock` | boolean | | Filter by availability |
+| `search` | string | | Full-text search across name, brand, category |
+| `sort` | string | | Sort order: `popular` (by interaction-weighted popularity score), default is relevance |
 | `limit` | number | 20 | Results per page |
 | `offset` | number | 0 | Pagination offset |
 
@@ -179,10 +179,13 @@ curl "https://api.podium.build/api/v1/companion/products?category=moisturizer&mi
     "productUrl": "https://theordinary.com/products/ha-serum",
     "openGraphData": { "title": "...", "description": "..." },
     "inStock": true,
+    "buyableInChat": true,
     "createdAt": "2026-03-01T00:00:00Z"
   }
 ]
 ```
+
+**Server-derived. Do not re-derive on the client.** `buyableInChat` mirrors live adapter selection. See [Product Feed](/agentic/product-feed#buyableinchat) for the full contract.
 
 ### Get Product by ID
 
@@ -258,7 +261,7 @@ curl -X POST https://api.podium.build/api/v1/companion/products/batch \
 | `GET` | `/companion/products` | List products (filterable, paginated) |
 | `GET` | `/companion/products/{productId}` | Get single product |
 | `POST` | `/companion/products` | Create one product |
-| `POST` | `/companion/products/batch` | Batch create (1–100 items) |
+| `POST` | `/companion/products/batch` | Batch create (1-100 items) |
 
 ---
 
@@ -323,7 +326,7 @@ curl https://api.podium.build/api/v1/companion/interactions/{userId} \
 | `userId` | string | Yes | The user performing the action |
 | `productId` | string | Yes | The product being acted on |
 | `action` | enum | Yes | One of the six interaction types above |
-| `score` | number | No | Optional 0–1 confidence score |
+| `score` | number | No | Optional 0-1 confidence score |
 
 ### Endpoints
 
@@ -365,7 +368,7 @@ const { data: recs } = await client.companion.listRecommendations({
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `count` | number | 5 | Number of recommendations to return |
-| `category` | string | — | Optional category filter |
+| `category` | string | | Optional category filter |
 
 **Response:**
 
@@ -379,10 +382,13 @@ const { data: recs } = await client.companion.listRecommendations({
     "price": 68.00,
     "imageUrl": "https://cdn.example.com/de-protini.jpg",
     "productUrl": "https://drunkelephant.com/protini",
-    "inStock": true
+    "inStock": true,
+    "buyableInChat": false
   }
 ]
 ```
+
+**Server-derived. Do not re-derive on the client.** `buyableInChat` mirrors live adapter selection. See [Product Feed](/agentic/product-feed#buyableinchat) for the full contract.
 
 <Note>
 Recommendations exclude products the user has already interacted with (any action type). The engine considers `RANK_UP` and `PURCHASED` interactions as positive signals for similar products, and `RANK_DOWN` as negative signals for similar attributes.
@@ -398,9 +404,9 @@ Recommendations exclude products the user has already interacted with (any actio
 
 ## Orders
 
-Companion orders use a **concierge fulfillment model** — the user pays Podium (via [x402 USDC](/agentic/x402-payments) or Stripe), and the platform handles purchasing from the retailer and shipping to the user. This enables agents to execute purchases from any catalog source, not just products that exist in Podium's core commerce system.
+Companion orders use a **concierge fulfillment model**. The user pays Podium (via [x402 USDC](/agentic/x402-payments) or Stripe), and the platform handles purchasing from the retailer and shipping to the user. This enables agents to execute purchases from any catalog source, not just products that exist in Podium's core commerce system.
 
-The conversational agent's `create_order` tool uses these endpoints automatically during chat — see [Conversational Agent](/agentic/conversational-agent) for the full flow.
+The conversational agent's `create_order` tool uses these endpoints automatically during chat. See [Conversational Agent](/agentic/conversational-agent) for the full flow.
 
 ### Create a Concierge Order
 
@@ -548,6 +554,81 @@ graph LR
 
 ---
 
+## Agent Chat
+
+The synchronous and streaming chat endpoints. For the full conceptual model (memory, tool use, personas, nudges), see [Conversational Agent](/agentic/conversational-agent).
+
+### Send a Message (Synchronous)
+
+```bash
+POST /api/v1/companion/agent/chat
+```
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `userId` | string (CUID) | Yes | The Podium user. Can be a guest user from `POST /companion/guest/session`. |
+| `message` | string (1-4000) | Yes | The user's message. |
+| `config` | object | No | Per-request overrides. |
+| `config.persona.name` | string | No | Agent display name. |
+| `config.persona.vertical` | string | No | Product vertical for domain-expert context. |
+| `config.persona.tone` | string | No | Communication style. |
+| `config.rules` | string[] | No | Additional behavioral rules injected into the system prompt. |
+| `config.enabledTools` | string[] | No | Restrict the tool set for this turn. |
+| `config.maxHistory` | integer | No | Max conversation turns to include in context. |
+| `config.model` | string | No | Override the default model. Default: `claude-sonnet-4-6`. |
+
+**Response:**
+
+```json
+{
+  "message": "I found a few options that fit your profile.",
+  "products": [
+    {
+      "id": "clx9prod001",
+      "name": "Hydrating Serum",
+      "brand": "The Ordinary",
+      "price": 12.99,
+      "currency": "USD",
+      "imageUrl": "https://cdn.example.com/serum.jpg",
+      "productUrl": "https://example.com/products/serum",
+      "buyableInChat": true
+    }
+  ],
+  "profileUpdated": false,
+  "orderInitiated": false,
+  "guestNudge": false,
+  "guestLimitReached": false
+}
+```
+
+**Server-derived. Do not re-derive on the client.** Every `ProductCard` in `products` carries `buyableInChat`. See [Product Feed](/agentic/product-feed#buyableinchat) for the full contract.
+
+When a chat turn is rejected by the paid-sessions paywall, the response body is `{ message, paywalled: true, sessionsExhausted: { nextFreeRefreshAt } }`. See [Conversational Agent → Paywall response](/agentic/conversational-agent#paywall-response).
+
+### Stream a Message (SSE)
+
+```bash
+POST /api/v1/companion/agent/chat/stream
+```
+
+Same request body as synchronous chat. Returns a `text/event-stream` with the events documented in [Conversational Agent → Event Types](/agentic/conversational-agent#event-types). The relevant additions for this version:
+
+- `checkout_intent_created` fires when the agent's `create_order` tool produces a Universal Checkout intent.
+- `quiz_requested` fires when the agent summons an inline profile quiz.
+- A dedicated `paywall` event precedes the final `done` when the user's paid-sessions balance is zero. See [Conversational Agent → Paywall response](/agentic/conversational-agent#paywall-response).
+- The `done` event carries `guestNudge`, `guestLimitReached`, `nearLimit`, `milestone`, `paywalled`, `sessionsExhausted`, `profileUpdated`, `orderInitiated`, and `orderId`. See [Gate metadata on done](/agentic/conversational-agent#gate-metadata-on-done).
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/agent/chat` | Synchronous chat. |
+| `POST` | `/companion/agent/chat/stream` | Streaming chat with SSE events. |
+
+---
+
 ## Chat History
 
 Retrieve durable conversation history for a user. Messages include role, content, timestamps, and any product cards that were shown during the conversation.
@@ -564,7 +645,7 @@ curl "https://api.podium.build/api/v1/companion/agent/chat/history/{userId}?limi
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `limit` | number | 50 | Number of messages to return |
-| `before` | string | — | Message ID cursor for pagination (returns messages older than this ID) |
+| `before` | string | | Message ID cursor for pagination (returns messages older than this ID) |
 
 **Response:**
 
@@ -618,7 +699,7 @@ curl "https://api.podium.build/api/v1/companion/agent/chat/history/{userId}?limi
 
 ## Creator Products
 
-Retrieve the resolved product catalog for a creator persona. Creator personas are profiles that curate products based on a creator's taste, platform affiliation, and audience — used by apps like [Clone Agents (Familiar)](/agentic/beauty-companion#clone-agents-familiar).
+Retrieve the resolved product catalog for a creator persona. Creator personas are profiles that curate products based on a creator's taste, platform affiliation, and audience. See [Reference Apps](/agentic/beauty-companion) for worked examples.
 
 ### Get Creator Products
 
@@ -664,7 +745,7 @@ curl https://api.podium.build/api/v1/companion/creator/{handle}/products \
 
 ## Profile Seeding from Creator
 
-Merge a creator's taste profile — preferred brands, price ranges, product concerns — into a user's intent profile. This lets users bootstrap their preferences from a creator they trust, without going through a full onboarding quiz.
+Merge a creator's taste profile. Preferred brands, price ranges, product concerns. Into a user's intent profile. This lets users bootstrap their preferences from a creator they trust, without going through a full onboarding quiz.
 
 ### Seed Profile from Creator
 
@@ -681,7 +762,7 @@ curl -X POST https://api.podium.build/api/v1/companion/profile/{userId}/seed-fro
 
 - Merges the creator's brand preferences, price range, and concern tags into the user's intent profile
 - Does **not** overwrite user-set fields if the user has completed an onboarding quiz (i.e., `quizCompletedAt` is set)
-- Safe to call multiple times — subsequent calls merge additively
+- Safe to call multiple times. Subsequent calls merge additively
 
 ### Endpoints
 
@@ -734,7 +815,14 @@ curl -X POST https://api.podium.build/api/v1/companion/guest/convert \
 }
 ```
 
-Conversion transfers chat history, intent profile data, and agent memory from the guest to the real user. The guest record is deleted after successful merge. Unconverted guests are automatically cleaned up after 7 days.
+Conversion runs as a single Prisma transaction with the following effects:
+
+- **Chat history.** Every `agentConversation` and `agentMessage` row owned by the guest is re-keyed to `realUserId` and surfaces in `GET /companion/agent/chat/history/{userId}`.
+- **Intent profile.** First-write-wins. If the real user has no `userIntentProfile`, the guest's profile (including `agentSummary`) is re-keyed onto the real user. If the real user already has a profile, the guest profile is deleted and the real user's profile is preserved as-is. There is no deep merge.
+- **Usage counters.** The guest's `companionUsage` row is deleted; the real user keeps theirs.
+- **Cleanup.** The guest's `privyUser` row and the guest `user` row are deleted at the end of the transaction.
+
+Returns `404` if the guest id is not a guest, `404` if the target user does not exist, and `400` if you try to convert a guest into another guest. Unconverted guests are cleaned up after 7 days by a background job.
 
 ### Guest Endpoints
 
@@ -742,6 +830,42 @@ Conversion transfers chat history, intent profile data, and agent memory from th
 |--------|------|-------------|
 | `POST` | `/companion/guest/session` | Create an anonymous guest user |
 | `POST` | `/companion/guest/convert` | Merge guest data into a real user account |
+
+---
+
+## World Sign-In Nonce
+
+Server-issued nonce for World Mini App wallet authentication. The miniapp passes this nonce to `MiniKit.commands.walletAuth({ nonce })`; later SIWE-verify flows consume it server-side. Nonces are Redis-backed, single-use, and expire after 5 minutes.
+
+### Issue a Nonce
+
+```bash
+POST /api/v1/companion/world/nonce
+```
+
+No request body. Returns:
+
+```json
+{
+  "nonce": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "expiresInSeconds": 300
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `nonce` | string | 32-char hex nonce. Single-use, 5-minute TTL. |
+| `expiresInSeconds` | integer | Always `300` today. |
+
+<Info>
+Nonces are issued and stored against a Redis key with a 5-minute TTL. If the Redis backing layer is briefly unavailable, the endpoint still returns a fresh nonce (server-side verification will reject it). Always treat the nonce as ephemeral; never persist it client-side beyond the auth handshake.
+</Info>
+
+### Endpoint
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/companion/world/nonce` | Issue a single-use SIWE nonce for World wallet auth. |
 
 ---
 
@@ -767,13 +891,13 @@ curl -X POST https://api.podium.build/api/v1/companion/subscription/checkout \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "clxyz1234567890",
-    "plan": "sage_plus",
+    "plan": "premium_monthly",
     "successUrl": "https://yourapp.com/success",
     "cancelUrl": "https://yourapp.com/cancel"
   }'
 ```
 
-Returns a Stripe checkout URL. On successful payment, the user's tier transitions to `TRIALING` (if trial eligible) or `ACTIVE`.
+Plan IDs are configured per-app against your Stripe price catalog (e.g. `premium_monthly`, `pro_annual`). The example above is illustrative. Returns a Stripe checkout URL. On successful payment, the user's tier transitions to `TRIALING` (if trial eligible) or `ACTIVE`.
 
 ### Check Subscription Status
 
@@ -820,7 +944,7 @@ curl "https://api.podium.build/api/v1/companion/user/by-telegram/{telegramId}?pr
 | `telegramId` | string (path) | Telegram user ID |
 | `privyId` | string (query, optional) | Privy DID to link to the user |
 
-The lookup uses a synthetic email pattern: `tg_{telegramId}@beauty-companion.podium.app`. If a matching user exists, it's returned. If `privyId` is provided, the Privy DID is linked to the user record.
+The lookup uses a synthetic email pattern: `tg_{telegramId}@your-app-slug.podium.app`. Your app slug is configured per-org (see `app` query parameter for deterministic matching). If a matching user exists, it's returned. If `privyId` is provided, the Privy DID is linked to the user record.
 
 ---
 

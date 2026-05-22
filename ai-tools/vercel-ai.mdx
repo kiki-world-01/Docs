@@ -160,7 +160,7 @@ Always:
 import { anthropic } from '@ai-sdk/anthropic';
 
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   system: '...',
   messages,
   tools: podiumTools,
@@ -254,6 +254,6 @@ export async function getProductSuggestions(query: string, userId: string) {
 
 ## Related
 
-- [LangChain](/ai-tools/langchain) — similar pattern using LangChain's tool API
-- [SDK Setup](/sdk/setup) — complete SDK reference
-- [Build a Claude MCP Server](/recipes/mcp-server) — if you need MCP instead of direct tool definitions
+- [LangChain](/ai-tools/langchain). Similar pattern using LangChain's tool API
+- [SDK Setup](/sdk/setup). Complete SDK reference
+- [Build a Claude MCP Server](/recipes/mcp-server). If you need MCP instead of direct tool definitions

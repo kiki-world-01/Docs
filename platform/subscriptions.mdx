@@ -1,13 +1,17 @@
 ---
 title: Subscriptions
-description: Built-in subscription billing for companion agents — freemium gating, usage tracking, and Stripe-powered monetization
+description: Built-in subscription billing for companion agents. Freemium gating, usage tracking, and Stripe-powered monetization.
 ---
+
+<Note>
+The companion message-counter API (`incrementMessageCount`) is deprecated. Newer apps use a metered credit-grant model based on `Session.recordChatTurn()` (documented separately for the apps that adopt it). The endpoints described below remain supported for existing integrations.
+</Note>
 
 ## Overview
 
 Podium provides a built-in subscription system for companion agents, enabling developers to monetize their AI experiences with freemium gating, usage tracking, and Stripe-powered billing.
 
-The system handles the full lifecycle: free users hit configurable limits, see upgrade prompts, check out via Stripe, and immediately unlock premium capabilities. All subscription state is managed server-side — your agent just checks the gate.
+The system handles the full lifecycle: free users hit configurable limits, see upgrade prompts, check out via Stripe, and immediately unlock premium capabilities. All subscription state is managed server-side. Your agent just checks the gate.
 
 ## Subscription Tiers
 
@@ -64,13 +68,13 @@ When `allowed` is `true`, the action proceeds normally. Use `nearLimit` to show 
 
 Memory extraction runs for **all users** regardless of tier. Free users still have their behavioral patterns, preferences, and conversation history analyzed and stored. The difference is in how that intelligence is used:
 
-- **Free users** — receive standard recommendations based on their intent profile and interactions
-- **Subscribers** — receive personalized, memory-aware recommendations where the agent's accumulated understanding of the user is loaded into every conversation turn
+- **Free users**. Receive standard recommendations based on their intent profile and interactions
+- **Subscribers**. Receive personalized, memory-aware recommendations where the agent's accumulated understanding of the user is loaded into every conversation turn
 
-This means upgrading immediately unlocks all accumulated intelligence — there's no "cold start" when a free user converts to paid. The agent already knows them.
+This means upgrading immediately unlocks all accumulated intelligence. There's no "cold start" when a free user converts to paid. The agent already knows them.
 
 <Info>
-  This design creates a powerful conversion mechanic: the longer a free user engages, the more valuable upgrading becomes, because the agent has been building their memory the entire time.
+  This design creates a strong conversion mechanic: the longer a free user engages, the more valuable upgrading becomes, because the agent has been building their memory the entire time.
 </Info>
 
 ## API Endpoints
@@ -171,7 +175,7 @@ The platform automatically processes these Stripe webhook events:
 | `invoice.payment_failed` | User tier set to `PAST_DUE` |
 
 <Warning>
-  You don't need to handle these webhooks yourself — the platform processes them automatically. Only configure a webhook endpoint in Stripe if you need to react to subscription changes in your own application logic.
+  You don't need to handle these webhooks yourself. The platform processes them automatically. Only configure a webhook endpoint in Stripe if you need to react to subscription changes in your own application logic.
 </Warning>
 
 ### Endpoint Summary
@@ -196,18 +200,18 @@ const status = await fetch(
 ).then(r => r.json())
 
 if (status.isSubscribed) {
-  // Subscriber — proceed with full memory-aware experience
+  // Subscriber: full memory-aware experience.
   await sendAgentMessage(userId, message)
 } else if (status.usage.messageCount < status.usage.messageLimit) {
-  // Free user within limits — proceed with standard experience
+  // Free user within limits: standard experience.
   await sendAgentMessage(userId, message)
 
   if (status.usage.messageCount >= 20) {
-    // Near limit — show soft nudge
+    // Near limit: show a soft nudge.
     showUpgradePrompt('You\'re almost at your free message limit')
   }
 } else {
-  // Free user at limit — trigger upgrade flow
+  // Free user at limit: trigger upgrade flow.
   const checkout = await fetch(
     'https://api.podium.build/api/v1/companion/subscription/checkout',
     {
@@ -227,7 +231,7 @@ if (status.isSubscribed) {
 
 ## Best Practices
 
-- **Check status before every gated action** — don't cache subscription state client-side for longer than a single session
-- **Use soft nudges before hard gates** — the `nearLimit` flag and milestone notifications reduce churn by warning users before they hit the wall
-- **Surface the value of upgrading** — when a free user hits a gate, remind them that their accumulated intelligence is waiting: "Sage has been learning your preferences — upgrade to unlock personalized recommendations"
-- **Handle `PAST_DUE` gracefully** — consider a short grace period before downgrading the experience, as many payment failures resolve automatically
+- **Check status before every gated action**. Don't cache subscription state client-side for longer than a single session
+- **Use soft nudges before hard gates**. The `nearLimit` flag and milestone notifications reduce churn by warning users before they hit the wall
+- **Surface the value of upgrading**. When a free user hits a gate, remind them that their accumulated intelligence is waiting. For example: "Your companion has been learning your preferences. Upgrade to unlock personalized recommendations."
+- **Handle `PAST_DUE` gracefully**. Consider a short grace period before downgrading the experience, as many payment failures resolve automatically

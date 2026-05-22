@@ -1,6 +1,6 @@
 ---
 title: Webhooks
-description: Inbound webhooks from Stripe, Shopify, and Privy, plus 25 async event handlers and 8 cron jobs
+description: Inbound webhooks from Stripe, Shopify, and Privy, plus 38 async event handlers and 14 cron jobs.
 ---
 
 ## Overview
@@ -133,7 +133,7 @@ POST /webhooks/task-verify/{taskId}
 
 Podium's async event system provides at-least-once delivery with automatic retries and dead-letter queues. All event handlers verify a cryptographic signature before processing.
 
-### Event Types (25 Queues)
+### Event Types (38 Queues)
 
 #### Commerce Events
 
@@ -143,6 +143,8 @@ Podium's async event system provides at-least-once delivery with automatic retri
 | `order-confirmation` | Order created | Send confirmation email to buyer |
 | `creator-order-confirmation` | Order for a creator | Notify creator of new order via email/push |
 | `shopify-order-push` | Shopify-linked order | Push order data to connected Shopify store |
+| `checkout-intent-completed` | [Universal Checkout](/agentic/universal-checkout) intent reached `completed` | Update order records, notify the buyer, write a `PlatformClassificationOutcome` row for feedback into [Merchant Intelligence](/platform/merchant-intelligence) |
+| `checkout-intent-failed` | Universal Checkout intent reached `failed` | Log failure code, notify the agent surface, write a `PlatformClassificationOutcome` row |
 
 #### Campaign Events
 
@@ -200,6 +202,10 @@ Podium's async event system provides at-least-once delivery with automatic retri
 | `enrichment-crawl` | Ingestion triggered | Fetch and process data from enrichment source |
 | `enrichment-extract` | Raw data ingested | Extract attributes via AI-powered extraction |
 | `enrichment-baseline` | Extraction complete | Recompute attribute baselines |
+| `enrichment-discover-brands` | A new merchant URL is observed | Fanout work for the [Merchant Intelligence](/platform/merchant-intelligence) brand-discovery pipeline |
+| `enrichment-classify-brand-platform` | A `BrandProfile` needs classification | Runs the three-tier platform classifier and updates `ecomPlatform` / `ecomPlatformConfidence` |
+| `image-content-validation` | Catalog image enrichment fetched a candidate image | Async revalidation of dimensions and content-type. See [Enrichment Pipeline → Catalog Image Enrichment](/agentic/enrichment-pipeline#catalog-image-enrichment) |
+| `scrape-probe-canary` | Scrape pipeline shadow path is sampled | Runs a canary against an alternate extraction tier and records outcome for routing decisions |
 
 ### Retry & Idempotency
 
@@ -210,7 +216,7 @@ The event system provides automatic retries with exponential backoff:
 - **Dead letter**: Failed events after max retries are logged for manual review
 
 <Warning>
-  The event system delivers at-least-once. Your handlers should be idempotent — processing the same event twice must produce the same result. Use database unique constraints and conditional updates to guard against duplicate processing.
+  The event system delivers at-least-once. Your handlers should be idempotent. Processing the same event twice must produce the same result. Use database unique constraints and conditional updates to guard against duplicate processing.
 </Warning>
 
 ### Idempotency Patterns
@@ -227,16 +233,22 @@ await db.creatorPayout.create({
 });
 ```
 
-## Cron Jobs (8 Scheduled Tasks)
+## Cron Jobs (14 Scheduled Tasks)
 
 | Job | Schedule | Purpose | Details |
 |-----|----------|---------|---------|
 | `airdrop-monitor` | Every 5 min | Process pending airdrop deliveries | Checks `Airdrop` records with `PENDING` status, queues mints |
+| `brand-discovery-fanout` | Hourly | Discover new merchant brands from observed traffic | Queues `enrichment-discover-brands` work for newly seen apex domains |
+| `brand-classification-drift` | Daily | Re-classify brands whose `reclassifyAfter` has passed | Triggers `enrichment-classify-brand-platform` for drift candidates. See [Merchant Intelligence](/platform/merchant-intelligence#drift-and-re-classification) |
 | `campaign-monitor` | Every 15 min | End campaigns past their deadline | Sets `ENDED` status, triggers `campaign-ended` event |
+| `companion-nudge` | Periodic | Generate proactive companion re-engagement nudges | Selects eligible users, composes a personalized nudge, and writes it into the conversation history |
 | `contract-monitor` | Every 10 min | Sync on-chain contract state | Verifies deployment status of reward contracts |
 | `enrichment-baseline-recompute` | Every 6 hours | Recompute stale attribute baselines | Recalculates `AttributeBaseline` values for enrichment |
 | `mint-queue` | Every 1 min | Process pending reward mints | Batches `PENDING` QueuedMints, executes via Privy server wallet |
 | `payouts-sweep` | Every 30 min | Transfer eligible creator payouts | Queries `ELIGIBLE` CreatorPayouts, executes Stripe transfers |
+| `rye-intent-poller` | Periodic | Reconcile in-flight Rye-adapter checkout intents | Polls the Rye adapter for state on `processing` and `confirming` intents, advances the state machine, and emits `checkout-intent-completed` or `checkout-intent-failed`. Only intents whose `adapter` is `rye` are touched today; other adapters reconcile through their own paths. |
+| `sage-reengagement` | Periodic | Companion lifecycle re-engagement for inactive users | App-specific cron used by the Sage reference app for re-engagement messaging |
+| `sage-sessions-free-refresh` | Daily at UTC midnight | Refresh free-tier session balances for the Sessions paywall | Resets the daily session counter so `sessionsExhausted` clears on schedule |
 | `stripe-onboarding-reminder` | Daily | Remind incomplete Stripe setups | Emails creators who started but didn't finish Connect onboarding |
 | `token-presale-monitor` | Every 15 min | Monitor presale status changes | Checks presale deadlines and token distribution status |
 
@@ -264,5 +276,5 @@ All cron jobs are triggered by scheduled messages to their respective webhook en
 | `POST` | `/webhooks/shopify` | Shopify product/order events |
 | `POST` | `/webhooks/privy` | Blockchain transaction events |
 | `POST` | `/webhooks/task-verify/{taskId}` | Oracle verification callback |
-| `POST` | `/webhooks/events/{event}` | Async event handler (25 queues) |
-| `POST` | `/webhooks/cron/{job}` | Cron handler (8 jobs) |
+| `POST` | `/webhooks/events/{event}` | Async event handler (38 queues) |
+| `POST` | `/webhooks/cron/{job}` | Cron handler (14 jobs) |

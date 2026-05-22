@@ -1,11 +1,15 @@
 ---
 title: "Building on Podium: Reference Apps"
-description: Two production apps built on the same platform — a conversational skincare agent and a creator-based shopping agent, demonstrating the breadth of experiences Podium supports
+description: Two production apps built on the same platform. A conversational skincare agent and a creator-based shopping agent, demonstrating the breadth of experiences Podium supports.
 ---
+
+<Info>
+**Reference apps.** The apps below (Sage, Familiar) are examples of what you can build on Podium. They are not part of the platform contract. The same Companion API, intent profile, recommendation, and checkout primitives support any vertical and any discovery model. Treat the specifics here as illustrative.
+</Info>
 
 ## Overview
 
-Podium's Companion API, subscription system, and intelligence layer are designed to support radically different agent experiences on the same infrastructure. These two production apps demonstrate the range — from conversation-first with deep memory to browse-first with creator taste profiles.
+Podium's Companion API, subscription system, and intelligence layer support radically different agent experiences on the same infrastructure. These two production apps illustrate the range: from conversation-first with deep memory, to browse-first with creator taste profiles.
 
 | | Beauty Companion (Sage) | Clone Agents (Familiar) |
 |---|---|---|
@@ -17,31 +21,31 @@ Podium's Companion API, subscription system, and intelligence layer are designed
 
 ---
 
-## Beauty Companion (Sage)
+## A vertical companion built on Podium
 
-A personal skincare agent: quiz onboarding → conversational discovery → personalized recommendations → checkout → subscription monetization.
+Sage (a personal skincare agent) is one production take on this pattern: quiz onboarding, conversational discovery, personalized recommendations, checkout, subscription monetization. The shape of the experience is up to you; this section walks through one app's choices.
 
 ### User Journey
 
 <Steps>
   <Step title="Guest experience or onboarding">
-    **New visitors** can try Sage without an account via the [guest experience](/agentic/guest-experience). Guest users get 5 messages with a soft sign-up nudge at message 3 and a hard gate at message 5. On sign-up, all guest chat history and profile data merge into the real account.
+    **New visitors** can try Sage without an account via the [guest experience](/agentic/guest-experience). Guest users get 5 messages with a soft sign-up nudge at message 4 and a hard gate at message 5 (the default `GUEST_MESSAGE_LIMIT`). On sign-up, all guest chat history and profile data merge into the real account.
 
     **Signing-up users** can onboard two ways:
-    - **Structured quiz** — a 4-step experiential quiz ("How does your skin feel by early afternoon?" instead of "What is your skin type?") that builds the intent profile and awards points
-    - **Conversational onboarding** — skip the quiz entirely. The agent naturally collects skin type, concerns, brands, and budget during the first few messages of conversation. See [Conversational Onboarding](/agentic/conversational-agent#conversational-onboarding)
+    - **Structured quiz**. A 4-step experiential quiz ("How does your skin feel by early afternoon?" instead of "What is your skin type?") that builds the intent profile and awards points
+    - **Conversational onboarding**. Skip the quiz entirely. The agent naturally collects skin type, concerns, brands, and budget during the first few messages of conversation. See [Conversational Onboarding](/agentic/conversational-agent#conversational-onboarding)
 
     Users can also report **current actives** (products they're already using) during onboarding, which the agent uses to avoid redundant recommendations and assess ingredient interactions.
   </Step>
   <Step title="Conversational discovery">
     The [Conversational Agent](/agentic/conversational-agent) uses the profile to deliver personalized recommendations with streaming SSE responses. Users see quick-reply chips for common follow-ups and [reason tags](/agentic/conversational-agent#reason-tags) explaining why each product was suggested.
 
-    **Voice input** is supported — users can speak instead of type, with audio transcribed via the [Voice Transcription API](/api-reference/voice). Domain-specific vocabulary hints improve accuracy for ingredient names and brand names.
+    **Voice input** is supported. Users can speak instead of type, with audio transcribed via the [Voice Transcription API](/api-reference/voice). Domain-specific vocabulary hints improve accuracy for ingredient names and brand names.
   </Step>
   <Step title="Purchase">
     Two purchase modes depending on the product source:
-    - **Platform products** — x402 USDC checkout via [concierge orders](/api-reference/companion#orders)
-    - **Affiliate products** — redirect to retailer with affiliate tracking
+    - **Platform products**. X402 USDC checkout via [concierge orders](/api-reference/companion#orders)
+    - **Affiliate products**. Redirect to retailer with affiliate tracking
 
     Spend confirmation cards show the product, price, and daily spending limit before the user commits.
   </Step>
@@ -57,9 +61,9 @@ A personal skincare agent: quiz onboarding → conversational discovery → pers
     Subscriptions are managed via Stripe with automatic lifecycle tracking. See [Subscriptions](/platform/subscriptions) for the full billing integration.
   </Step>
   <Step title="Ongoing engagement">
-    Returning subscribers receive [personalized greetings](/agentic/conversational-agent#first-return-greeting) that reference their last conversation, products they've tried, and goals they're working toward. Chat history is durable with full pagination support.
+    Returning subscribers receive personalized greetings that reference their last conversation, products they've tried, and goals they're working toward. The agent reads durable memory at session start and weaves it into the opening reply. Chat history is paginated via the [Conversational Agent](/agentic/conversational-agent) endpoints.
 
-    The agent generates **email insights** from conversation memory — a personalized paragraph summarizing what it has learned about the user's preferences, concerns, and goals. These insights power lifecycle email campaigns for re-engagement.
+    The agent generates **email insights** from conversation memory. A personalized paragraph summarizing what it has learned about the user's preferences, concerns, and goals. These insights power lifecycle email campaigns for re-engagement.
   </Step>
 </Steps>
 
@@ -79,7 +83,7 @@ Sage integrates with a lifecycle email automation system that triggers personali
 | **Tier limit reached** | Free tier exhausted | Conversion prompt |
 | **Re-engagement** | 7+ days inactive | Personalized prompt based on conversation history |
 
-Emails are personalized using data from the user's intent profile, conversation memory, and interaction history. The `sageInsightSummary` — a rich, multi-sentence paragraph generated from the user's AgentMemory — is available as a template variable for particularly personalized email content.
+Emails are personalized using data from the user's intent profile, conversation memory, and interaction history. The `sageInsightSummary`. A rich, multi-sentence paragraph generated from the user's AgentMemory. Is available as a template variable for particularly personalized email content.
 
 ### Platform Features Used
 
@@ -92,7 +96,7 @@ Emails are personalized using data from the user's intent profile, conversation 
 | [Subscriptions](/platform/subscriptions) | Sage+ billing with Stripe, memory gating, usage tracking |
 | [Chat History](/api-reference/companion#chat-history) | Durable conversation history with cursor-based pagination |
 | Wallet Integration | Privy embedded wallets, USDC on Base, Apple Pay / Google Pay funding |
-| Points Gamification | Points awarded at every touchpoint — quiz steps, interactions, purchases |
+| Points Gamification | Points awarded at every touchpoint. Quiz steps, interactions, purchases |
 
 ### Architecture
 
@@ -133,13 +137,13 @@ graph TB
 
 ### Key Design: Thin Client
 
-Sage stores almost nothing locally — just a Telegram-to-Podium user mapping. All user data, product data, interactions, orders, and subscription state live in Podium. This makes the companion a **thin agentic client** that orchestrates the platform API into a coherent experience.
+Sage stores almost nothing locally. Just a Telegram-to-Podium user mapping. All user data, product data, interactions, orders, and subscription state live in Podium. This makes the companion a **thin agentic client** that orchestrates the platform API into a coherent experience.
 
 ---
 
-## Clone Agents (Familiar)
+## A creator-based shopping agent built on Podium
 
-A creator-based shopping agent: pick a creator → browse their curated products → buy what they'd buy. The agent surfaces products through the lens of a creator's taste rather than the user's own profile.
+Familiar (a creator-curated shopping agent) is the second pattern: pick a creator, browse their curated products, buy what they'd buy. The agent surfaces products through the lens of a creator's taste rather than the user's own profile. Same Podium primitives, different discovery model.
 
 ### User Journey
 
@@ -148,7 +152,7 @@ A creator-based shopping agent: pick a creator → browse their curated products
     Users browse active creator personas via the [CreatorPersona discovery](/api-reference/companion#creator-products) endpoint. Each persona has a display name, avatar, platform affiliation, and curated product catalog.
   </Step>
   <Step title="Browse creator picks">
-    Selecting a creator loads their resolved product catalog. Products are displayed as swipeable cards with Love, Skip, and Buy actions — each recorded as an [interaction](/api-reference/companion#interactions).
+    Selecting a creator loads their resolved product catalog. Products are displayed as swipeable cards with Love, Skip, and Buy actions. Each recorded as an [interaction](/api-reference/companion#interactions).
   </Step>
   <Step title="Profile seeding">
     When a user selects a creator, the creator's taste profile (preferred brands, price ranges, product concerns) is [merged into the user's intent profile](/api-reference/companion#profile-seeding-from-creator). User-set fields from a completed onboarding quiz are never overwritten.
@@ -157,7 +161,7 @@ A creator-based shopping agent: pick a creator → browse their curated products
     Buy actions redirect to the product's affiliate URL (ShopMy, Amazon Associates, or LTK). The platform handles URL resolution and tracking.
   </Step>
   <Step title="Guest mode">
-    Unauthenticated users can browse up to 5 products before hitting an auth gate. All interactions during guest mode are replayed to the user's profile on sign-in — no engagement is lost.
+    Unauthenticated users can browse up to 5 products before hitting an auth gate. All interactions during guest mode are replayed to the user's profile on sign-in. No engagement is lost.
   </Step>
 </Steps>
 
@@ -207,9 +211,9 @@ Both apps share the same Podium infrastructure but deliver radically different e
 
 | Dimension | Sage | Familiar |
 |-----------|------|----------|
-| **Discovery model** | Conversation-first — the agent suggests products through dialogue | Browse-first — users explore a creator's curated feed |
-| **Monetization** | Subscription — Sage+ unlocks memory-aware personalization | Affiliate — revenue from retailer redirects |
-| **Intelligence** | Deep memory — extracts preferences, goals, concerns, avoidances across conversations | Creator taste profiles — seeds user preferences from a creator's curation patterns |
+| **Discovery model** | Conversation-first. The agent suggests products through dialogue | Browse-first. Users explore a creator's curated feed |
+| **Monetization** | Subscription. Sage+ unlocks memory-aware personalization | Affiliate. Revenue from retailer redirects |
+| **Intelligence** | Deep memory. Extracts preferences, goals, concerns, avoidances across conversations | Creator taste profiles. Seeds user preferences from a creator's curation patterns |
 | **User model** | Same `IntentProfile` and `Interaction` models | Same `IntentProfile` and `Interaction` models |
 
 The takeaway: Podium's primitives are **vertical-agnostic and experience-agnostic**. The same user model, interaction system, and enrichment pipeline support both a deeply personalized AI companion and a social commerce discovery tool.
@@ -220,7 +224,7 @@ To build a companion for a different product domain or experience model:
 
 <Steps>
   <Step title="Define your intent profile fields">
-    Replace skin type, concerns, and brand preferences with your domain's preference dimensions. The profile schema is flexible — use whatever fields describe your user's preferences.
+    Replace skin type, concerns, and brand preferences with your domain's preference dimensions. The profile schema is flexible. Use whatever fields describe your user's preferences.
   </Step>
   <Step title="Choose your discovery model">
     Conversation-first (like Sage), browse-first (like Familiar), or a hybrid. The same API endpoints support all patterns.

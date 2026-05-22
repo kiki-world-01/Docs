@@ -54,7 +54,7 @@ const client = createPodiumClient({
 
 ## Multi-Tenant Context
 
-Every API call is scoped to the organization that owns your API key. You don't need to pass an `organizationId` — the Podium middleware extracts it from your key automatically.
+Every API call is scoped to the organization that owns your API key. You don't need to pass an `organizationId`. The Podium middleware extracts it from your key automatically.
 
 If your organization manages multiple creators, all creator-scoped operations (products, orders, campaigns) are accessible through your single API key:
 
@@ -80,11 +80,29 @@ The SDK is organized into namespaces that mirror the API structure:
 | `client.nftRewards` | Reward programs, minting, grants, publishing |
 | `client.userNfTs` | User reward redemption, earned/redeemable queries |
 | `client.agentic` | Agentic product feed, checkout sessions |
+| `client.companion` | Companion agent. Generated methods include `createAgent` (chat), `listAgent` (chat history), `listRecommendations`, `listProducts`, `listProfile` / `createProfile` / `updateProfile`, `listProfileRoutine` / `replaceProfileRoutine`, `createProfileSeedFromCreator`, `listCreator`, `listOrders` / `createOrders` / `updateOrders`, and `companionGuestSession`. |
+| `client.companionSubscription` | Stripe-backed subscription billing: checkout, customer portal, status. |
+| `client.checkoutIntents` | [Universal Checkout](/agentic/universal-checkout) intents: `createCheckoutIntent`, `getCheckoutIntent`, `confirmCheckoutIntent`, `getCheckoutIntentPaymentConfig`, `listCheckoutIntents`. |
+| `client.guests` | Standalone `/guest/order` flow for guest checkout against the commerce catalog. **Not** the same as the companion-guest session. The companion-guest session lives on `client.companion`. |
+| `client.guest` | Standalone `/guest/:id` user updates (e.g. setting an email). **Not** the companion-guest session. |
 | `client.search` | Product search with filters |
 | `client.universalSearch` | Cross-entity search with LLM-powered answers |
 | `client.x402` | x402 USDC payment processing |
 | `client.apiKeys` | API key rotation and management |
 | `client.organizations` | Organization settings |
+
+<Note>
+**`client.companion` vs `client.guests`.** The companion guest session (`POST /companion/guest/session` and `POST /companion/guest/convert`) lives under `client.companion`. It shares a chat user, conversation history, and profile with authenticated users. `client.guests` is a separate, standalone flow for guest **orders** on the commerce API (`/guest/order/*`) and has no relationship to companion chat. If you're building a chat-first onboarding, you want `client.companion`.
+</Note>
+
+<Note>
+A few routes are reachable through the public REST API but are not yet covered by the generated SDK because they use Elysia `detail` instead of the `*_OPERATION` pattern that drives codegen. Use the HTTP examples in their reference pages until the OpenAPI migration completes:
+
+- `POST /companion/world/nonce` (the World Mini App sign-in nonce)
+- `POST /companion/guest/convert` (only the `/session` half is currently generated as `companionGuestSession`)
+- `POST /admin/api-keys`, `PATCH/DELETE /admin/api-keys/:id`, `POST /admin/api-keys/:id/rotate`
+- `GET /admin/creator-personas/active` and related admin creator-persona endpoints
+</Note>
 
 ## Basic Usage
 
@@ -172,14 +190,14 @@ try {
 
 | Status | Meaning |
 |--------|---------|
-| `400` | Bad request — invalid parameters |
-| `401` | Unauthorized — invalid or missing API key |
-| `402` | Payment required — x402 payment needed |
-| `403` | Forbidden — insufficient permissions |
+| `400` | Bad request. Invalid parameters |
+| `401` | Unauthorized. Invalid or missing API key |
+| `402` | Payment required. X402 payment needed |
+| `403` | Forbidden. Insufficient permissions |
 | `404` | Not found |
-| `409` | Conflict — duplicate resource |
-| `422` | Validation error — request body failed Zod validation |
-| `429` | Rate limited — check `Retry-After` header |
+| `409` | Conflict. Duplicate resource |
+| `422` | Validation error. Request body failed Zod validation |
+| `429` | Rate limited. Check `Retry-After` header |
 | `500` | Server error |
 
 ### Validation Errors (422)

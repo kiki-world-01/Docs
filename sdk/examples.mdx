@@ -1,6 +1,6 @@
 ---
 title: Usage Examples
-description: Complete workflow examples with the Podium SDK — products, orders, campaigns, companion agents, tasks, rewards, and agentic commerce
+description: Complete workflow examples with the Podium SDK. Products, orders, campaigns, companion agents, tasks, rewards, and agentic commerce
 ---
 
 These examples use the [Podium TypeScript SDK](/sdk/setup). Each section is a self-contained workflow you can adapt for your application.
@@ -128,7 +128,7 @@ await client.userOrderPoints.replaceFinalize({
 
 ### x402 Checkout (Agent)
 
-The x402 payment flow uses HTTP directly — it negotiates USDC payment via response headers:
+The x402 payment flow uses HTTP directly. It negotiates USDC payment via response headers:
 
 ```typescript
 const response = await fetch(
@@ -475,7 +475,7 @@ const status = await client.userNfTs.getStatus({
 
 ### Query the Agentic Product Feed
 
-No API key required — designed for machine consumption:
+No API key required. Designed for machine consumption:
 
 ```typescript
 const feed = await client.agentic.listProductsFeed({
@@ -533,6 +533,107 @@ const updated = await client.agentic.updateCheckoutSessions({
 const state = await client.agentic.getCheckoutSessions({ id: session.id })
 ```
 
+### Universal Checkout: Buy from a Merchant URL
+
+[Universal Checkout](/agentic/universal-checkout) lets an agent buy from supported merchant URLs in two phases: create an intent (which resolves the offer), then confirm with a verified buyer. This example walks the full flow: create, fetch the adapter's payment config, tokenize, confirm, and poll to terminal state.
+
+```typescript
+import { createPodiumClient } from '@podium-sdk/node-sdk'
+import { setTimeout as sleep } from 'node:timers/promises'
+
+const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY! })
+
+const productUrl = 'https://shop.example.com/products/hydrating-serum'
+
+// Phase 1: create the intent. The platform resolves the URL, picks the
+// merchant adapter, and returns the offer in `awaiting_confirmation`.
+const intent = await client.checkoutIntents.createCheckoutIntent({
+  requestBody: {
+    productUrl,
+    quantity: 1,
+    buyer: {
+      firstName: 'Jane',
+      lastName: 'Buyer',
+      email: 'jane@example.com',
+      phone: '+15555550123',
+      address1: '123 Main St',
+      city: 'San Francisco',
+      province: 'CA',
+      postalCode: '94110',
+      country: 'US',
+    },
+    constraints: {
+      maxTotal: { amountSubunits: 5000, currencyCode: 'USD' },
+    },
+  },
+})
+
+if (intent.state !== 'awaiting_confirmation') {
+  throw new Error(`Unexpected initial state: ${intent.state}`)
+}
+
+// Fetch the Stripe publishable key that matches this intent's adapter.
+// You MUST tokenize against this key, not your own. The resulting token is
+// bound to the right Stripe account.
+const config = await client.checkoutIntents.getCheckoutIntentPaymentConfig({
+  id: intent.id,
+})
+
+// Tokenize a card with Stripe Elements / Stripe.js using
+// config.stripePublishableKey (omitted here). For this snippet, assume you
+// already have a Confirmation Token.
+const stripeConfirmationToken = 'ctok_xxx'
+
+// Phase 2: confirm. `payment` is a discriminated union; send exactly one shape.
+const confirmed = await client.checkoutIntents.confirmCheckoutIntent({
+  id: intent.id,
+  requestBody: {
+    payment: { stripeConfirmationToken },
+    // x402 settlement instead: { payment: { xPaymentHeader: '...' } }
+    // Rye-style tokenization: { payment: { stripeToken: 'tok_visa' } }
+  },
+})
+
+// Poll until terminal. `state`, not `status`.
+let state = confirmed.state
+let current = confirmed
+while (state === 'processing' || state === 'confirming') {
+  await sleep(1500)
+  current = await client.checkoutIntents.getCheckoutIntent({ id: intent.id })
+  state = current.state
+}
+
+if (state === 'completed') {
+  // `podiumOrderId` links to the internal Podium order row.
+  // `externalOrderId` is the merchant adapter's own id (e.g. Rye intent id).
+  console.log('Order placed', {
+    podiumOrderId: current.podiumOrderId,
+    externalOrderId: current.externalOrderId,
+  })
+} else {
+  console.error('Checkout failed', current.failureReason)
+}
+```
+
+<Warning>
+`buyer.phone` is required on both `POST /checkout-intents` and `POST /checkout-intents/:id/confirm`. Format as E.164-ish (`+14155551234`). Missing or malformed phone numbers return `400` with a Zod validation error on `path: ["buyer", "phone"]`. There is no machine-readable `error.code` field; match on the `path` array for validation failures and on the `merchant_unsupported:` prefix in `errors[0].message` for 422s.
+</Warning>
+
+If the URL is not yet covered by any adapter, the create call returns `422` with a body like:
+
+```json
+{
+  "errors": [
+    {
+      "message": "merchant_unsupported: no adapter can fulfill https://shop.example.com/products/hydrating-serum. Enable Rye on this org or onboard the merchant via Shopify to proceed.",
+      "path": []
+    }
+  ]
+}
+```
+
+See [Checkout Intents API](/api-reference/checkout-intents) and [Merchant Intelligence](/platform/merchant-intelligence) for coverage details.
+
 ---
 
 ## Shopify Integration
@@ -579,9 +680,11 @@ const response = await fetch(
 const { text, durationMs } = await response.json()
 
 // Feed transcript into the conversational agent
-const agentResponse = await client.companion.chat({
-  userId,
-  message: text,
+const agentResponse = await client.companion.createAgent({
+  requestBody: {
+    userId,
+    message: text,
+  },
 })
 ```
 
@@ -594,29 +697,33 @@ See [Voice Transcription](/api-reference/voice) for the full endpoint spec.
 Create an anonymous session, chat with the agent, and merge on sign-up:
 
 ```typescript
-// 1. Create guest session (no auth needed for the guest)
-const { guestUserId } = await client.guests.createSession()
+const API_BASE = 'https://api.podium.build/api/v1'
 
-// 2. Chat as guest — standard agent chat with the guest userId
-const response = await fetch(
-  'https://api.podium.build/api/v1/companion/agent/chat/stream',
-  {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId: guestUserId,
-      message: "What's a good moisturizer for dry skin?",
-    }),
-  }
-)
+// 1. Create a companion-scoped guest session.
+// (This is the companion guest, not the standalone /guest order flow.)
+const { guestUserId } = await client.companion.companionGuestSession()
 
-// 3. After the user signs up, merge their guest data
-await client.guests.convert({
-  guestUserId,
-  realUserId: authenticatedUser.id,
+// 2. Chat as guest. Standard agent chat with the guest userId.
+const agentResponse = await client.companion.createAgent({
+  requestBody: {
+    userId: guestUserId,
+    message: "What's a good moisturizer for dry skin?",
+  },
+})
+
+// 3. After the user signs up, merge their guest data into the real account.
+// POST /companion/guest/convert is not yet generated into the SDK
+// (only POST /companion/guest/session is). Call it over HTTP for now.
+await fetch(`${API_BASE}/companion/guest/convert`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    guestUserId,
+    realUserId: authenticatedUser.id,
+  }),
 })
 ```
 
@@ -626,7 +733,7 @@ See [Guest Experience](/agentic/guest-experience) for the full flow including me
 
 ## Playground Search
 
-Anonymous product search — no API key required:
+Anonymous product search. No API key required:
 
 ```typescript
 const response = await fetch(
@@ -638,7 +745,7 @@ console.log(`Found ${products.length} products`)
 console.log(`Rate limit remaining: ${_meta.rateLimit.remaining}/${_meta.rateLimit.limit}`)
 
 for (const product of products) {
-  console.log(`${product.name} by ${product.brand} — $${product.price}`)
+  console.log(`${product.name} by ${product.brand}. $${product.price}`)
   if (product.topIngredients?.length) {
     console.log(`  Key ingredients: ${product.topIngredients.join(', ')}`)
   }

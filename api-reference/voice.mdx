@@ -89,9 +89,11 @@ const response = await fetch(
 
 const { text, durationMs } = await response.json();
 // Feed the transcript into the conversational agent
-const agentResponse = await client.companion.chat({
-  userId,
-  message: text,
+const agentResponse = await client.companion.createAgent({
+  requestBody: {
+    userId,
+    message: text,
+  },
 });
 ```
 

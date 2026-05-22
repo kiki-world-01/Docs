@@ -5,24 +5,24 @@ description: AI-powered shopping companion with configurable personas, built-in 
 
 ## Overview
 
-The Conversational Agent is Podium's AI-powered shopping companion engine. It gives developers two endpoints — synchronous and streaming — that turn a user message into an intelligent, context-aware conversation with access to the full commerce stack.
+The Conversational Agent is Podium's AI-powered shopping companion engine. It gives developers two endpoints (synchronous and streaming) that turn a user message into an intelligent, context-aware conversation with access to the full commerce stack.
 
 The agent:
 
-- **Knows the user** — loads their intent profile, interaction history, conversation memory, and active product usage before every turn
-- **Uses tools** — can search products, get recommendations, record interactions, update profiles, and create orders mid-conversation
-- **Streams responses** — delivers progressive text deltas, tool execution events, product cards, and quick-reply chips over Server-Sent Events
-- **Remembers everything** — persistent conversation history with automatic summarization keeps context across sessions
-- **Handles concurrency** — serializes requests per user to prevent duplicate responses during rapid messaging
-- **Onboards conversationally** — new users can build their profile through natural conversation instead of a structured quiz
-- **Is configurable** — persona, tone, rules, enabled tools, and model are all overridable per request
+- **Knows the user**. Loads their intent profile, interaction history, conversation memory, and active product usage before every turn
+- **Uses tools**. Can search products, get recommendations, record interactions, update profiles, and create orders mid-conversation
+- **Streams responses**. Delivers progressive text deltas, tool execution events, product cards, and quick-reply chips over Server-Sent Events
+- **Remembers everything**. Persistent conversation history with automatic summarization keeps context across sessions
+- **Handles concurrency**. Serializes requests per user to prevent duplicate responses during rapid messaging
+- **Onboards conversationally**. New users can build their profile through natural conversation instead of a structured quiz
+- **Is configurable**. Persona, tone, rules, enabled tools, and model are all overridable per request
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/companion/agent/chat` | Synchronous chat — returns a complete response |
-| `POST` | `/companion/agent/chat/stream` | Streaming chat — returns SSE events as the agent thinks |
+| `POST` | `/companion/agent/chat` | Synchronous chat. Returns a complete response |
+| `POST` | `/companion/agent/chat/stream` | Streaming chat. Returns SSE events as the agent thinks |
 
 Both endpoints share the same request body.
 
@@ -51,12 +51,14 @@ Both endpoints share the same request body.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `userId` | string (CUID) | Yes | The Podium user to converse with |
-| `message` | string (1–4000 chars) | Yes | The user's message |
+| `message` | string (1-4000 chars) | Yes | The user's message |
 | `config` | object | No | Override default agent behavior |
-| `config.persona` | object | No | Agent identity — `name`, `vertical`, `tone` |
+| `config.persona` | object | No | Agent identity. `name`, `vertical`, `tone` |
 | `config.rules` | string[] | No | Additional behavioral rules injected into the system prompt |
 | `config.enabledTools` | string[] | No | Restrict which tools the agent can use (defaults to all) |
 | `config.maxHistory` | number | No | Max conversation turns to include in context |
+| `config.model` | string | No | Override the default model. Default: `claude-sonnet-4-6`. |
+| `config.surface` | enum | No | One of `telegram_bot`, `telegram_miniapp`, `web`. Tunes UI affordances in the system prompt. |
 
 ## Synchronous Response
 
@@ -104,9 +106,15 @@ Both endpoints share the same request body.
 | `memory_queued` | `{ type: "memory_queued" }` | When the system queues a memory extraction job |
 | `confirmation_required` | `{ type: "confirmation_required", productId, productName, productBrand, amount, currency, imageUrl?, spendSummary }` | When a purchase needs user confirmation |
 | `spend_limit_exceeded` | `{ type: "spend_limit_exceeded", reason, spendSummary, resetInfo? }` | When a purchase exceeds spend limits |
+| `checkout_intent_created` | `{ type: "checkout_intent_created", intentId, adapter, state, productUrl, productName?, merchantHostname, offer? }` | When the agent creates a [Universal Checkout](/agentic/universal-checkout) intent from a merchant URL |
+| `quiz_requested` | `{ type: "quiz_requested", quiz }` | When the agent summons an [Inline Profile Quiz](#inline-profile-quiz) card mid-conversation |
 | `error` | `{ type: "error", error: "..." }` | On failure |
 
-Where `spendSummary` is: `{ dailySpent: number, dailyLimit: number, txMax: number }`
+Where `spendSummary` is: `{ dailySpent: number, dailyLimit: number, txMax: number }`.
+
+The `checkout_intent_created` event mirrors the response shape of `POST /checkout-intents`. `adapter` is one of `podium-native`, `shopify`, `concierge`, `affiliate-redirect`, or `rye`; `state` follows the [intent state machine](/api-reference/checkout-intents#state-machine). The `offer` block is present when the adapter resolved an offer (`subtotal`, `shipping`, `tax`, `total`, `currency` in cents). Use this event to render the resolved offer in your chat surface before the buyer confirms.
+
+The `quiz_requested` event carries an `InlineQuizDefinition` with `id`, `title`, optional `intro`, and an ordered list of `steps`. Each step has a `key` (`skinType`, `concerns`, `brands`, `budget`), a `kind` (`single_select` or `multi_select`), a `question`, optional `helper`, and a list of `options` with `id` and `label`. Render the card inline, capture answers, and `PATCH /companion/profile/:userId` with the resulting selections.
 
 ### SSE Client Example
 
@@ -156,7 +164,7 @@ async function chatWithAgent(userId: string, message: string) {
             console.log("[Memory extraction queued]");
             break;
           case "confirmation_required":
-            console.log(`\nConfirm purchase: ${event.productName} (${event.productBrand}) — $${event.amount} ${event.currency}`);
+            console.log(`\nConfirm purchase: ${event.productName} (${event.productBrand}). $${event.amount} ${event.currency}`);
             console.log(`Daily spend: $${event.spendSummary.dailySpent}/$${event.spendSummary.dailyLimit}`);
             break;
           case "spend_limit_exceeded":
@@ -197,7 +205,7 @@ Handle the `busy` response in your frontend by showing a "still thinking" indica
 
 ## Built-in Tools
 
-The agent has access to 7 commerce tools that map directly to Podium API operations. Each tool is callable by the AI during conversation — no developer code needed.
+The agent has access to 8 commerce tools that map directly to Podium API operations. Each tool is callable by the AI during conversation. No developer code needed.
 
 | Tool | Description | Maps To |
 |------|-------------|---------|
@@ -205,9 +213,14 @@ The agent has access to 7 commerce tools that map directly to Podium API operati
 | `get_recommendations` | Get AI-ranked products based on the user's profile and interaction history | `GET /companion/recommendations/{userId}` |
 | `update_profile` | Update the user's intent profile (preferences, constraints, avoidances) | `PATCH /companion/profile/{userId}` |
 | `record_interaction` | Record a product interaction (`RANK_UP`, `RANK_DOWN`, `SKIP`, `PURCHASED`, `PURCHASE_INTENT`) | `POST /companion/interactions` |
-| `initiate_order` | Begin a purchase flow — collects shipping and payment details conversationally | State machine (multi-turn) |
+| `initiate_order` | Begin a purchase flow. Collects shipping and payment details conversationally. | State machine (multi-turn) |
 | `get_order_history` | Retrieve the user's recent orders | `GET /companion/orders` |
-| `create_order` | Create a companion order with collected shipping details | `POST /companion/orders` |
+| `create_order` | Create a companion order with collected shipping details. Accepts `productId` for catalog products, and `productUrl` for buy-by-URL when [Universal Checkout](/agentic/universal-checkout) is enabled for the org and user. With `productUrl`, the tool emits a `checkout_intent_created` SSE event with the resolved offer. | `POST /companion/orders` or `POST /checkout-intents` |
+| `start_inline_quiz` | Summon a structured quiz card mid-conversation to capture skin profile basics without leaving the chat. Emits a `quiz_requested` SSE event with the [InlineQuizDefinition](#inline-profile-quiz). | SSE event only |
+
+<Info>
+`create_order` with a `productUrl` is gated per-org and per-user. When buy-by-URL is enabled, the tool emits a `checkout_intent_created` event with the resolved offer; when it is not, the agent shares the merchant link instead of calling the tool. Read [Universal Checkout](/agentic/universal-checkout) for the underlying contract.
+</Info>
 
 ### Tool Selection
 
@@ -239,8 +252,8 @@ Every product recommendation includes a human-readable **reason tag** that expla
 | User concern match | "Targets your hydration concerns" |
 | Memory goal match | "Aligns with your anti-aging goal" |
 | Budget alignment | "Within your $50 budget" |
-| Brand affinity | "From The Ordinary — a brand you love" |
-| Ingredient match | "Contains hyaluronic acid — a top ingredient for you" |
+| Brand affinity | "From The Ordinary. A brand you love" |
+| Ingredient match | "Contains hyaluronic acid. A top ingredient for you" |
 
 Reason tags appear alongside product cards in both synchronous and streaming responses, giving users (and downstream UIs) transparency into why each recommendation was made.
 
@@ -248,9 +261,90 @@ Reason tags appear alongside product cards in both synchronous and streaming res
 
 The `search_products` tool supports domain and category filtering to improve result relevance:
 
-- **Domain filter** — restrict results to beauty, wellness, fashion, or home
-- **Category enrichment** — the agent maps user intent to canonical categories (e.g., "eye cream for dark circles" → `eye_care` category, not generic "eye" substring matching)
-- **Intelligent fallback** — when no domain or category matches, the system falls back to length-sorted token matching, skipping short generic tokens that produce noisy results
+- **Domain filter**. Restrict results to beauty, wellness, fashion, or home
+- **Category enrichment**. The agent maps user intent to canonical categories (e.g., "eye cream for dark circles" → `eye_care` category, not generic "eye" substring matching)
+- **Intelligent fallback**. When no domain or category matches, the system falls back to length-sorted token matching, skipping short generic tokens that produce noisy results
+
+## Gate metadata on `done`
+
+Every `done` event (and the synchronous response body) carries optional gate metadata so the client can react to guest, paywall, and milestone signals without a follow-up call.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `guestNudge` | boolean? | `true` on the soft-nudge turn (default: turn 4). Show a non-blocking sign-up CTA. |
+| `guestLimitReached` | boolean? | `true` once the guest message cap is reached (default: turn 5, configurable via `GUEST_MESSAGE_LIMIT`). Block further turns and trigger sign-up. |
+| `nearLimit` | boolean? | `true` when a subscribed user is approaching their free-tier message limit. |
+| `milestone` | string? | Free-form milestone tag (e.g. `"50_percent_messages"`) the client can render as progress UI. |
+| `paywalled` | boolean? | `true` when the chat turn was rejected because the user's paid-sessions balance is zero. Always paired with `sessionsExhausted`. |
+| `sessionsExhausted` | object? | `{ nextFreeRefreshAt: ISO timestamp }` when the user has hit the paid-sessions paywall. Show the upgrade or refresh UI. |
+| `profileUpdated` | boolean? | `true` when this turn changed the user's intent profile. |
+| `orderInitiated` | boolean? | `true` when an order tool ran. Inspect `orderId` for the linked order. |
+| `orderId` | string? | The id of the order created or advanced this turn. |
+
+There is no `isGuest` field on the wire. Whether the userId belongs to a guest session is something your client already knows from the session-creation step.
+
+See [Guest Experience](/agentic/guest-experience) for the full guest lifecycle and [Subscriptions](/platform/subscriptions) for the paid-sessions model.
+
+## Paywall response
+
+When a chat turn would have spent a paid session and the user's balance is zero, the agent short-circuits **before** running the LLM (no token spend).
+
+### Synchronous response
+
+The sync endpoint returns the standard `AgentResponse` shape with two paywall fields set:
+
+```json
+{
+  "message": "...short message explaining the paywall...",
+  "paywalled": true,
+  "sessionsExhausted": { "nextFreeRefreshAt": "2026-05-22T00:00:00.000Z" }
+}
+```
+
+### Streaming response
+
+The stream sends a dedicated `paywall` event and then a final `done` carrying the same paywall fields, then closes:
+
+```json
+event: paywall
+data: { "type": "paywall", "reason": "sessions_exhausted", "nextFreeRefreshAt": "2026-05-22T00:00:00.000Z" }
+
+event: done
+data: { "type": "done", "message": "...", "paywalled": true, "sessionsExhausted": { "nextFreeRefreshAt": "2026-05-22T00:00:00.000Z" } }
+```
+
+`reason` is `"sessions_exhausted"` today. Treat unknown reasons as paywalls and show the upgrade UI.
+
+## Inline Profile Quiz
+
+The agent can summon a structured quiz card mid-conversation through the `start_inline_quiz` tool. When invoked, the stream emits a `quiz_requested` event carrying an `InlineQuizDefinition`. Render the card in the chat surface, capture answers, and update the user's profile.
+
+### `InlineQuizDefinition` shape
+
+```typescript
+type InlineQuizDefinition = {
+  id: string
+  title: string
+  intro?: string
+  steps: InlineQuizStep[]
+}
+
+type InlineQuizStep = {
+  key: 'skinType' | 'concerns' | 'brands' | 'budget'
+  kind: 'single_select' | 'multi_select'
+  question: string
+  helper?: string
+  options: { id: string; label: string; hint?: string }[]
+  optional?: boolean
+  maxSelections?: number
+}
+```
+
+When the user completes the quiz, persist the selections by calling `PATCH /companion/profile/:userId` with the corresponding fields. The next agent turn will pick up the updated profile.
+
+## Model
+
+The agent uses `claude-sonnet-4-6` as its default model. Override per-request via `config.model`.
 
 ## Conversational Order Flow
 
@@ -285,12 +379,12 @@ The order state persists across messages, so the user can provide information ac
 
 Every conversation turn (user message + agent response) is stored in persistent memory. On each new message, the agent loads:
 
-1. **Intent profile** — the user's preferences, constraints, avoidances, and behavioral signals
-2. **Conversation history** — recent messages (up to `maxHistory` turns)
-3. **Conversation summary** — a compressed summary of older conversations
-4. **Agent state** — any in-progress workflows (e.g., pending orders)
+1. **Intent profile**. The user's preferences, constraints, avoidances, and behavioral signals
+2. **Conversation history**. Recent messages (up to `maxHistory` turns)
+3. **Conversation summary**. A compressed summary of older conversations
+4. **Agent state**. Any in-progress workflows (e.g., pending orders)
 
-History is persisted across sessions — not just held in memory. When a user returns hours or days later, the agent has full context from previous conversations.
+History is persisted across sessions. Not just held in memory. When a user returns hours or days later, the agent has full context from previous conversations.
 
 ### Automatic Summarization
 
@@ -298,7 +392,7 @@ Summary extraction happens automatically at conversation milestones:
 
 | Trigger | Condition | Purpose |
 |---------|-----------|---------|
-| **Early capture** | Turns 3–5, no existing memory | Capture initial preferences quickly |
+| **Early capture** | Turns 3-5, no existing memory | Capture initial preferences quickly |
 | **Regular cadence** | Every 10 user turns | Keep memory current as conversation evolves |
 | **Session gap** | >2 hours since last message | Summarize before context goes cold |
 
@@ -312,9 +406,9 @@ This keeps the agent's context window efficient while preserving long-term knowl
 
 ### Agent Summary → Intent Profile
 
-Summaries are stored on the user's intent profile (`agentSummary` field), making conversation insights available to other parts of the platform — recommendations, the agentic product feed, and downstream analytics.
+Summaries are stored on the user's intent profile (`agentSummary` field), making conversation insights available to other parts of the platform. Recommendations, the agentic product feed, and downstream analytics.
 
-Memory is also stored as a structured [AgentMemory](/agentic/memory-intelligence#agentmemory) object on the user's profile. This structured memory — preferences, goals, concerns, avoidances, products tried, and category-aware price ranges — feeds directly into recommendation scoring, reason tag generation, and proactive nudges. See [Memory & Intelligence](/agentic/memory-intelligence) for the full schema and scoring details.
+Memory is also stored as a structured [AgentMemory](/agentic/memory-intelligence#agentmemory) object on the user's profile. This structured memory. Preferences, goals, concerns, avoidances, products tried, and category-aware price ranges. Feeds directly into recommendation scoring, reason tag generation, and proactive nudges. See [Memory & Intelligence](/agentic/memory-intelligence) for the full schema and scoring details.
 
 ## Personas
 
@@ -363,7 +457,7 @@ The agent weaves these questions into the conversation rather than presenting a 
 
 ### Surface-Aware Prompts
 
-The system prompt adapts to the client surface — web, Telegram mini app, or embedded widget. Each surface has different UI capabilities (image rendering, inline buttons, link handling), and the agent tailors its response format accordingly.
+The system prompt adapts to the client surface. Web, Telegram mini app, or embedded widget. Each surface has different UI capabilities (image rendering, inline buttons, link handling), and the agent tailors its response format accordingly.
 
 ## User Context: Current Actives
 
@@ -383,20 +477,20 @@ Beyond reactive conversations, Podium's agent can proactively re-engage users th
 
 | Type | Trigger | Example |
 |------|---------|---------|
-| `re_engagement` | User hasn't chatted in several days | "Hey! I noticed some new serums from The Ordinary that match your hydration goals — want me to show you?" |
+| `re_engagement` | User hasn't chatted in several days | "Hey! I noticed some new serums from The Ordinary that match your hydration goals. Want me to show you?" |
 | `purchase_follow_up` | Recent purchase completed | "How's the HA serum working for you? Let me know and I can adjust your recommendations." |
-| `profile_deepening` | Incomplete preference profile | "I noticed you haven't told me about your SPF preferences — want to do a quick quiz?" |
-| `seasonal` | Seasonal product relevance | "Winter's here — time to switch up your moisturizer. Want me to find something heavier-duty?" |
-| `price_drop` | Price decreased on a product the user interacted with | "Good news — that CeraVe moisturizer you liked dropped 20% in price. Want to grab it?" |
-| `reorder_reminder` | Enough time has passed since a consumable purchase | "You bought that vitamin C serum about 6 weeks ago — running low? I can reorder for you." |
+| `profile_deepening` | Incomplete preference profile | "I noticed you haven't told me about your SPF preferences. Want to do a quick quiz?" |
+| `seasonal` | Seasonal product relevance | "Winter's here. Time to switch up your moisturizer. Want me to find something heavier-duty?" |
+| `price_drop` | Price decreased on a product the user interacted with | "Good news. That CeraVe moisturizer you liked dropped 20% in price. Want to grab it?" |
+| `reorder_reminder` | Enough time has passed since a consumable purchase | "You bought that vitamin C serum about 6 weeks ago. Running low? I can reorder for you." |
 
 ### How It Works
 
-1. **User selection** — the system identifies users eligible for nudges based on activity signals (days since last conversation, profile completeness, recent purchases)
-2. **Signal gathering** — for each eligible user, the system collects their profile, loved products, recent purchases, conversation summary, and profile gaps
-3. **Nudge generation** — AI generates a personalized, contextual message using the user's full signal set
-4. **Delivery** — the nudge is published to configured channels (Telegram, email, push) and logged
-5. **History integration** — nudge messages are appended to the conversation history so the agent has full context if the user replies
+1. **User selection**. The system identifies users eligible for nudges based on activity signals (days since last conversation, profile completeness, recent purchases)
+2. **Signal gathering**. For each eligible user, the system collects their profile, loved products, recent purchases, conversation summary, and profile gaps
+3. **Nudge generation**. AI generates a personalized, contextual message using the user's full signal set
+4. **Delivery**. The nudge is published to configured channels (Telegram, email, push) and logged
+5. **History integration**. Nudge messages are appended to the conversation history so the agent has full context if the user replies
 
 Nudges are logged and rate-limited to prevent over-messaging. Each nudge includes the `nudgeType` for analytics.
 
@@ -419,9 +513,9 @@ Quick replies are contextually generated based on:
 |--------|----------|
 | **Warm vs cold start** | New users get onboarding-oriented chips ("Take the skin quiz", "Tell me your budget"). Returning users get product-oriented chips. |
 | **Session saturation** | Max 3 chip sets per session to avoid overwhelming the user |
-| **Conversation state** | Chips adapt to context — quiz mode offers answer options, browsing mode offers category pivots, checkout mode offers confirmation/cancel |
+| **Conversation state** | Chips adapt to context. Quiz mode offers answer options, browsing mode offers category pivots, checkout mode offers confirmation/cancel |
 
-Quick replies are suggestions, not constraints — the user can always type a freeform message instead.
+Quick replies are suggestions, not constraints. The user can always type a freeform message instead.
 
 ## Durable Chat History
 
@@ -453,8 +547,8 @@ GET /api/v1/companion/agent/chat/history/:userId?limit=50&before=cursor_id
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `limit` | integer | 50 | Max messages to return (1–100) |
-| `before` | string | — | Cursor-based pagination — pass a message `id` to fetch older messages |
+| `limit` | integer | 50 | Max messages to return (1-100) |
+| `before` | string | | Cursor-based pagination. Pass a message `id` to fetch older messages |
 
 History is ordered newest-first. Page backward through the conversation by passing the last message's `id` as the `before` parameter.
 
@@ -481,7 +575,7 @@ For `x402_platform` purchases, the agent enforces spend limits to protect users:
 
 1. User expresses purchase intent
 2. Agent resolves the product's purchase mode
-3. For `x402_platform` — agent checks spend limits and emits `confirmation_required` with product details and current spend summary
+3. For `x402_platform`. Agent checks spend limits and emits `confirmation_required` with product details and current spend summary
 4. User confirms → agent executes the purchase
 5. If limits would be exceeded → agent emits `spend_limit_exceeded` with the reason and reset timing
 
@@ -501,28 +595,6 @@ For `x402_platform` purchases, the agent enforces spend limits to protect users:
   }
 }
 ```
-
-## First-Return Greeting
-
-For returning subscribers, the agent can generate a personalized greeting that references their history, preferences, and recent activity. This creates a warm re-engagement experience instead of a generic "How can I help you?"
-
-Send a greeting request:
-
-```json
-{
-  "userId": "clxyz1234567890",
-  "message": "__greeting__",
-  "config": {
-    "greeting": true
-  }
-}
-```
-
-The agent uses the user's [AgentMemory](/agentic/memory-intelligence#agentmemory) to generate the greeting — referencing products they've tried, concerns they've mentioned, and goals they're working toward. The response arrives through the standard streaming or synchronous endpoint.
-
-<Tip>
-Use first-return greetings when your app detects a returning user. The `__greeting__` message is a special trigger — it's not displayed to the user, it just signals the agent to generate a personalized welcome.
-</Tip>
 
 ## Example: Full Integration
 
@@ -573,7 +645,7 @@ const result = await response.json();
 console.log(result.message);
 console.log(`Products found: ${result.products?.length ?? 0}`);
 
-// 3. Follow up — the agent remembers the conversation
+// 3. Follow up. the agent remembers the conversation
 const followUp = await fetch(
   "https://api.podium.build/api/v1/companion/agent/chat",
   {

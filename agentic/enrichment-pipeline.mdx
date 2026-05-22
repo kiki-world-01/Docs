@@ -1,6 +1,6 @@
 ---
 title: Enrichment Pipeline
-description: Multi-source product intelligence — ingest, extract, resolve, normalize, and baseline computation for agent-ready product data
+description: Multi-source product intelligence. Ingest, extract, resolve, normalize, and baseline computation for agent-ready product data
 ---
 
 ## What It Does
@@ -38,17 +38,17 @@ graph LR
 
 Agents need more than product titles and prices to make informed recommendations. The enrichment pipeline provides:
 
-- **Rich product attributes** — texture, effectiveness, sentiment, ingredient analysis, certifications, and more — extracted from real-world data
-- **Provenance on every signal** — agents and users always know *where* a data point came from and how confident it is
-- **Cold-start intelligence** — new platforms have useful product data from day one, without waiting for user interactions
-- **Multi-level baselines** — understand a product's attributes in context: how it compares to its category and the broader market
-- **Continuous discovery** — Podium automatically discovers and enriches new products from multiple sources, keeping your catalog fresh
+- **Rich product attributes**. Texture, effectiveness, sentiment, ingredient analysis, certifications, and more. Extracted from real-world data
+- **Provenance on every signal**. Agents and users always know *where* a data point came from and how confident it is
+- **Cold-start intelligence**. New platforms have useful product data from day one, without waiting for user interactions
+- **Multi-level baselines**. Understand a product's attributes in context: how it compares to its category and the broader market
+- **Continuous discovery**. Podium automatically discovers and enriches new products from multiple sources, keeping your catalog fresh
 
 As users interact (vote in campaigns, rank products, purchase), `USER_DECLARED` signals naturally dominate the intent score. Market-derived enrichment data gracefully steps back to a supplementary validation role.
 
 ## Schema Overview
 
-The pipeline uses five core data models. These form a reusable blueprint — you can adapt this schema for any product vertical.
+The pipeline uses five core data models. These form a reusable blueprint. You can adapt this schema for any product vertical.
 
 ### EnrichmentSource
 
@@ -64,7 +64,7 @@ Defines where data comes from. Each source has a type and a JSON configuration:
 
 ### RawEnrichmentRecord
 
-Immutable audit log of every piece of ingested data. Raw records are never modified after creation — they serve as the provenance trail.
+Immutable audit log of every piece of ingested data. Raw records are never modified after creation. They serve as the provenance trail.
 
 | Field | Type | Purpose |
 |-------|------|---------|
@@ -75,7 +75,7 @@ Immutable audit log of every piece of ingested data. Raw records are never modif
 
 ### EnrichmentSignal
 
-The core output — individual attribute-value pairs extracted from raw records, resolved to products, and tagged with confidence and provenance.
+The core output. Individual attribute-value pairs extracted from raw records, resolved to products, and tagged with confidence and provenance.
 
 | Field | Type | Purpose |
 |-------|------|---------|
@@ -85,7 +85,7 @@ The core output — individual attribute-value pairs extracted from raw records,
 | `externalName` | string | Product name as seen in the source |
 | `attributeType` | string | Canonical attribute type (see taxonomy below) |
 | `attributeValue` | string | Normalized value |
-| `confidence` | float | 0–1 confidence score |
+| `confidence` | float | 0-1 confidence score |
 | `signalSource` | enum | `MARKET_DERIVED` for enrichment data |
 | `metadata` | JSON | Evidence: text snippets, URLs, ratings, context |
 
@@ -104,7 +104,7 @@ Aggregated top values per product (or category, or market) per attribute type. T
 | `signalCount` | int | Total signals contributing to this baseline |
 | `signalSource` | enum | `BASELINE_INFERRED` |
 | `computedAt` | datetime | When this baseline was computed |
-| `validUntil` | datetime | TTL — recompute after this timestamp |
+| `validUntil` | datetime | TTL. Recompute after this timestamp |
 
 ### ProductEmbedding
 
@@ -146,7 +146,7 @@ This balances signal quality (confidence) with signal volume (count), using loga
 
 ## Attribute Taxonomy
 
-The pipeline extracts 13 attribute types. This taxonomy is extensible — add new types by updating the canonical type mapping in the normalization layer.
+The pipeline extracts 13 attribute types. This taxonomy is extensible. Add new types by updating the canonical type mapping in the normalization layer.
 
 | Attribute Type | Example Values | Typical Sources |
 |---------------|---------------|-----------------|
@@ -189,7 +189,7 @@ Each domain applies different weight multipliers to enrichment signals, because 
 | **Fashion** | Brand tier, style coherence, seasonal relevance | Ingredient signals (not applicable) |
 | **Home** | Material quality, durability signals, design awards | Scent, skin-type (not applicable) |
 
-Signal polarity is also domain-aware — a high `longevity` score is positive for beauty (long-wear makeup) but the system treats longevity differently for supplements (shelf life vs. product wear time).
+Signal polarity is also domain-aware. A high `longevity` score is positive for beauty (long-wear makeup) but the system treats longevity differently for supplements (shelf life vs. product wear time).
 
 ## Ingredient Intelligence
 
@@ -199,9 +199,9 @@ The enrichment pipeline includes a specialized ingredient subsystem that provide
 
 The system maintains a canonical dictionary of **2,600+ ingredients** with normalized names, common aliases, and functional categories. This dictionary powers:
 
-- **INCI normalization** — converts International Nomenclature of Cosmetic Ingredients (INCI) names to human-readable equivalents
-- **Parenthetical stripping** — handles entries like "Water (Aqua)" by normalizing to the primary name
-- **Alias resolution** — maps variant spellings and regional names to canonical entries
+- **INCI normalization**. Converts International Nomenclature of Cosmetic Ingredients (INCI) names to human-readable equivalents
+- **Parenthetical stripping**. Handles entries like "Water (Aqua)" by normalizing to the primary name
+- **Alias resolution**. Maps variant spellings and regional names to canonical entries
 
 ### Ingredient Extraction Pipeline
 
@@ -218,11 +218,11 @@ flowchart LR
     Phase0 --> Phase1 --> Phase2 --> Phase3 --> Phase4
 ```
 
-1. **Dictionary and Normalization** — canonical ingredient dictionary with INCI normalization and external database integration for safety data, comedogenicity ratings, and functional classifications
-2. **Structured Sweep** — extracts ingredient lists from existing product metadata (descriptions, ingredient fields), yielding high-confidence signals with zero external API cost
-3. **Deep Extraction** — for products without structured ingredient data, the pipeline uses AI-powered extraction from product pages, resolving full ingredient lists with confidence scores
-4. **Affinity Modeling** — computes per-user ingredient affinities from interaction history. Users who consistently rank up products with niacinamide build a positive niacinamide affinity that influences future recommendations
-5. **Caching and Integration** — ingredient affinities and catalog-wide ingredient frequencies are cached and wired into the [scoring pipeline](/agentic/ranking-intelligence), adding a personalized ingredient boost to recommendations
+1. **Dictionary and Normalization**. Canonical ingredient dictionary with INCI normalization and external database integration for safety data, comedogenicity ratings, and functional classifications
+2. **Structured Sweep**. Extracts ingredient lists from existing product metadata (descriptions, ingredient fields), yielding high-confidence signals with zero external API cost
+3. **Deep Extraction**. For products without structured ingredient data, the pipeline uses AI-powered extraction from product pages, resolving full ingredient lists with confidence scores
+4. **Affinity Modeling**. Computes per-user ingredient affinities from interaction history. Users who consistently rank up products with niacinamide build a positive niacinamide affinity that influences future recommendations
+5. **Caching and Integration**. Ingredient affinities and catalog-wide ingredient frequencies are cached and wired into the [scoring pipeline](/agentic/ranking-intelligence), adding a personalized ingredient boost to recommendations
 
 ### Ingredient Affinity
 
@@ -268,7 +268,7 @@ Several automated gates prevent contaminated data from reaching the product feed
 
 ### Ubiquity Decay
 
-Ingredients and attributes that appear in too many products lose their recommendation value — if everything has "hyaluronic acid," it's not a useful differentiator. The system applies a smooth quadratic decay curve:
+Ingredients and attributes that appear in too many products lose their recommendation value. If everything has "hyaluronic acid," it's not a useful differentiator. The system applies a smooth quadratic decay curve:
 
 - Attributes appearing in **<15%** of products retain full signal weight
 - Attributes appearing in **15--60%** are progressively down-weighted
@@ -292,16 +292,16 @@ Exploration rates adapt based on interaction volume, and even exploration slots 
 
 Structured product databases provide high-quality, deterministic data. Extraction is rule-based (no AI cost):
 
-- Certifications from label tags (organic, cruelty-free, vegan) — confidence 0.95
-- Categories from category tags — confidence 0.9
-- Key ingredients from ingredient text via pattern matching — confidence 0.9
-- Scent profile from fragrance-free/unscented patterns — confidence 0.85
+- Certifications from label tags (organic, cruelty-free, vegan). Confidence 0.95
+- Categories from category tags. Confidence 0.9
+- Key ingredients from ingredient text via pattern matching. Confidence 0.9
+- Scent profile from fragrance-free/unscented patterns. Confidence 0.85
 
 **URL Resolution.** The enrichment pipeline resolves product URLs through multiple strategies:
 
-1. **Structured product APIs** — retailer URL resolution via direct API lookups
-2. **Web search** — discovering retailer URLs for products without direct API coverage
-3. **Affiliate platform resolution** — resolving intermediate redirect URLs (e.g., affiliate tracking links) to real retailer pages
+1. **Structured product APIs**. Retailer URL resolution via direct API lookups
+2. **Web search**. Discovering retailer URLs for products without direct API coverage
+3. **Affiliate platform resolution**. Resolving intermediate redirect URLs (e.g., affiliate tracking links) to real retailer pages
 
 This ensures every product in the catalog has a valid, purchasable URL regardless of how it was originally discovered.
 
@@ -336,16 +336,16 @@ This means your companion's product catalog grows organically without manual cur
 
 Source type: `CREATOR_STOREFRONT`. Podium discovers creators from multiple affiliate platforms, ingests their curated product collections, and enriches the catalog. The Creator Intelligence pipeline operates in three stages:
 
-**Discovery** — automated discovery across multiple affiliate platforms finds new creator candidates. Candidates are staged in a pre-qualification table before expensive data processing begins.
+**Discovery**. Automated discovery across multiple affiliate platforms finds new creator candidates. Candidates are staged in a pre-qualification table before expensive data processing begins.
 
-**Enrichment** — qualified creators are scraped and enriched. Each creator becomes a `CreatorPersona` with:
+**Enrichment**. Qualified creators are scraped and enriched. Each creator becomes a `CreatorPersona` with:
 
 - Resolved product IDs linked to your catalog
 - Creator metadata (handle, display name, platform, avatar, bio)
 - Computed features: domain tags, popularity score, product count, feed-safe count
 - Affiliate URLs with proper attribution tags
 
-**Recommendations** — creators are recommended to users via Thompson Sampling, which balances showing popular creators with exploring lesser-known ones. Creator recommendations consider domain match, product overlap with user preferences, and diversity.
+**Recommendations**. Creators are recommended to users via Thompson Sampling, which balances showing popular creators with exploring lesser-known ones. Creator recommendations consider domain match, product overlap with user preferences, and diversity.
 
 #### Supported Platforms
 
@@ -358,8 +358,20 @@ Source type: `CREATOR_STOREFRONT`. Podium discovers creators from multiple affil
 Amazon creators use a specialized pipeline: Level 1 scrapes storefront collections to harvest product identifiers, then Level 2 batch-resolves those identifiers to real product data with proper pricing, brand, and category information.
 
 <Info>
-Creator storefronts are a high-signal data source — a creator's curation reflects expert taste and audience trust, which feeds directly into recommendation quality and the [product feed](/agentic/product-feed).
+Creator storefronts are a high-signal data source. A creator's curation reflects expert taste and audience trust, which feeds directly into recommendation quality and the [product feed](/agentic/product-feed).
 </Info>
+
+### Parallel Task API
+
+A long-running task API that returns deeply-resolved product context for an external URL or creator product. The pipeline uses it to enrich creator-linked products that need more context than a single scrape pass can produce, including upstream brand identity, materials, variants, and provenance signals that other source types can't surface in one hop.
+
+| Source attribute | Value |
+|---|---|
+| `sourceType` | `PARALLEL_TASK` |
+| Output signal type | Standard `EnrichmentSignal` rows, written through the same extract pass as other sources. |
+| When it runs | On the creator-linked enrichment path (`runCreatorProductEnrichment`) when a product needs deep cross-source resolution. |
+
+The pipeline records the parallel task identifier on the `RawEnrichmentRecord` so signals are fully provenanced back to the originating task.
 
 ### Wellness Vertical
 
@@ -372,7 +384,40 @@ The pipeline covers wellness products (supplements, probiotics, adaptogens, etc.
 | 3 (mainstream) | Nature Made | Widely available, trusted |
 | 4 (mass market) | Kirkland | Value-focused, bulk |
 
-Wellness enrichment emphasizes formulation data — bioavailability, clinical evidence, third-party testing, and ingredient sourcing — rather than the texture and finish attributes that dominate beauty.
+Wellness enrichment emphasizes formulation data. Bioavailability, clinical evidence, third-party testing, and ingredient sourcing. Rather than the texture and finish attributes that dominate beauty.
+
+## Catalog Image Enrichment
+
+Product cards are only useful when the images are real, on-brand, and present. Catalog Image Enrichment is the subsystem that gets product images right: a tiered scrape pipeline picks the best source for each product, image-quality validators reject the bad ones, and an async content-validation queue catches drift over time.
+
+### Tiered scrape
+
+When the enrichment pipeline needs to fetch or refresh a product image, it routes the request through a tier router that prefers cheaper, higher-confidence sources first and escalates only when necessary.
+
+| Tier | Source | When chosen |
+|---|---|---|
+| 1 | Merchant-specific image APIs | The platform has direct API coverage for the merchant (deterministic, fastest). |
+| 2 | Headless browser fetch | The product page renders images client-side or behind a redirect; the tier-1 path is unavailable. |
+| 3 | Apify-backed extraction | The platform has structured extraction for the marketplace (e.g. Amazon ASINs). |
+
+Each fetch produces a `RawEnrichmentRecord` with the source it came from. A cost circuit breaker caps how aggressively the pipeline can escalate so a single noisy domain can't burn through the daily budget.
+
+### Image-quality validation
+
+Before an image is promoted onto a `ProductCatalogItem` it passes through quality gates:
+
+- **Dimension validation** rejects images that are too small, the wrong aspect ratio, or known placeholder sizes.
+- **Best-image selection** picks the highest-confidence candidate from the set returned by the chosen tier.
+- **URL upgrade** rewrites CDN-style thumbnails to their highest-resolution sibling URL when the platform knows the rewrite rule.
+
+### Async content validation
+
+After ingestion, images are dispatched to two QStash queues:
+
+- `image-content-validation` runs deeper checks on the resolved image (alt-text plausibility, visual content sanity).
+- `scrape-probe-canary` periodically re-runs a small sample of recent scrapes to catch drift when a merchant changes their markup.
+
+The result is a catalog where the product card's `imageUrl` is the highest-quality image the platform could fetch, source-traced, and continuously revalidated.
 
 ## Attribute Extraction
 
@@ -398,7 +443,7 @@ External product names ("CeraVe Moisturizing Cream 16oz") must be matched to pro
 
 - Compares external names against all product names using trigram similarity
 - Similarity > 0.75 → immediate match
-- Similarity 0.4–0.75 → candidate for Tier 2
+- Similarity 0.4-0.75 → candidate for Tier 2
 - Cost: zero external API calls
 
 ### Tier 2: Semantic Embedding Match
@@ -407,7 +452,7 @@ External product names ("CeraVe Moisturizing Cream 16oz") must be matched to pro
 - Cosine similarity search against pre-computed product embeddings
 - Threshold: 0.82 cosine similarity for acceptance
 
-When resolution fails, the `EnrichmentSignal` is stored with `productId: null`. Unresolved signals aren't lost — they can be retroactively linked when entity resolution improves or when the matching product is added to the catalog.
+When resolution fails, the `EnrichmentSignal` is stored with `productId: null`. Unresolved signals aren't lost. They can be retroactively linked when entity resolution improves or when the matching product is added to the catalog.
 
 ## Normalization
 
@@ -461,7 +506,7 @@ The pipeline runs asynchronously via Podium's event system:
 | `enrichment-extract` | Published after ingestion completes | AI extraction from raw records, creates signals |
 | `enrichment-baseline` | Admin endpoint or scheduled cron | Recomputes baselines from accumulated signals |
 
-All handlers are idempotent — safe to retry on failure. Raw records track a `processed` flag to prevent duplicate extraction.
+All handlers are idempotent. Safe to retry on failure. Raw records track a `processed` flag to prevent duplicate extraction.
 
 ## Admin Endpoints
 
@@ -503,11 +548,11 @@ curl https://api.podium.build/api/v1/admin/enrichment/status \
 
 The enrichment architecture is designed to be extensible across verticals. To adapt it for your domain:
 
-1. **Define your attribute taxonomy** — what product attributes matter in your vertical?
-2. **Register data sources** — structured APIs for your domain, review platforms, community forums
-3. **Configure extraction** — rule-based for structured sources, AI-powered for unstructured text
-4. **Generate product embeddings** — pre-compute embeddings for your catalog to enable entity resolution
-5. **Set baseline thresholds** — minimum signal count, confidence floor, and TTL for your data freshness requirements
+1. **Define your attribute taxonomy**. What product attributes matter in your vertical?
+2. **Register data sources**. Structured APIs for your domain, review platforms, community forums
+3. **Configure extraction**. Rule-based for structured sources, AI-powered for unstructured text
+4. **Generate product embeddings**. Pre-compute embeddings for your catalog to enable entity resolution
+5. **Set baseline thresholds**. Minimum signal count, confidence floor, and TTL for your data freshness requirements
 
 The schema patterns (source → raw record → signal → baseline) and the two-lane provenance model (user-declared vs market-derived) are vertical-agnostic. The taxonomy and data sources are where you customize.
 
