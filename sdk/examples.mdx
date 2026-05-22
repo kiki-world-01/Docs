@@ -579,8 +579,9 @@ const config = await client.checkoutIntents.getCheckoutIntentPaymentConfig({
   id: intent.id,
 })
 
-// Tokenize a card with Stripe Elements / Stripe.js using config.publishableKey
-// (omitted here). For this snippet, assume you already have a Confirmation Token.
+// Tokenize a card with Stripe Elements / Stripe.js using
+// config.stripePublishableKey (omitted here). For this snippet, assume you
+// already have a Confirmation Token.
 const stripeConfirmationToken = 'ctok_xxx'
 
 // Phase 2: confirm. `payment` is a discriminated union; send exactly one shape.
@@ -679,9 +680,11 @@ const response = await fetch(
 const { text, durationMs } = await response.json()
 
 // Feed transcript into the conversational agent
-const agentResponse = await client.companion.chat({
-  userId,
-  message: text,
+const agentResponse = await client.companion.createAgent({
+  requestBody: {
+    userId,
+    message: text,
+  },
 })
 ```
 
@@ -694,29 +697,33 @@ See [Voice Transcription](/api-reference/voice) for the full endpoint spec.
 Create an anonymous session, chat with the agent, and merge on sign-up:
 
 ```typescript
-// 1. Create guest session (no auth needed for the guest)
-const { guestUserId } = await client.guests.createSession()
+const API_BASE = 'https://api.podium.build/api/v1'
 
-// 2. Chat as guest. standard agent chat with the guest userId
-const response = await fetch(
-  'https://api.podium.build/api/v1/companion/agent/chat/stream',
-  {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId: guestUserId,
-      message: "What's a good moisturizer for dry skin?",
-    }),
-  }
-)
+// 1. Create a companion-scoped guest session.
+// (This is the companion guest, not the standalone /guest order flow.)
+const { guestUserId } = await client.companion.companionGuestSession()
 
-// 3. After the user signs up, merge their guest data
-await client.guests.convert({
-  guestUserId,
-  realUserId: authenticatedUser.id,
+// 2. Chat as guest. Standard agent chat with the guest userId.
+const agentResponse = await client.companion.createAgent({
+  requestBody: {
+    userId: guestUserId,
+    message: "What's a good moisturizer for dry skin?",
+  },
+})
+
+// 3. After the user signs up, merge their guest data into the real account.
+// POST /companion/guest/convert is not yet generated into the SDK
+// (only POST /companion/guest/session is). Call it over HTTP for now.
+await fetch(`${API_BASE}/companion/guest/convert`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.PODIUM_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    guestUserId,
+    realUserId: authenticatedUser.id,
+  }),
 })
 ```
 

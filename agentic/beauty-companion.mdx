@@ -29,7 +29,7 @@ Sage (a personal skincare agent) is one production take on this pattern: quiz on
 
 <Steps>
   <Step title="Guest experience or onboarding">
-    **New visitors** can try Sage without an account via the [guest experience](/agentic/guest-experience). Guest users get 5 messages with a soft sign-up nudge at message 3 and a hard gate at message 5. On sign-up, all guest chat history and profile data merge into the real account.
+    **New visitors** can try Sage without an account via the [guest experience](/agentic/guest-experience). Guest users get 5 messages with a soft sign-up nudge at message 4 and a hard gate at message 5 (the default `GUEST_MESSAGE_LIMIT`). On sign-up, all guest chat history and profile data merge into the real account.
 
     **Signing-up users** can onboard two ways:
     - **Structured quiz**. A 4-step experiential quiz ("How does your skin feel by early afternoon?" instead of "What is your skin type?") that builds the intent profile and awards points
@@ -61,7 +61,7 @@ Sage (a personal skincare agent) is one production take on this pattern: quiz on
     Subscriptions are managed via Stripe with automatic lifecycle tracking. See [Subscriptions](/platform/subscriptions) for the full billing integration.
   </Step>
   <Step title="Ongoing engagement">
-    Returning subscribers receive [personalized greetings](/agentic/conversational-agent#first-return-greeting) that reference their last conversation, products they've tried, and goals they're working toward. Chat history is durable with full pagination support.
+    Returning subscribers receive personalized greetings that reference their last conversation, products they've tried, and goals they're working toward. The agent reads durable memory at session start and weaves it into the opening reply. Chat history is paginated via the [Conversational Agent](/agentic/conversational-agent) endpoints.
 
     The agent generates **email insights** from conversation memory. A personalized paragraph summarizing what it has learned about the user's preferences, concerns, and goals. These insights power lifecycle email campaigns for re-engagement.
   </Step>

@@ -137,12 +137,13 @@ The merge is safe to retry. Calling convert twice with the same pair returns `40
 ```typescript
 import { createPodiumClient } from '@podium-sdk/node-sdk';
 
+const API_BASE = 'https://api.podium.build/api/v1';
 const client = createPodiumClient({ apiKey: process.env.PODIUM_API_KEY });
 
-// 1. Create guest session (companion-scoped guest, not the standalone /guest orders flow)
+// 1. Create guest session (companion-scoped guest, not the standalone /guest orders flow).
 const { guestUserId } = await client.companion.companionGuestSession();
 
-// 2. Chat as guest (uses standard agent chat with guest userId)
+// 2. Chat as guest. Standard agent chat with the guest userId.
 const response = await client.companion.createAgent({
   requestBody: {
     userId: guestUserId,
@@ -150,11 +151,11 @@ const response = await client.companion.createAgent({
   },
 });
 
-// 3. After user signs up, merge their session.
-// The convert endpoint shares the companionGuestSession method today
-// (POST /companion/guest/session and POST /companion/guest/convert
-// are both reachable through the same generated SDK surface).
-await fetch(`${API_BASE}/api/v1/companion/guest/convert`, {
+// 3. After user signs up, merge their session into the real account.
+// POST /companion/guest/convert is not yet in the generated SDK
+// (only POST /companion/guest/session is, as `companionGuestSession`).
+// Call it over HTTP for now.
+await fetch(`${API_BASE}/companion/guest/convert`, {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${process.env.PODIUM_API_KEY}`,

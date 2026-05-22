@@ -205,7 +205,7 @@ Handle the `busy` response in your frontend by showing a "still thinking" indica
 
 ## Built-in Tools
 
-The agent has access to 7 commerce tools that map directly to Podium API operations. Each tool is callable by the AI during conversation. No developer code needed.
+The agent has access to 8 commerce tools that map directly to Podium API operations. Each tool is callable by the AI during conversation. No developer code needed.
 
 | Tool | Description | Maps To |
 |------|-------------|---------|
@@ -548,7 +548,7 @@ GET /api/v1/companion/agent/chat/history/:userId?limit=50&before=cursor_id
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `limit` | integer | 50 | Max messages to return (1-100) |
-| `before` | string |. | Cursor-based pagination. Pass a message `id` to fetch older messages |
+| `before` | string | | Cursor-based pagination. Pass a message `id` to fetch older messages |
 
 History is ordered newest-first. Page backward through the conversation by passing the last message's `id` as the `before` parameter.
 

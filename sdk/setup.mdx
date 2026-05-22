@@ -80,7 +80,8 @@ The SDK is organized into namespaces that mirror the API structure:
 | `client.nftRewards` | Reward programs, minting, grants, publishing |
 | `client.userNfTs` | User reward redemption, earned/redeemable queries |
 | `client.agentic` | Agentic product feed, checkout sessions |
-| `client.companion` | Companion agent: chat, history, recommendations, products, profiles, creator personas, the companion-guest session (and convert), and the World Mini App nonce. The world nonce is a single generated method directly under `client.companion`, not a sub-namespace. |
+| `client.companion` | Companion agent. Generated methods include `createAgent` (chat), `listAgent` (chat history), `listRecommendations`, `listProducts`, `listProfile` / `createProfile` / `updateProfile`, `listProfileRoutine` / `replaceProfileRoutine`, `createProfileSeedFromCreator`, `listCreator`, `listOrders` / `createOrders` / `updateOrders`, and `companionGuestSession`. |
+| `client.companionSubscription` | Stripe-backed subscription billing: checkout, customer portal, status. |
 | `client.checkoutIntents` | [Universal Checkout](/agentic/universal-checkout) intents: `createCheckoutIntent`, `getCheckoutIntent`, `confirmCheckoutIntent`, `getCheckoutIntentPaymentConfig`, `listCheckoutIntents`. |
 | `client.guests` | Standalone `/guest/order` flow for guest checkout against the commerce catalog. **Not** the same as the companion-guest session. The companion-guest session lives on `client.companion`. |
 | `client.guest` | Standalone `/guest/:id` user updates (e.g. setting an email). **Not** the companion-guest session. |
@@ -95,7 +96,12 @@ The SDK is organized into namespaces that mirror the API structure:
 </Note>
 
 <Note>
-Some admin and `/companion/*` operations (e.g. world nonce, agent chat, subscription endpoints, admin API-keys CRUD, admin creator-personas) are reachable through the public REST API but are not yet covered by the generated SDK because they use Elysia `detail` instead of `*_OPERATION`. Use HTTP examples for those routes until the OpenAPI migration completes.
+A few routes are reachable through the public REST API but are not yet covered by the generated SDK because they use Elysia `detail` instead of the `*_OPERATION` pattern that drives codegen. Use the HTTP examples in their reference pages until the OpenAPI migration completes:
+
+- `POST /companion/world/nonce` (the World Mini App sign-in nonce)
+- `POST /companion/guest/convert` (only the `/session` half is currently generated as `companionGuestSession`)
+- `POST /admin/api-keys`, `PATCH/DELETE /admin/api-keys/:id`, `POST /admin/api-keys/:id/rotate`
+- `GET /admin/creator-personas/active` and related admin creator-persona endpoints
 </Note>
 
 ## Basic Usage

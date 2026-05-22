@@ -200,18 +200,18 @@ const status = await fetch(
 ).then(r => r.json())
 
 if (status.isSubscribed) {
-  // Subscriber. proceed with full memory-aware experience
+  // Subscriber: full memory-aware experience.
   await sendAgentMessage(userId, message)
 } else if (status.usage.messageCount < status.usage.messageLimit) {
-  // Free user within limits. proceed with standard experience
+  // Free user within limits: standard experience.
   await sendAgentMessage(userId, message)
 
   if (status.usage.messageCount >= 20) {
-    // Near limit. show soft nudge
+    // Near limit: show a soft nudge.
     showUpgradePrompt('You\'re almost at your free message limit')
   }
 } else {
-  // Free user at limit. trigger upgrade flow
+  // Free user at limit: trigger upgrade flow.
   const checkout = await fetch(
     'https://api.podium.build/api/v1/companion/subscription/checkout',
     {
